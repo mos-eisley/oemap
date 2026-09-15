@@ -23,6 +23,19 @@ fájl — nincs build lépés, nincs függőség, nincs csomagkezelő.
 — a teremadatok, az alaprajz geometriája, az útvonalkeresés — az `index.html`-en
 belül van. Így az oldal külső szolgáltató nélkül, offline is működik.
 
+## Nézetek
+
+Az app **Alaprajzzal indul** — telefonon ez a nézet 76 fps az Épület 13-ával
+szemben, és nagyításkor éles marad, mert nincs 3D kontextus. Az Épület nézet
+gombbal érhető el.
+
+A fejlécben a **Hallgatói / Minden** kapcsoló dönti el, mely helyiségek
+látszanak. Hallgatói nézetben az irodák, üzemeltetési terek, raktárak és
+dolgozói területek semleges szürkén, felirat nélkül jelennek meg — ez a 183
+helyiségből 87. Nem tűnnek el: a födém sziluettje az összes poligonból áll
+össze, kivéve őket lyukas lenne az alaprajz. Keresésből és kiválasztásból sem
+esnek ki, csak nem versenyeznek a figyelemért.
+
 ## Kezelés
 
 | | Alaprajz | Épület |

@@ -294,6 +294,10 @@ button{cursor:pointer;background:none;border:0}
 .m3 .hit{pointer-events:fill}
 .room.pick{cursor:pointer}
 .room.pick:hover{opacity:.72}
+/* Nem hallgatói helyiségek: semleges kitöltés, halványan. A .showstaff a
+   fejléc kapcsolójától kerül fel, olyankor visszakapja a kategóriaszínét. */
+.room.staff{fill:var(--sunk);opacity:.62}
+.showstaff .room.staff{fill:var(--cat);opacity:1}
 .room.sel{stroke:var(--accent);stroke-width:.5}
 
 .ftag{position:absolute;white-space:nowrap;pointer-events:none;text-align:right;
@@ -491,6 +495,9 @@ button{cursor:pointer;background:none;border:0}
       <div class="seg" role="group" aria-label="Nyelv">
         <button id="langHu" aria-pressed="true">HU</button><button id="langEn" aria-pressed="false">EN</button>
       </div>
+      <div class="seg" role="group" aria-label="Helyiségek" id="staffSeg">
+        <button id="stOff" aria-pressed="true">Hallgatói</button><button id="stOn" aria-pressed="false">Minden</button>
+      </div>
       <div class="seg icons" role="group" aria-label="Téma">
         <button id="thLight" aria-pressed="false" title="Világos">☀</button>
         <button id="thAuto" aria-pressed="true" title="Rendszer">◐</button>
@@ -565,6 +572,8 @@ const I18N={hu:{
   viaLabel:"Szintváltás", noLiftHere:"Ehhez az útvonalhoz nincs liftes alternatíva: a hallgatói lift az FL3 magban van, ami a tervlap szerint erről a szintről gyalog nem érhető el.",
   lift:"A hallgatók az épületben csak az FL3 lépcsőmagban lévő liftet használhatják, ezért az alternatív útvonal ezen keresztül vezet.",
   foot:"Az alaprajzokból gépi úton előállított adat. Tájékoztató jellegű.",
+  stStudent:"Hallgatói", stAll:"Minden", stTitle:"Mely helyiségek látszanak",
+  stHint:"Az irodák, raktárak és üzemeltetési terek halványan jelennek meg.",
   qwc:"Legközelebbi mosdó", qbufe:"Büfé", qentry:"Főbejárat · előtér",
   qrooms:"Foglalható termek", qroomsSub:"most szabad vagy foglalt",
   tmTitle:"Foglalható termek", tmFree:"Szabad", tmBusy:"Foglalt",
@@ -591,6 +600,8 @@ const I18N={hu:{
   viaLabel:"Between levels", noLiftHere:"No lift alternative for this route: the student lift sits in the FL3 core, which the source plan leaves unreachable on foot from this level.",
   lift:"Students may only use the lift in the FL3 stair core, so the alternative route goes through it.",
   foot:"Data derived automatically from the architectural plans. For orientation only.",
+  stStudent:"Student", stAll:"All", stTitle:"Which rooms are shown",
+  stHint:"Offices, stores and plant rooms are shown dimmed.",
   qwc:"Nearest toilet", qbufe:"Café", qentry:"Main entrance · lobby",
   qrooms:"Bookable rooms", qroomsSub:"free or busy right now",
   tmTitle:"Bookable rooms", tmFree:"Free", tmBusy:"Busy",
@@ -607,7 +618,7 @@ const I18N={hu:{
    beégetve; most állapot, hogy forgatni lehessen. */
 const ROT0={x:58,z:-30}, TILT_MIN=15, TILT_MAX=85;
 const S={lang:"hu",theme:"auto",mode:2,level:0,from:null,to:null,sel:null,route:null,mm:null,
-         view:{k:1,x:0,y:0},rot:{...ROT0},leg:false,termek:false,tmOpen:null,
+         view:{k:1,x:0,y:0},rot:{...ROT0},leg:false,termek:false,tmOpen:null,staff:false,
          routes:{stairs:null,lift:null},mms:{stairs:null,lift:null},via:"stairs",hasLift:false};
 const T=()=>I18N[S.lang];
 const $=id=>document.getElementById(id);
@@ -615,6 +626,12 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",
 
 /* ------------------------------------------------------------------ adat */
 const MOB=()=>matchMedia("(max-width:900px)").matches;
+
+/* Amire egy hallgatónak nincs dolga: a 183 helyiségből 87 (47,5%). Nem
+   vesszük ki őket — a födém sziluettje az összes poligonból áll össze, így
+   lyukas lenne az alaprajz —, csak semlegesre halványítjuk és elhagyjuk a
+   feliratukat. A karbantartásnak a fejlécben visszakapcsolható. */
+const STAFF=new Set(["IRODÁK","ÜZEMELTETÉS","RAKTÁROZÁS/TÁROLÁS","DOLGOZÓI TERÜLETEK"]);
 /* Az Épület nézet valódi 3D transzformokat használ, ezért a böngésző textúrába
    rajzolja a szinteket, és a nagyítás azt a bitmapet nyújtja fel — ettől lesz
    homályos, ahogy ráközelítesz. Sűrűbb SVG-vel sűrűbb a textúra is. A költség a
@@ -872,7 +889,8 @@ function buildFloors(){
     const gr=el("g",{class:"rooms"});
     for(const r of rs){
       const po=el("polygon",{points:r.poly.map(p=>p.join(",")).join(" "),fill:cc(r.cat),
-        class:"room"+(r.code?" pick":"")+(S.sel===r.code?" sel":"")});
+        class:"room"+(r.code?" pick":"")+(S.sel===r.code?" sel":"")+(STAFF.has(r.cat)?" staff":"")});
+      if(STAFF.has(r.cat)) po.style.setProperty("--cat",cc(r.cat));
       if(r.code){
         po.addEventListener("click",e=>{e.stopPropagation();select(r.code);});
         const ti=el("title");ti.textContent=r.code+" · "+(r.name||r.cat);po.appendChild(ti);
@@ -902,6 +920,7 @@ function buildLabels(lv){
   const gl=F.labels;
   for(const r of F.rs){
     if(!r.code) continue;
+    if(!S.staff && STAFF.has(r.cat)) continue;   // halványítva nem feliratozzuk
     const sc=r.code.slice(4);
     const fs=Math.max(.5,Math.min(1.2,(r.lw-1.4)/(sc.length*.66),r.lh/3.4));
     if(fs<.55) continue;
@@ -1458,6 +1477,9 @@ function applyLang(){
   const t=T();
   $("sub").textContent=t.sub; $("q").placeholder=t.ph;
   $("m2t").textContent=t.plan; $("m3t").textContent=t.bld;
+  $("stOff").textContent=t.stStudent; $("stOn").textContent=t.stAll;
+  $("staffSeg").setAttribute("aria-label",t.stTitle);
+  $("stOff").title=t.stHint; $("stOn").title=t.stTitle;
   $("foot").textContent=t.foot;
   $("langHu").setAttribute("aria-pressed",S.lang==="hu");
   $("langEn").setAttribute("aria-pressed",S.lang==="en");
@@ -1484,6 +1506,15 @@ addEventListener("keydown",e=>{
   if(e.key==="/"&&document.activeElement!==$("q")){e.preventDefault();$("q").focus();}
   if(e.key==="Escape"){if(S.leg)toggleLeg(false);else if(S.sel){S.sel=null;refreshSel();renderPanel();}}});
 $("m2").onclick=()=>setMode(2); $("m3").onclick=()=>setMode(3);
+function setStaff(v){
+  S.staff=v;
+  app.classList.toggle("showstaff",v);
+  $("stOff").setAttribute("aria-pressed",!v); $("stOn").setAttribute("aria-pressed",v);
+  // a feliratok lustán épülnek, újra kell kérni őket
+  for(const lv of LV){ const F=FLOOR[lv]; F.built=false; F.labels.textContent=""; }
+  buildLabels(S.level); updateView();
+}
+$("stOff").onclick=()=>setStaff(false); $("stOn").onclick=()=>setStaff(true);
 $("langHu").onclick=()=>{S.lang="hu";applyLang();};
 $("langEn").onclick=()=>{S.lang="en";applyLang();};
 $("thLight").onclick=()=>{S.theme="light";applyTheme(false);};
@@ -1594,8 +1625,9 @@ addEventListener("orientationchange",()=>setTimeout(()=>{setSnap(snap);fit();},2
 if("serviceWorker" in navigator)
   addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
 
-if(matchMedia("(prefers-reduced-motion: reduce)").matches) setMode(3);
-else setTimeout(()=>{ if(S.mode===2) setMode(3); }, 480);
+/* Alaprajzzal indulunk. Telefonon ez a nézet 76 fps az Épület 13-ával szemben,
+   és nagyításkor éles marad, mert nincs 3D kontextus — a teremkódokat itt lehet
+   elolvasni. Az Épület nézet gombbal továbbra is elérhető. */
 </script>
 
 </body>
