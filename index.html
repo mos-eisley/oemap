@@ -177,6 +177,16 @@ button{cursor:pointer;background:none;border:0}
 
 /* Útvonalválasztó: lépcső vagy lift. A kiválasztott az akcentszínt kapja. */
 .eyebrow.sub{margin:14px 0 7px}
+.eyebrow.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.shr{flex:none;width:30px;height:30px;margin:-7px -4px -7px 0;border-radius:9px;display:grid;
+  place-items:center;color:var(--muted);transition:background .16s,color .16s}
+.shr:hover{background:var(--sunk);color:var(--accent)}
+.toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,14px);z-index:60;
+  background:var(--ink);color:var(--bg);font-size:13px;padding:10px 16px;border-radius:99px;
+  box-shadow:var(--shadow-2);opacity:0;pointer-events:none;
+  transition:opacity .22s var(--ease),transform .22s var(--ease)}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+@media (max-width:900px){ .toast{bottom:calc(22px + env(safe-area-inset-bottom))} }
 .viasw{display:flex;gap:7px}
 .via{flex:1;display:flex;align-items:center;gap:10px;padding:10px 11px;text-align:left;
   border:1px solid var(--line);border-radius:var(--r);background:var(--panel);color:var(--ink);
@@ -572,6 +582,8 @@ const I18N={hu:{
   viaLabel:"Szintváltás", noLiftHere:"Ehhez az útvonalhoz nincs liftes alternatíva: a hallgatói lift az FL3 magban van, ami a tervlap szerint erről a szintről gyalog nem érhető el.",
   lift:"A hallgatók az épületben csak az FL3 lépcsőmagban lévő liftet használhatják, ezért az alternatív útvonal ezen keresztül vezet.",
   foot:"Az alaprajzokból gépi úton előállított adat. Tájékoztató jellegű.",
+  share:"Megosztás", shareCopied:"Link a vágólapra másolva",
+  shareRoute:"Útvonal · %s → %s", shareRoom:"%s · OA épület",
   stStudent:"Hallgatói", stAll:"Minden", stTitle:"Mely helyiségek látszanak",
   stHint:"Az irodák, raktárak és üzemeltetési terek halványan jelennek meg.",
   qwc:"Legközelebbi mosdó", qbufe:"Büfé", qentry:"Főbejárat · előtér",
@@ -600,6 +612,8 @@ const I18N={hu:{
   viaLabel:"Between levels", noLiftHere:"No lift alternative for this route: the student lift sits in the FL3 core, which the source plan leaves unreachable on foot from this level.",
   lift:"Students may only use the lift in the FL3 stair core, so the alternative route goes through it.",
   foot:"Data derived automatically from the architectural plans. For orientation only.",
+  share:"Share", shareCopied:"Link copied to clipboard",
+  shareRoute:"Route · %s → %s", shareRoom:"%s · OA building",
   stStudent:"Student", stAll:"All", stTitle:"Which rooms are shown",
   stHint:"Offices, stores and plant rooms are shown dimmed.",
   qwc:"Nearest toilet", qbufe:"Café", qentry:"Main entrance · lobby",
@@ -1301,9 +1315,15 @@ function renderPanel(){
     return;
   }
   let h="";
+  /* Ugyanaz a gomb a teremnél és az útvonalnál is: egy kiválasztott terem
+     önmagában is megosztható link („ez a terem"), nem csak a kész útvonal. */
+  const shrBtn=`<button class="shr" title="${t.share}" aria-label="${t.share}"><svg width="15" height="15"
+      viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+      <circle cx="12" cy="3.5" r="2"/><circle cx="4" cy="8" r="2"/><circle cx="12" cy="12.5" r="2"/>
+      <path d="M5.8 7 10.2 4.5M5.8 9l4.4 2.5"/></svg></button>`;
   if(S.sel){
     const r=ROOM[S.sel];
-    h+=`<div class="sec"><div class="eyebrow">${t.room}</div>
+    h+=`<div class="sec"><div class="eyebrow row">${t.room}${S.from||S.to?"":shrBtn}</div>
       <div class="rcard"><div class="top" style="--cat:${cc(r.cat)}">
         <div class="code mono">${esc(r.code)}</div>
         <div class="name">${esc(r.name||r.cat)}</div>
@@ -1314,7 +1334,7 @@ function renderPanel(){
         <button class="btn primary" id="bT">${t.setTo}</button></div></div></div>`;
   }
   if(S.from||S.to){
-    h+=`<div class="sec"><div class="eyebrow">${t.route}</div><div class="ends">
+    h+=`<div class="sec"><div class="eyebrow row">${t.route}${shrBtn}</div><div class="ends">
       ${epRow("from")}${epRow("to")}</div>`;
     if(S.from&&S.to&&!S.route) h+=`<p class="note">${t.none}</p>`;
     else if(S.route){
@@ -1373,6 +1393,7 @@ function renderPanel(){
   if(bF)bF.onclick=()=>{S.from=S.sel;recompute();};
   if(bT)bT.onclick=()=>{S.to=S.sel;recompute();};
   box.querySelectorAll("[data-via]").forEach(b=>b.onclick=()=>setVia(b.dataset.via));
+  box.querySelectorAll(".shr").forEach(b=>b.onclick=shareCurrent);
   box.querySelectorAll("[data-ep]").forEach(b=>b.onclick=e=>{
     if(e.target.dataset.clear){S[e.target.dataset.clear]=null;recompute();return;}
     const c=S[b.dataset.ep];if(c)select(c);});
@@ -1445,6 +1466,7 @@ function select(code){
   refreshSel(); renderPanel(); setSnap("mid");
   document.querySelectorAll(".res-item").forEach(b=>
     b.setAttribute("aria-selected",b.dataset.code===code));
+  pushUrl();
 }
 function applyVia(){
   S.route=S.routes[S.via]||S.routes.stairs;
@@ -1472,6 +1494,7 @@ function recompute(){
   if(S.mm&&!S.mm.segs.some(s=>s.lv===S.level)){S.level=S.mm.segs[0].lv;renderRail();}
   updateView();
   if(S.route){ setSnap("mid"); if(!S.dirty) fit(); }
+  pushUrl();
 }
 function applyLang(){
   const t=T();
@@ -1612,14 +1635,89 @@ document.addEventListener("click",e=>{
   if(o.classList.contains("open")&&!o.contains(e.target)&&e.target!==$("menuBtn")){
     o.classList.remove("open");$("menuBtn").setAttribute("aria-expanded","false");}});
 
+function toast(msg){
+  let el=$("toast");
+  if(!el){ el=document.createElement("div"); el.id="toast"; el.className="toast"; document.body.appendChild(el); }
+  el.textContent=msg; el.classList.add("on");
+  clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove("on"),2200);
+}
+async function shareCurrent(){
+  const t=T(), u=urlOf();
+  const url=location.origin+location.pathname+(u.startsWith("#")?u:"");
+  const nm=c=>{const r=ROOM[c];return r?(r.name||r.cat)+" · "+c:c;};
+  const title=(S.from&&S.to) ? t.shareRoute.replace("%s",nm(S.from)).replace("%s",nm(S.to))
+            : t.shareRoom.replace("%s",nm(S.sel||S.to||S.from));
+  try{ if(navigator.share){ await navigator.share({title,url}); return; } }
+  catch(e){ if(e&&e.name==="AbortError") return; }
+  try{ await navigator.clipboard.writeText(url); toast(t.shareCopied); }
+  catch(e){ prompt(t.share,url); }
+}
+
+/* --------------------------------------------------------------- mély link */
+/* Az állapot a címsorban él, így az útvonal megosztható, könyvjelzőzhető, és
+   a vissza gomb visszalép — telepített appban ez utóbbi nélkül a vissza
+   egyszerűen kilépne. Két alak van:
+     #OA10E18                       – egy terem kiválasztva
+     #from=OA00FK1&to=OA10E18       – útvonal; a from önmagában az „itt vagyok”,
+                                      erre mutatnak a folyosókra kerülő QR-kódok.  */
+let urlLock=false;                    // a visszaállítás ne írjon vissza a címsorba
+
+function urlOf(){
+  const q=[];
+  if(S.from) q.push("from="+S.from);
+  if(S.to)   q.push("to="+S.to);
+  if(S.sel && S.sel!==S.to && S.sel!==S.from) q.push("sel="+S.sel);
+  if(!q.length) return location.pathname+location.search;
+  if(q.length===1 && q[0].startsWith("sel=")) return "#"+S.sel;   // rövid alak
+  return "#"+q.join("&");
+}
+function pushUrl(replace){
+  if(urlLock) return;
+  const u=urlOf();
+  if(u===location.hash || (!location.hash && u===location.pathname+location.search)) return;
+  try{ history[replace?"replaceState":"pushState"]({},"",u); }catch(e){}
+}
+
+function readUrl(){
+  const h=decodeURIComponent(location.hash.replace(/^#/,"")).trim();
+  const out={from:null,to:null,sel:null};
+  if(!h) return out;
+  if(!h.includes("=")){ out.sel=h.toUpperCase(); return out; }   // #OA10E18
+  for(const part of h.split("&")){
+    const [k,v]=part.split("=");
+    if(v && ["from","to","sel"].includes(k)) out[k]=v.toUpperCase();
+  }
+  return out;
+}
+
+/* A címsorból visszaállított állapot. Ismeretlen kódot csendben elhagyunk —
+   egy elgépelt vagy régi link ne törje szét az appot. */
+function applyUrl(){
+  const u=readUrl();
+  const ok=c=>c && ROOM[c] ? c : null;
+  urlLock=true;
+  S.from=ok(u.from); S.to=ok(u.to); S.sel=ok(u.sel)||S.to||S.from;
+  recompute();
+  if(S.sel){ const r=ROOM[S.sel];
+    if(r && r.level!==S.level){ S.level=r.level; renderRail(); } }
+  refreshSel(); renderPanel(); updateView();
+  urlLock=false;
+  return !!(S.from||S.to||S.sel);
+}
+addEventListener("popstate",applyUrl);
+addEventListener("hashchange",()=>{ if(!urlLock) applyUrl(); });
+
 /* ------------------------------------------------------------------ start */
 applyTheme(true);
 buildFloors(); placeTags();
 S.level=0;
-S.from = ROOM["OA00FK1"] ? "OA00FK1" : D.rooms.find(r=>r.circ&&r.level===0).code;
-S.to   = ROOM["OA10E18"] ? "OA10E18" : null;
-S.sel  = S.to;
-applyLang(); fit(); recompute(); refreshSel(); syncFlat();
+/* Üresen indulunk: az érkezőnek ne egy általunk kitalált útvonal fogadja.
+   Ha a címsorban van állapot (megosztott link vagy falra ragasztott QR),
+   az dönt. */
+applyLang();
+urlLock=true; const fromUrl=applyUrl(); urlLock=false;
+if(!fromUrl){ recompute(); refreshSel(); }
+fit(); syncFlat();
 setSnap(MOB()?"peek":"full");
 addEventListener("orientationchange",()=>setTimeout(()=>{setSnap(snap);fit();},260));
 if("serviceWorker" in navigator)

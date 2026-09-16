@@ -15,7 +15,7 @@ fájl — nincs build lépés, nincs függőség, nincs csomagkezelő.
 | `manifest.webmanifest` | PWA leíró — telepíthetőség |
 | `sw.js` | Service worker — offline működés |
 | `data/` | Foglalható termek és foglaltságuk (generált) |
-| `tools/` | Az adatot előállító szkriptek |
+| `tools/` | Az adatot előállító szkriptek és a QR-ív generátora |
 | `.github/workflows/deploy-pages.yml` | Automatikus deploy GitHub Pages-re |
 | `.nojekyll` | Kikapcsolja a Jekyll feldolgozást |
 
@@ -60,6 +60,38 @@ működik.
 
 Frissítés: a dokumentumot hálózat-először kéri le, így egy új deploy a következő
 indításnál azonnal megérkezik; offline a gyorsítótárazott példány jön.
+
+## Megosztható link
+
+Az állapot a címsorban él, így az útvonal megosztható, könyvjelzőzhető, és a
+vissza gomb visszalép benne — telepített appban e nélkül a vissza egyszerűen
+kilépne:
+
+| link | mit jelent |
+| --- | --- |
+| `#OA10E18` | ez a terem ki van választva |
+| `#from=OA00FK1` | „itt vagyok" — az indulás megvan, a célt a hallgató adja meg |
+| `#from=OA00FK1&to=OA10E18` | kész útvonal |
+
+Ismeretlen kódot a link csendben elhagy: az app elindul, csak épp kiválasztás
+nélkül. A panelben a megosztás gomb a pillanatnyi állapot linkjét adja —
+`navigator.share`-rel, ahol van, különben vágólapra.
+
+## „Itt vagyok" QR-kódok
+
+Beltérben a GPS nem ad emelet- vagy teremszintű pontosságot, ezért a „hol
+vagyok?" kérdésre a hallgatónak kellene válaszolnia. Egy falra ragasztott QR
+ezt leveszi róla: a kód a `#from=<terem>` linkre mutat, így az app már tudja,
+honnan indul. Se engedélykérés, se hálózat — a telepített PWA offline is
+elindul.
+
+```
+python3 tools/make-qr.py https://mayydayy99.github.io/oemap/ qr.html
+```
+
+Nyomtatható A4-es ív lesz belőle, szintenként csoportosítva: 41 kód a
+közlekedőkre, előterekbe és közösségi terekre. Egy-egy szintre szűkíthető a
+szintszámok megadásával (`... qr.html 0 1`).
 
 ## Foglalható termek
 
