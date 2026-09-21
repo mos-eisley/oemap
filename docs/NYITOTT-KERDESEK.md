@@ -1,0 +1,145 @@
+# Nyitott kérdések
+
+Négy dolog vár külső információra. Kettő valódi funkcióhiányt okoz, kettő
+üzemeltetési. Mindegyiknél ott van, hogy **mi hiányzik**, **kitől**, és
+**mit kell majd csinálni**, ha megjön.
+
+A számok a `main` aktuális állapotából származnak, nem emlékezetből — a
+végén megtalálod, hogyan futtathatod újra őket.
+
+---
+
+## 1. A Neptun-teremszámok hiánya — a foglalható termek nincsenek a térképen
+
+**Mi a baj.** Két, egymástól független teremszámozás van, és nincs köztük
+megfeleltetés:
+
+| | honnan | példa |
+| --- | --- | --- |
+| hivatalos, foglalható teremnév | `ingatlan.uni-obuda.hu`, Neptun | `F01`, `F05`, `Audmax` |
+| tervlapi (üzemeltetési) kód | az épület alaprajza | `OA00F01`, `OA10E18` |
+
+A névazonosság csapda, nem segítség: a hivatalos **F01 268 férőhelyes**, míg a
+tervlap **OA00F01-e 95,7 m²** — nem ugyanaz a helyiség. Az `F05`, `F06` és
+`F08` tervlapi névrokona pedig raktár, mosdó és takarítószeres kamra.
+
+**Következmény.** A foglalható termek panelje működik, de a termek **nem
+jelölhetők a térképen**, és útvonalat sem lehet hozzájuk tervezni. Az
+`„audmax"` keresés **0 találatot** ad (ahogy az `„AM"` is).
+
+**Kitől kell.** A megrendelőtől ígéret van rá: „Neptun/órarend szerinti
+teremszám: nemsokára megadom".
+
+**Mit kell csinálni, ha megjön.**
+1. A megfeleltetést tedd a `tools/build-termek.py` `ALIAS` táblájába (most
+   csak `{"AM": "AUDMAX"}` van benne).
+2. Vedd fel a `code` mezőt a `data/termek.json` soraiba.
+3. A keresésbe kerüljön be a hivatalos név aliasként, hogy az `„audmax"`
+   találjon.
+4. A foglalható termek panelján a sor legyen kattintható → ugorjon a térképre.
+5. A `tests/termek.js`-be jöjjön egy eset: a hivatalos névre keresve a
+   megfelelő tervlapi kód jön vissza.
+
+---
+
+## 2. Hiányzó ajtók a járásrácson — 10 helyiség elérhetetlen
+
+**Mi a baj.** A járásrács a falgeometriából épül. Ahol a tervlapon nincs
+bejelölve ajtó, ott a rács szerint nincs átjárás, és a Dijkstra nem talál utat.
+A fő bejárattól (`OA00FK1`) **182 kódolt helyiségből 10-hez nem vezet út**, se
+lépcsőn, se lifttel:
+
+| kód | helyiség | szint | méret | hallgatót érint? |
+| --- | --- | --- | --- | --- |
+| `OA00F14` | ELŐADÓ | Földszint | 57,5 m² | **igen** |
+| `OA20E03` | LABOR | II. emelet | 108,6 m² | **igen** |
+| `OA20E04` | LABOR | II. emelet | 63,8 m² | **igen** |
+| `OA10E03` | KÖZÖSSÉGI TÉR | I. emelet | 22,8 m² | **igen** |
+| `OA01FL4` | KÖZLEKEDŐ | Félemelet | 18,8 m² | igen (átjáró) |
+| `OA01FL5` | KÖZLEKEDŐ | Félemelet | 18,8 m² | igen (átjáró) |
+| `OA10E04` | IRODA | I. emelet | 14,5 m² | nem |
+| `OA10E05` | IRODA | I. emelet | 15,8 m² | nem |
+| `OA10E07` | IRODA | I. emelet | 17,0 m² | nem |
+| `OA01F02` | SZERVER SZOBA | Félemelet | 19,5 m² | nem |
+
+Egy 108 m²-es labor és egy 57 m²-es előadó nem apróság — ezekre a hallgató
+rákeres, és nem kap útvonalat.
+
+**Kitől kell.** Valakitől, aki ismeri az épületet: hol van tényleges ajtó a
+felsorolt helyiségek és a szomszédos közlekedők között. Egy bejárás elég.
+
+**Mit kell csinálni, ha megjön.** A `D.walls` megfelelő szakaszába kell ajtónyílás
+(vagy a maszkba átjárás). Utána a lenti ellenőrzőnek 0-t kell adnia.
+
+---
+
+## 3. A földszinti hallgatói lift gyalog nem érhető el
+
+**Mi a baj.** A hallgatók csak az **FL3 magban** lévő liftet használhatják. A
+tervlap a liftet nem jelöli külön helyiségként (`D.lifts` üres), ezért az
+`index.html` az FL3 lépcsőmag pontjain veszi fel. A földszinten viszont ez a
+pont a rács szerint nem érhető el gyalog, így **a földszintről nincs liftes
+alternatíva** — az app korrektül meg is írja ezt, ahelyett hogy hamis
+útvonalat adna.
+
+Ez valószínűleg ugyanannak a hiányzó ajtónak a következménye, mint a 2. pont,
+úgyhogy a kettő együtt megoldható.
+
+**Mit kell csinálni.** Ha a tervlap megkapja a liftet, az `index.html`-ben a
+kézi `LIFTS` lista elhagyható — a kód már úgy van megírva, hogy `D.lifts`-et
+használja, amint az nem üres.
+
+---
+
+## 4. Az órarendi adat lejárt, és nincs gazdája a frissítésnek
+
+**Mi a baj.** A `data/termek.json` a **2026-08-31 … 2026-09-11** hétre szól.
+Ezen kívüli napra az app „nincs adat"-ot ír — ami helyes viselkedés (soha nem
+állít hamisan szabad termet), de a panel gyakorlatilag üres.
+
+**Kitől kell.** Rendszeresen érkező `terem.xlsx`, és valaki, aki lefuttatja a
+pipeline-t. Ez heti egy parancs:
+
+```
+python3 tools/parse-timetable.py terem.xlsx /tmp/tt.json
+python3 tools/build-termek.py data/rooms.json /tmp/tt.json data/termek.json <kezdődátum>
+```
+
+**Érdemes lenne** GitHub Actions ütemezett futtatásra tenni, ha a tábla
+elérhető gépi úton. Amíg nem az, marad a kézi frissítés.
+
+---
+
+## Ami nem külső információra vár — ezeket bármikor meg lehet csinálni
+
+**Akadálymentesség.** Jelenleg: **0 `aria-live`**, **0 `tabindex`**, a térképnek
+nincs `role`-ja, és a 182 kattintható helyiség `<polygon>` elem, nem gomb — azaz
+billentyűzettel nem elérhető, képernyőolvasóval nem bejárható. A keresés és a
+panel használható, a térkép nem. Ez a legnagyobb megmaradt hiányosság, és
+egyedül is elvégezhető.
+
+**Épületválasztó.** A meetingen eldőlt, hogy GPS-alapú épületválasztó kell —
+de csak akkor, ha lesz több épület. Addig nincs mit választani. A beltéri
+„hol vagyok?" kérdést a QR-kódok már megoldják.
+
+---
+
+## Az itteni számok újraellenőrzése
+
+Ez a fájl elavulhat. A benne szereplő állítások így futtathatók újra:
+
+```js
+// node -e "..." vagy egy tests/-beli fájlba másolva:
+//   elérhetetlen helyiségek a fő bejárattól
+const start = ROOM["OA00FK1"];
+D.rooms.filter(r => r.code &&
+  !findRoute(start, r, PORTAL) && !findRoute(start, r, PORTAL_LIFT))
+  .map(r => `${r.code} ${r.name||r.cat} ${r.area}m²`);
+
+//   keres-e az "audmax"
+search("audmax").length;            // most: 0
+
+//   akadálymentességi számlálók
+document.querySelectorAll("[aria-live]").length;   // most: 0
+document.querySelectorAll("[tabindex]").length;    // most: 0
+```

@@ -16,6 +16,9 @@ fájl — nincs build lépés, nincs függőség, nincs csomagkezelő.
 | `sw.js` | Service worker — offline működés |
 | `data/` | Foglalható termek és foglaltságuk (generált) |
 | `tools/` | Az adatot előállító szkriptek és a QR-ív generátora |
+| `tests/` | Böngészős regressziós tesztek (`npm test`) |
+| `CLAUDE.md` | Fejlesztői jegyzet — ezt olvasd, mielőtt hozzányúlsz |
+| `docs/` | Nyitott kérdések, amik külső információra várnak |
 | `.github/workflows/deploy-pages.yml` | Automatikus deploy GitHub Pages-re |
 | `.nojekyll` | Kikapcsolja a Jekyll feldolgozást |
 
@@ -122,6 +125,7 @@ a fenti három parancs újrafuttatandó.
 teremnevei; a tervlap más (üzemeltetési) számozást használ, és a kettő
 összerendelése még nincs meg. Például a hivatalos `F01` 268 fős, míg a tervlap
 `OA00F01`-e 95,7 m². Ezért a foglalható termek nem jelennek meg a térképen.
+Részletek és a teendők: [docs/NYITOTT-KERDESEK.md](docs/NYITOTT-KERDESEK.md).
 
 ## Arculat
 
@@ -181,6 +185,21 @@ Vagy egy helyi szerverrel:
 python3 -m http.server 8000
 # majd http://localhost:8000
 ```
+
+## Tesztek
+
+```
+npm install     # playwright
+npm test        # mind a 9 tesztfájl
+```
+
+A tesztek maguk indítanak szervert és böngészőt szabad porton, így nem kell
+előre semmit elindítani. Egy-egy fájl külön is futtatható:
+`node tests/run.js url share`.
+
+Mit őriznek, és miért pont azt, arról a [CLAUDE.md](CLAUDE.md) ír. A rövid
+verzió: mindegyik teszt egy valódi, egyszer már bejelentett hibát tart távol —
+a befagyó térképet, az elérhetetlen panelaljat, a hamisan „szabad" termet.
 
 ## Frissítés
 
