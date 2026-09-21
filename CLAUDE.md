@@ -42,7 +42,7 @@ honnan/hova, útvonal, forgatás, panelállás). Aki ezt megérti, érti az appo
 
 ```
 npm install          # playwright (a böngésző a képen már megvan)
-npm test             # mind a 9 tesztfájl
+npm test             # mind a 10 tesztfájl
 node tests/run.js url share     # csak egy-kettő
 ```
 
@@ -62,6 +62,7 @@ hagytak egy hibás kódot.
 | `tests/staff.js` | hallgatói/minden szűrő |
 | `tests/termek.js` | foglalható termek, és a lejárt adat kezelése |
 | `tests/pwa.js` | manifest, service worker, **offline indulás** |
+| `tests/a11y.js` | billentyűzetes bejárás, felolvasónak szóló jelölés |
 
 ## Amit érdemes tudni, mielőtt hozzányúlsz
 
@@ -90,6 +91,17 @@ volna. Ezt a `tests/termek.js` kötelezővé teszi.
 hibátlanul KINÉZŐ, de olvashatatlan ívet (hiányzó csendzóna; rossz viewBox;
 majd egy regex, ami az `id="qr-path"`-ra futott rá a rajz helyett).
 `python3 tools/verify-qr.py <ív> <base-url>` — ez mindhármat megfogta volna.
+
+**A térkép egyetlen tab-állomás.** A helyiségek `role="button"`-ok, de
+`tabindex="-1"`-gyel: fókuszt csak a nyilaktól kapnak (roving tabindex). Ha
+bármelyik `tabindex="0"`-t kapna, a billentyűzetes felhasználónak 182-szer
+kellene tabbolnia, hogy a térképen túljusson. A `tests/a11y.js` ezt számolja.
+
+**A fókusz nem maradhat `aria-hidden` ágon.** Csak az aktív szint látszik a
+felolvasónak; az `updateView()` ezért mielőtt elrejtene egy szintet,
+megnézi, benne áll-e a fókusz, és kihozza a térképre. Aki a szintváltáshoz
+nyúl, ezt vigye tovább — enélkül a felolvasó némán áll egy olyan elemen,
+amiről a felhasználó semmit nem tud meg.
 
 **Ismétlődő teremkód.** A tervlapon az `OA00FK2` kétszer szerepel (ELŐTÉR és
 AULA). Az app `ROOM` táblája `Object.fromEntries`-szel épül, ott az UTOLSÓ nyer;

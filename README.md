@@ -53,6 +53,31 @@ Az alsó lapot a fejléc bármely pontjáról lehet húzni, és a lista tetejér
 is. Az elengedés sebessége számít: egy határozott pöccintés a mozgás irányában
 lép a következő állásra.
 
+### Billentyűzettel
+
+A térkép **egy** tab-állomás — nem 182 —, és onnan a nyilak viszik tovább:
+
+| billentyű | mit csinál |
+| --- | --- |
+| Tab | a térképre lép (a fejléc, a kereső és a gyorsgombok után) |
+| nyilak | a szomszédos helyiségre lép abban az irányban |
+| Enter / szóköz | kiválasztja a fókuszált helyiséget |
+| Home / End | a szint első, illetve utolsó helyisége |
+| Page Up / Page Down | szintet vált |
+| Esc | vissza a térképre, majd törli a kiválasztást |
+| `/` | a keresőmezőbe ugrik |
+
+A helyiségek gombok, a nevük a teremkód és a funkció, a kiválasztott terem
+`aria-pressed`-et kap. A kiválasztás, az útvonal eredménye és a szintváltás
+élő régióban is elhangzik, így képernyőolvasóval is követhető. A felolvasó az
+aktív szintet látja: a födém, a falak, a feliratok és az útvonalrajz
+`aria-hidden`, mert ugyanazt mondanák el, amit a panel szövegesen.
+
+A nyilas bejárás azokat a helyiségeket járja be, amelyek látszanak is —
+hallgatói nézetben a hallgatóiakat. A halványított termek kereséssel és
+megosztott linkkel ugyanúgy elérhetők, a fejléc kapcsolója pedig egy tabbal
+odébb van.
+
 ## Telepítés a kezdőképernyőre
 
 Az oldal telepíthető webalkalmazás. Androidon a böngésző menüjében „Alkalmazás
@@ -190,7 +215,7 @@ python3 -m http.server 8000
 
 ```
 npm install     # playwright
-npm test        # mind a 9 tesztfájl
+npm test        # mind a 10 tesztfájl
 ```
 
 A tesztek maguk indítanak szervert és böngészőt szabad porton, így nem kell
