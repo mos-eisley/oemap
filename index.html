@@ -98,6 +98,11 @@ body{margin:0;background:var(--bg);color:var(--ink);
 button,input{font:inherit;color:inherit}
 button{cursor:pointer;background:none;border:0}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+/* Csak képernyőolvasónak: a látható elrendezésből kikerül, de a fókusz és a
+   felolvasás eléri. display:none vagy visibility:hidden nem jó — azokat a
+   képernyőolvasó is kihagyná. */
+.sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;
+  clip-path:inset(50%);white-space:nowrap;border:0}
 .mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
 .cond{font-family:"Metropolis","Open Sans",system-ui,sans-serif}
 
@@ -133,7 +138,9 @@ button{cursor:pointer;background:none;border:0}
 
 .res-item{display:flex;align-items:center;gap:11px;padding:9px 14px;width:100%;text-align:left;
   border-bottom:1px solid var(--line);transition:background .15s}
-.res-item:hover,.res-item[aria-selected="true"]{background:var(--panel)}
+/* aria-current, nem aria-selected: az utóbbi listboxban/fülön értelmes, egy
+   sima gombon a felolvasó figyelmen kívül hagyja. */
+.res-item:hover,.res-item[aria-current="true"]{background:var(--panel)}
 .dotc{width:8px;height:8px;border-radius:50%;flex:none;box-shadow:0 0 0 3px color-mix(in srgb,currentColor 18%,transparent)}
 .res-main{min-width:0;flex:1}
 .res-code{font-size:12px;font-weight:600;letter-spacing:.01em}
@@ -304,6 +311,16 @@ button{cursor:pointer;background:none;border:0}
 .m3 .hit{pointer-events:fill}
 .room.pick{cursor:pointer}
 .room.pick:hover{opacity:.72}
+/* A billentyűzetes kurzor. SVG-n az outline böngészőnként máshol és máshogy
+   jelenik meg (a bounding boxra, nem az alakzatra), ezért a fókuszt szaggatott
+   kontúrral rajzoljuk — az a poligon valódi formáját követi. Szaggatott, hogy
+   a folytonos kontúrú kiválasztástól (.sel) ránézésre is elváljon: a kettő
+   egyszerre is fennáll, amikor a fókuszált termet ki is választod. */
+.room:focus{outline:none}
+.room:focus-visible{stroke:var(--accent);stroke-width:.55;stroke-dasharray:.85 .5;
+  stroke-linejoin:round}
+/* A térkép maga egyetlen tab-állomás; a termek közt a nyilak léptetnek. */
+.stage:focus-visible{outline:2px solid var(--accent);outline-offset:-4px;border-radius:0}
 /* Nem hallgatói helyiségek: semleges kitöltés, halványan. A .showstaff a
    fejléc kapcsolójától kerül fel, olyankor visszakapja a kategóriaszínét. */
 .room.staff{fill:var(--sunk);opacity:.62}
@@ -531,7 +548,16 @@ button{cursor:pointer;background:none;border:0}
   </aside>
 
   <div class="map-wrap" id="mapwrap">
-    <div class="stage" id="stage"><div class="world" id="world"></div></div>
+    <!-- A térkép EGY tab-állomás, nem 182. Odaérve a nyilak léptetnek a
+         helyiségek közt, Enter választ — a roving tabindex mintája. Ha minden
+         poligon külön tab-állomás lenne, a billentyűzetes felhasználónak
+         182-szer kellene tabbolnia, hogy a térképen túljusson. -->
+    <div class="stage" id="stage" tabindex="0" role="group"
+         aria-describedby="mapHint"><div class="world" id="world"></div></div>
+    <p id="mapHint" class="sr-only"></p>
+    <!-- A kiválasztás, az útvonal és a szintváltás vizuális visszajelzés; élő
+         régió nélkül a képernyőolvasó egyikről sem tudna. -->
+    <p id="live" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
 
     <div class="hud">
       <div class="plate fname" id="fname"></div>
@@ -547,8 +573,8 @@ button{cursor:pointer;background:none;border:0}
       </div>
     </div>
 
-    <div class="rail" id="rail"></div>
-    <div class="tools">
+    <div class="rail" id="rail" role="group"></div>
+    <div class="tools" role="group" id="tools">
       <button id="zin" title="Nagyítás">+</button>
       <button id="zout" title="Kicsinyítés">−</button>
       <button id="zfit" title="Illesztés">⤢</button>
@@ -595,7 +621,15 @@ const I18N={hu:{
   tmRange:"Az adat %s és %s között érvényes.",
   kEloadas:"előadás", kVizsga:"vizsga / ZH", kLevelezos:"levelezős előadás",
   kTavos:"távoktatás", kFoglalas:"teremfoglalás", kEgyeb:"foglalt",
-  qsub:"innen: %s", qsub0:"a földszinti előtértől", legend2:"Funkció szerinti színek"
+  qsub:"innen: %s", qsub0:"a földszinti előtértől", legend2:"Funkció szerinti színek",
+  mapLabel:"Alaprajz — %s", mapLabel3:"Épület, 3D nézet — %s",
+  mapHint:"Nyílbillentyűkkel léptethetsz a helyiségek közt, Enterrel kiválasztod. A Page Up és Page Down szintet vált.",
+  aLevel:"%s. Ezen a szinten %s helyiség van.",
+  aSel:"%s kiválasztva, %s.", aClear:"A kiválasztás törölve.",
+  aRoute:"Útvonal kiszámolva: %s méter, %s perc, %s szintváltás.",
+  aNoRoute:"Erre a két helyiségre nincs összefüggő útvonal.",
+  aMode:"%s nézet.", aStaff:"%s helyiség látszik.", aEdge:"Nincs több helyiség ebben az irányban.",
+  zin:"Nagyítás", zout:"Kicsinyítés", zfit:"Képre igazítás", railLabel:"Szint", toolsLabel:"Nagyítás"
 },en:{
   sub:"Faculty of Informatics · Bécsi út 96/b, Budapest",
   ph:"Room, code or function…", plan:"Floor plan", bld:"Building", legend:"Legend",
@@ -625,7 +659,15 @@ const I18N={hu:{
   tmRange:"Data covers %s to %s.",
   kEloadas:"lecture", kVizsga:"exam", kLevelezos:"correspondence lecture",
   kTavos:"remote teaching", kFoglalas:"room booking", kEgyeb:"booked",
-  qsub:"from %s", qsub0:"from the ground-floor lobby", legend2:"Function colours"
+  qsub:"from %s", qsub0:"from the ground-floor lobby", legend2:"Function colours",
+  mapLabel:"Floor plan — %s", mapLabel3:"Building, 3D view — %s",
+  mapHint:"Use the arrow keys to move between rooms and Enter to select. Page Up and Page Down change level.",
+  aLevel:"%s. This level has %s rooms.",
+  aSel:"%s selected, %s.", aClear:"Selection cleared.",
+  aRoute:"Route found: %s metres, %s minutes, %s level changes.",
+  aNoRoute:"No connected route between these two rooms.",
+  aMode:"%s view.", aStaff:"Showing %s rooms.", aEdge:"No further room in that direction.",
+  zin:"Zoom in", zout:"Zoom out", zfit:"Fit to view", railLabel:"Level", toolsLabel:"Zoom"
 }};
 /* Az izometrikus nézet szögei: rot.z a függőleges tengely körüli forgatás
    (ezt húzza az ujj vízszintesen), rot.x a dőlés. Eddig három helyen voltak
@@ -864,7 +906,7 @@ function cc(cat){
 /* ------------------------------------------------------------------ render */
 const NS="http://www.w3.org/2000/svg";
 const el=(n,a={})=>{const x=document.createElementNS(NS,n);for(const k in a)x.setAttribute(k,a[k]);return x;};
-const world=$("world"), app=$("app");
+const world=$("world"), app=$("app"), stage=$("stage");
 const FLOOR={};
 
 function buildFloors(){
@@ -890,12 +932,19 @@ function buildFloors(){
     // keletkező sötétebb foltokat is megszünteti.
     const slabD = rs.map(r=>"M"+r.poly.map(p=>p.join(" ")).join("L")+"Z").join("");
 
-    // 1. födém-sziluett (helyiségek + falak összeolvasztva) + vetett árnyék
-    svg.appendChild(el("path",{class:"slabsh",transform:"translate(0.7 2)",d:slabD||"M0 0"}));
-    svg.appendChild(el("path",{class:"slab",d:(slabD+wallPath)||"M0 0"}));
+    // A képernyőolvasó számára a szintből egyetlen dolog érdekes: a helyiségek.
+    // A födém, az árnyék, a falak, a feliratok és az útvonalrajz mind ugyanazt
+    // mondják el vizuálisan, amit a panel és az élő régió szövegesen — névtelen
+    // grafikus csomópontként viszont csak zajt adnának, ezért aria-hidden.
+    f.setAttribute("role","group");
+    f.setAttribute("aria-label",L.name);
 
-    // 2. kattintófelület (3D módban)
-    const hit=el("path",{class:"hit",fill:"transparent",d:(slabD+wallPath)||"M0 0"});
+    // 1. födém-sziluett (helyiségek + falak összeolvasztva) + vetett árnyék
+    svg.appendChild(el("path",{class:"slabsh",transform:"translate(0.7 2)",d:slabD||"M0 0","aria-hidden":"true"}));
+    svg.appendChild(el("path",{class:"slab",d:(slabD+wallPath)||"M0 0","aria-hidden":"true"}));
+
+    // 2. kattintófelület (3D módban) — billentyűzettel a szintváltó sáv felel meg neki
+    const hit=el("path",{class:"hit",fill:"transparent",d:(slabD+wallPath)||"M0 0","aria-hidden":"true"});
     hit.addEventListener("click",e=>{e.stopPropagation();dive(L.level);});
     svg.appendChild(hit);
 
@@ -907,21 +956,33 @@ function buildFloors(){
       if(STAFF.has(r.cat)) po.style.setProperty("--cat",cc(r.cat));
       if(r.code){
         po.addEventListener("click",e=>{e.stopPropagation();select(r.code);});
-        const ti=el("title");ti.textContent=r.code+" · "+(r.name||r.cat);po.appendChild(ti);
+        const nm=r.code+" · "+(r.name||r.cat);
+        const ti=el("title");ti.textContent=nm;po.appendChild(ti);
+        // A <title> egérre buboréknév, de a hozzáférhető nevet nem bízzuk rá:
+        // a gombszerepnél az aria-label a kiszámítási sor elején áll, tehát
+        // biztosan az jut el a felolvasóig. tabindex=-1: a poligon csak a
+        // nyilakkal kap fókuszt, a tab-sorrendben nincs benne.
+        po.setAttribute("role","button");
+        po.setAttribute("aria-label",nm);
+        po.setAttribute("tabindex","-1");
+        po.dataset.code=r.code;
+      } else {
+        po.setAttribute("aria-hidden","true");   // kód nélküli helyiség: nem választható
       }
       gr.appendChild(po);
     }
     svg.appendChild(gr);
-    const wallNode=el("path",{d:wallPath||"M0 0",class:"walls","fill-rule":"evenodd"});
+    const wallNode=el("path",{d:wallPath||"M0 0",class:"walls","fill-rule":"evenodd","aria-hidden":"true"});
     svg.appendChild(wallNode);
 
     // 4. feliratok (lustán, csak amikor a szint aktív lesz)
-    const gl=el("g",{class:"glabel"});
+    const gl=el("g",{class:"glabel","aria-hidden":"true"});
     svg.appendChild(gl);
-    const rt=el("g",{class:"rt"}); svg.appendChild(rt);
+    const rt=el("g",{class:"rt","aria-hidden":"true"}); svg.appendChild(rt);
     f.appendChild(svg);
     const tag=document.createElement("div");
     tag.className="ftag";
+    tag.setAttribute("aria-hidden","true");
     tag.innerHTML=`${esc(L.name)}<em>${rs.length}</em>`;
     f.appendChild(tag);
     world.appendChild(f);
@@ -994,6 +1055,12 @@ function updateView(){
       if(S.mode!==3 && lv!==S.level) F.box.style.visibility="hidden";
     },600);
     F.box.style.zIndex = 100+F.idx;
+    // Csak az aktív szint helyiségei látszanak a képernyőolvasónak: hét szint
+    // mind a 183 helyisége egyszerre bejárhatatlan lenne, és a nem aktív
+    // szintek amúgy sem kattinthatók. aria-hidden nem tartalmazhatja a fókuszt,
+    // ezért ha ott áll, előbb kihozzuk a térkép szintjére.
+    if(!on && F.box.contains(document.activeElement)) stage.focus();
+    F.box.setAttribute("aria-hidden",on?"false":"true");
     if(on && S.mode===2) buildLabels(lv);
     F.labels.style.opacity = S.mode===3 ? 0 : 1;
   }
@@ -1092,11 +1159,14 @@ function setMode(m){
   S.mode=m;
   app.classList.toggle("m3",m===3); app.classList.toggle("m2",m===2);
   $("m2").setAttribute("aria-pressed",m===2); $("m3").setAttribute("aria-pressed",m===3);
+  applyMapLabel();
   fit(); syncFlat();
 }
 function dive(lv){
   S.level=lv; renderRail();
   if(S.mode===3) setMode(2); else updateView();
+  // A födémre kattintás szintet vált — a nézetváltás mellett ez a lényegi hír.
+  sayLevel();
 }
 (function(){
   const stage=$("stage");
@@ -1305,7 +1375,7 @@ function renderPanel(){
   if(q){
     const list=search(q);
     box.innerHTML=list.length?list.map(r=>`
-      <button class="res-item" data-code="${esc(r.code)}" aria-selected="${S.sel===r.code}">
+      <button class="res-item" data-code="${esc(r.code)}" aria-current="${S.sel===r.code}">
         <span class="dotc" style="background:${cc(r.cat)};color:${cc(r.cat)}"></span>
         <span class="res-main"><span class="res-code mono">${esc(r.code)}</span>
         <span class="res-name">${esc(r.name||r.cat)}</span></span>
@@ -1399,7 +1469,7 @@ function renderPanel(){
     const c=S[b.dataset.ep];if(c)select(c);});
   box.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{
     const x=window.__steps[+b.dataset.s];
-    if(x.lv!==S.level){S.level=x.lv;renderRail();updateView();}});
+    setLevel(x.lv);});
 }
 function quick(key){
   if(key==="@ROOMS"){ S.view0=S.tmOpen=null; S.termek=true;
@@ -1435,8 +1505,8 @@ function renderRail(){
     const on=S.mm&&S.mm.segs.some(s=>s.lv===l.level);
     return `<button class="lv" data-l="${l.level}" aria-pressed="${S.level===l.level}"
       title="${esc(l.name)}">${esc(l.short)}${on?'<span class="pip"></span>':""}</button>`;}).join("");
-  rail.querySelectorAll("[data-l]").forEach(b=>b.onclick=()=>{
-    S.level=+b.dataset.l;renderRail();updateView();});
+  rail.querySelectorAll("[data-l]").forEach(b=>b.onclick=()=>setLevel(+b.dataset.l));
+  applyMapLabel();
   const L=lvOf(S.level);
   $("fname").innerHTML=`<b class="cond">${esc(L.name)}</b>
     <span>${esc(D.meta.building)} · ${D.rooms.filter(r=>r.level===S.level).length} helyiség</span>`;
@@ -1448,24 +1518,33 @@ function renderLegend(){
     `<div><i style="background:${cc(n)}"></i>${esc(n.toLowerCase())}</div>`).join("")}</div>
     <div class="src">${esc(D.meta.source)}</div>`;
 }
+/* A poligon a szintjén belüli sorrendben épült, ugyanabból a listából. */
+function roomNode(r){
+  const F=FLOOR[r.level]; if(!F) return null;
+  return F.rooms.children[D.rooms.filter(x=>x.level===r.level).indexOf(r)]||null;
+}
 function refreshSel(){
   for(const lv of LV){
-    FLOOR[lv].rooms.querySelectorAll(".room").forEach(p=>p.classList.remove("sel"));
+    FLOOR[lv].rooms.querySelectorAll(".room").forEach(p=>{
+      p.classList.remove("sel"); p.removeAttribute("aria-pressed");
+    });
   }
   if(!S.sel)return;
-  const r=ROOM[S.sel];
-  const rs=D.rooms.filter(x=>x.level===r.level);
-  const i=rs.indexOf(r);
-  const node=FLOOR[r.level].rooms.children[i];
-  if(node)node.classList.add("sel");
+  const node=roomNode(ROOM[S.sel]);
+  // aria-pressed: a gombszerepű poligonnál ez mondja meg a felolvasónak, hogy
+  // ez a terem épp ki van választva — a kontúr csak a szemnek szól.
+  if(node){node.classList.add("sel"); node.setAttribute("aria-pressed","true");}
 }
 function select(code){
   const r=ROOM[code];if(!r)return;
-  S.sel=code; $("q").value="";
+  // A billentyűzetes kurzor minden kiválasztást követ — egérrel, keresőből vagy
+  // linkről is —, így a nyilas bejárás onnan folytatódik, ahol a szem tart.
+  S.sel=cursor=code; $("q").value="";
   if(r.level!==S.level){S.level=r.level;renderRail();updateView();}
   refreshSel(); renderPanel(); setSnap("mid");
   document.querySelectorAll(".res-item").forEach(b=>
-    b.setAttribute("aria-selected",b.dataset.code===code));
+    b.setAttribute("aria-current",b.dataset.code===code));
+  say(T().aSel.replace("%s",code+" · "+(r.name||r.cat)).replace("%s",lvName(r.level)));
   pushUrl();
 }
 function applyVia(){
@@ -1494,6 +1573,13 @@ function recompute(){
   if(S.mm&&!S.mm.segs.some(s=>s.lv===S.level)){S.level=S.mm.segs[0].lv;renderRail();}
   updateView();
   if(S.route){ setSnap("mid"); if(!S.dirty) fit(); }
+  // Az útvonal a térképen rajzolódik ki, a számai a panelben — a felolvasónak
+  // egyik sem szól magától, ezért az eredményt bemondjuk.
+  if(pair){
+    const t=T();
+    say(S.mm ? t.aRoute.replace("%s",S.mm.dist).replace("%s",S.mm.min).replace("%s",S.mm.vert)
+             : t.aNoRoute);
+  }
   pushUrl();
 }
 function applyLang(){
@@ -1527,8 +1613,10 @@ $("q").addEventListener("keydown",e=>{
   const f=search(e.target.value)[0];if(f){e.preventDefault();$("q").value="";select(f.code);}});
 addEventListener("keydown",e=>{
   if(e.key==="/"&&document.activeElement!==$("q")){e.preventDefault();$("q").focus();}
-  if(e.key==="Escape"){if(S.leg)toggleLeg(false);else if(S.sel){S.sel=null;refreshSel();renderPanel();}}});
-$("m2").onclick=()=>setMode(2); $("m3").onclick=()=>setMode(3);
+  if(e.key==="Escape"){if(S.leg)toggleLeg(false);
+    else if(S.sel){S.sel=null;refreshSel();renderPanel();say(T().aClear);}}});
+$("m2").onclick=()=>{setMode(2);say(T().aMode.replace("%s",T().plan));};
+$("m3").onclick=()=>{setMode(3);say(T().aMode.replace("%s",T().bld));};
 function setStaff(v){
   S.staff=v;
   app.classList.toggle("showstaff",v);
@@ -1536,6 +1624,9 @@ function setStaff(v){
   // a feliratok lustán épülnek, újra kell kérni őket
   for(const lv of LV){ const F=FLOOR[lv]; F.built=false; F.labels.textContent=""; }
   buildLabels(S.level); updateView();
+  // A szűrő a nyilas bejárást is szűkíti, ezért a darabszám a hír benne.
+  say(T().aStaff.replace("%s",navRooms(S.level).length+" / "+
+      D.rooms.filter(r=>r.level===S.level&&r.code).length));
 }
 $("stOff").onclick=()=>setStaff(false); $("stOn").onclick=()=>setStaff(true);
 $("langHu").onclick=()=>{S.lang="hu";applyLang();};
@@ -1547,6 +1638,139 @@ function toggleLeg(v){S.leg=v===undefined?!S.leg:v;$("legPop").classList.toggle(
 $("legBtn").onclick=e=>{e.stopPropagation();toggleLeg();};
 document.addEventListener("click",e=>{if(S.leg&&!$("legPop").contains(e.target))toggleLeg(false);});
 addEventListener("resize",()=>{clearTimeout(window.__rz);window.__rz=setTimeout(fit,140);});
+
+/* ------------------------------------------- billentyűzet és képernyőolvasó */
+
+/* Ugyanazt a szöveget kétszer egymás után a felolvasó nem mondja ki: a csomópont
+   tartalma nem változott, nincs mit bejelenteni. Előbb kiürítjük, és a
+   következő képkockában írjuk vissza — így az ismételt szintváltás is hallható. */
+let liveT;
+function say(msg){
+  if(!msg) return;
+  const n=$("live"); if(!n) return;
+  clearTimeout(liveT); n.textContent="";
+  liveT=setTimeout(()=>{n.textContent=msg;},60);
+}
+function sayLevel(){
+  say(T().aLevel.replace("%s",lvName(S.level))
+      .replace("%s",D.rooms.filter(r=>r.level===S.level).length));
+}
+
+/* A térkép hozzáférhető neve együtt mozog azzal, amit mutat: nézet és szint.
+   A használati tudnivaló külön bekezdés (aria-describedby), hogy a nevet ne
+   kelljen minden fókuszálásnál végighallgatni. */
+function applyMapLabel(){
+  const t=T();
+  stage.setAttribute("aria-label",(S.mode===3?t.mapLabel3:t.mapLabel).replace("%s",lvName(S.level)));
+  $("mapHint").textContent=t.mapHint;
+  $("rail").setAttribute("aria-label",t.railLabel);
+  $("tools").setAttribute("aria-label",t.toolsLabel);
+  $("zin").title=t.zin; $("zout").title=t.zout; $("zfit").title=t.zfit;
+  $("zin").setAttribute("aria-label",t.zin);
+  $("zout").setAttribute("aria-label",t.zout);
+  $("zfit").setAttribute("aria-label",t.zfit);
+}
+
+/* A nyilas léptetés azokat a helyiségeket járja be, amelyek látszanak is:
+   hallgatói nézetben a hallgatóit, „Minden"-ben az összeset. A halványított
+   termek így nem esnek ki semmiből — kereséssel, megosztott linkkel és a
+   fejléc kapcsolójával ugyanúgy elérhetők —, csak nem kell 52 irodán
+   átlépkedni a mosdóig. Ez ugyanaz a szabály, ami a feliratokra vonatkozik. */
+const navRooms=lv=>D.rooms.filter(r=>r.level===lv&&r.code&&(S.staff||!STAFF.has(r.cat)));
+/* olvasási sorrend a Home/End-hez: fentről le, balról jobbra */
+const readOrder=(a,b)=>a.cy-b.cy||a.cx-b.cx;
+
+let cursor=null;                       // a billentyűzetes kurzor terem-kódja
+
+function focusRoom(code){
+  const r=ROOM[code]; if(!r) return false;
+  if(r.level!==S.level) setLevel(r.level);
+  const n=roomNode(r); if(!n) return false;
+  cursor=code; n.focus();
+  return true;
+}
+
+/* Belépés a térképre: a kiválasztott terem, ha ezen a szinten van, különben az
+   előző kurzor, különben a szint legnagyobb közlekedője — az nagyjából középen
+   van, onnan minden irányba el lehet indulni. */
+function enterMap(){
+  const list=navRooms(S.level); if(!list.length) return false;
+  const at=c=>c&&ROOM[c]&&ROOM[c].level===S.level&&list.includes(ROOM[c])?ROOM[c]:null;
+  const r=at(S.sel)||at(cursor)
+        ||list.filter(x=>x.circ).sort((a,b)=>b.area-a.area)[0]||list.slice().sort(readOrder)[0];
+  return focusRoom(r.code);
+}
+
+/* A nyíl a megadott irányban legközelebbi helyiségbe lép. Olvasási sorrend
+   helyett geometria: a térképen az „alattam lévő terem" az, amit a szem is
+   annak lát. Az irányra merőleges eltérés büntet, de nem zár ki — különben egy
+   kicsit odébb nyíló folyosónál a nyíl egyszerűen nem csinálna semmit. */
+function stepRoom(dx,dy){
+  const cur=ROOM[cursor]; if(!cur) return null;
+  let best=null,bd=1e9;
+  for(const r of navRooms(S.level)){
+    if(r===cur) continue;
+    const vx=r.cx-cur.cx, vy=r.cy-cur.cy;
+    const ahead=vx*dx+vy*dy;                 // irány menti távolság
+    if(ahead<=.3) continue;                  // nem arra van
+    const side=Math.abs(vx*dy-vy*dx);        // oldalirányú kilógás
+    const d=ahead+side*2.2;
+    if(d<bd){bd=d;best=r;}
+  }
+  return best;
+}
+
+const ARROW={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]};
+stage.addEventListener("keydown",e=>{
+  if(e.altKey||e.ctrlKey||e.metaKey) return;
+  const t=T();
+
+  if(ARROW[e.key]){
+    e.preventDefault();
+    // Az első nyílnyomás még csak belép a térképre, nem lép odébb.
+    if(!cursor||!ROOM[cursor]||ROOM[cursor].level!==S.level){ enterMap(); return; }
+    const n=stepRoom(...ARROW[e.key]);
+    if(n) focusRoom(n.code); else say(t.aEdge);
+    return;
+  }
+  if(e.key==="Enter"||e.key===" "){
+    e.preventDefault();
+    if(cursor&&ROOM[cursor]) select(cursor); else enterMap();
+    return;
+  }
+  if(e.key==="Home"||e.key==="End"){
+    const ord=navRooms(S.level).slice().sort(readOrder);
+    if(!ord.length) return;
+    e.preventDefault();
+    focusRoom((e.key==="Home"?ord[0]:ord[ord.length-1]).code);
+    return;
+  }
+  if(e.key==="PageUp"||e.key==="PageDown"){
+    e.preventDefault();
+    const i=LVI[S.level]+(e.key==="PageUp"?1:-1);
+    if(i<0||i>=LV.length){ say(t.aEdge); return; }
+    setLevel(LV[i]);
+    // A kurzor a szinttel együtt lép; enélkül a következő nyíl az eltűnt
+    // szinten keresne, és a fókusz egy aria-hidden ágon ragadna.
+    if(stage.contains(document.activeElement)) enterMap();
+    return;
+  }
+  /* Az Esc két lépés: előbb kijön a teremből a térkép szintjére, és csak a
+     másodikra törli a kiválasztást (azt a globális kezelő végzi, ezért itt
+     megállítjuk a buborékolást). Egy nyomásra mindkettő meglepő lenne: a
+     billentyűzetes felhasználó a fókuszt akarja visszavenni, nem az útvonalát
+     eldobni. */
+  if(e.key==="Escape"&&document.activeElement!==stage){
+    e.stopPropagation(); stage.focus();
+  }
+});
+
+/* A szintváltás egy helyen: a sáv gombja, a Page Up/Down és a födémre kattintás
+   is ide fut be, így a bemondás egyszer van megírva. */
+function setLevel(lv){
+  if(lv===S.level||LVI[lv]===undefined) return;
+  S.level=lv; renderRail(); updateView(); sayLevel();
+}
 
 /* ------------------------------------------------------------------ alsó lap */
 const side=$("side"), grab=$("grab");

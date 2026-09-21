@@ -112,11 +112,21 @@ elérhető gépi úton. Amíg nem az, marad a kézi frissítés.
 
 ## Ami nem külső információra vár — ezeket bármikor meg lehet csinálni
 
-**Akadálymentesség.** Jelenleg: **0 `aria-live`**, **0 `tabindex`**, a térképnek
-nincs `role`-ja, és a 182 kattintható helyiség `<polygon>` elem, nem gomb — azaz
-billentyűzettel nem elérhető, képernyőolvasóval nem bejárható. A keresés és a
-panel használható, a térkép nem. Ez a legnagyobb megmaradt hiányosság, és
-egyedül is elvégezhető.
+**~~Akadálymentesség.~~ Kész.** A térkép billentyűzettel bejárható és
+felolvasóval követhető. Amit a számok mondanak: `aria-live` 0 → 1,
+`tabindex` 0 → 183, a 182 helyiség `role="button"` névvel. A térkép **egy**
+tab-állomás, a termek közt a nyilak léptetnek, az Enter választ, a Page
+Up/Down szintet vált; a kiválasztás, az útvonal eredménye és a szintváltás
+élő régióban is elhangzik. A díszítő SVG-rétegek és a nem aktív szintek
+`aria-hidden`-ök, így a felolvasó az aktív szint helyiségeit látja, nem
+mind a hétét. Őrzője a `tests/a11y.js` (29 állítás).
+
+Ami ebből még hátravan, és nem külső információra vár: a panel
+újrarajzolása (`renderPanel`) minden kiválasztáskor eldobja a benne lévő
+fókuszt, és a téma váltása újraépíti a szinteket, amitől a térképen álló
+fókusz elveszik. Egyik sem teszi használhatatlanná a felületet — a kurzor
+állapota megmarad, a következő nyíl ugyanoda tér vissza —, de egy
+billentyűzetes felhasználónak felesleges visszaút.
 
 **Épületválasztó.** A meetingen eldőlt, hogy GPS-alapú épületválasztó kell —
 de csak akkor, ha lesz több épület. Addig nincs mit választani. A beltéri
@@ -140,6 +150,8 @@ D.rooms.filter(r => r.code &&
 search("audmax").length;            // most: 0
 
 //   akadálymentességi számlálók
-document.querySelectorAll("[aria-live]").length;   // most: 0
-document.querySelectorAll("[tabindex]").length;    // most: 0
+document.querySelectorAll("[aria-live]").length;          // most: 1
+document.querySelectorAll("[tabindex]").length;           // most: 183
+document.querySelectorAll(".room[role='button']").length; // most: 182
+document.querySelectorAll("#stage [tabindex='0']").length;// most: 0 — egy tab-állomás
 ```
