@@ -1192,13 +1192,16 @@ function syncFlat(){
   if(S.mode===3){ app.classList.remove("flat2d"); return; }
   flatT=setTimeout(()=>{ if(S.mode===2) app.classList.add("flat2d"); },1050);
 }
-function setMode(m){
+/* keepView: a nézet marad, ahol van. A kétujjas döntés gesztus közben vált
+   Alaprajzról Épületre, ott egy újraillesztés kiugratná a térképet a kéz alól. */
+function setMode(m,keepView){
   if(S.mode===m)return;
   S.mode=m;
   app.classList.toggle("m3",m===3); app.classList.toggle("m2",m===2);
   $("m2").setAttribute("aria-pressed",m===2); $("m3").setAttribute("aria-pressed",m===3);
   applyMapLabel();
-  fit(); syncFlat();
+  if(keepView) updateView(); else fit();
+  syncFlat();
 }
 function dive(lv){
   S.level=lv; renderRail();
@@ -1209,7 +1212,7 @@ function dive(lv){
 (function(){
   const stage=$("stage");
   const pts=new Map();
-  let drag=null,moved=0,pinch=null;
+  let drag=null,moved=0,pinch=null,tilted=false;
   const nowOn =()=>{world.classList.add("now");    app.classList.add("navving");};
   const nowOff=()=>{world.classList.remove("now"); app.classList.remove("navving");};
   /* A két ujj fogása: középpont, távolság és az általuk bezárt szög. A szög a
@@ -1217,12 +1220,22 @@ function dive(lv){
      tudott, forgatni nem. */
   const mid=()=>{const a=[...pts.values()], dx=a[1].x-a[0].x, dy=a[1].y-a[0].y;
     return {x:(a[0].x+a[1].x)/2,y:(a[0].y+a[1].y)/2,
-            d:Math.hypot(dx,dy), a:Math.atan2(dy,dx)};};
+            d:Math.hypot(dx,dy), a:Math.atan2(dy,dx), p:a};};
   /* Ennyi fok elcsavarás után indul a forgatás. Holtjáték nélkül minden
      csippentés forgatna is valamennyit, mert a két ujj sosem pontosan egy
      tengely mentén mozdul; a küszöböt utána levonjuk, hogy induláskor ne
      ugorjon egyet a térkép. */
   const TWIST_DEAD=8;
+  /* A döntés a kétujjas mozdulatok közül az egyetlen, amelyik KIZÁRJA a
+     többit: ugyanaz a függőleges elmozdulás tolásnak is olvasható, a kettő
+     nem mehet egyszerre. Ezért a gesztus az első határozott mozdulatnál
+     eldől — döntés vagy minden más —, és a fogás végéig ott marad.
+     A küszöbök ezt a döntést teszik határozottá:
+       TILT_TAKE  mindkét ujjnak ennyit kell FÜGGŐLEGESEN, azonos irányba
+       TILT_SKEW  ennél jobban nem lóghat el oldalra (≈19°-os kúp)
+       PINCH_BAND ennél jobban nem változhat az ujjak távolsága
+       PAN_TAKE   ennyi oldalirányú elmozdulás után már tolásnak vesszük  */
+  const TILT_TAKE=16, TILT_SKEW=.35, PINCH_BAND=.06, PAN_TAKE=12, TILT_RATE=.25;
 
   /* A pointermove sűrűbben tüzel, mint ahány képkocka van (telefonon 120 Hz+),
      ezért az írást egy rAF-ra fogjuk össze: képkockánként pontosan egy transform. */
@@ -1256,11 +1269,12 @@ function dive(lv){
       // gomb egérrel forgatás helyett tolás, hogy asztali gépen is legyen pan.
       drag=startDrag(e.clientX,e.clientY,
         S.mode!==3 || e.shiftKey || e.button===1 || e.button===2);
-      moved=0;
+      moved=0; tilted=false;
     }
     else if(pts.size===2){const m=mid();
       pinch={d:m.d,k:S.view.k,x:S.view.x,y:S.view.y,mx:m.x,my:m.y,
-             last:m.a,tw:0,rz:S.rot.z,rot:false,slack:0};drag=null;}
+             last:m.a,tw:0,rz:S.rot.z,rot:false,slack:0,
+             ay:m.p[0].y,by:m.p[1].y,lock:null,rx:0,tslack:0};drag=null;}
   });
   stage.addEventListener("pointermove",e=>{
     if(!pts.has(e.pointerId))return;
@@ -1280,6 +1294,35 @@ function dive(lv){
         pinch.rot=true; pinch.slack=Math.sign(twDeg)*TWIST_DEAD*Math.PI/180;
       }
       const th=pinch.rot ? pinch.tw-pinch.slack : 0;
+
+      /* Döntés vagy minden más — az első határozott mozdulat dönti el. */
+      const dmx=m.x-pinch.mx, dmy=m.y-pinch.my;
+      if(!pinch.lock){
+        const day=m.p[0].y-pinch.ay, dby=m.p[1].y-pinch.by;
+        const egyutt=day*dby>0 && Math.min(Math.abs(day),Math.abs(dby))>TILT_TAKE;
+        if(Math.abs(f-1)>PINCH_BAND||Math.abs(twDeg)>TWIST_DEAD||Math.abs(dmx)>PAN_TAKE)
+          pinch.lock="map";
+        else if(egyutt && Math.abs(dmx)<Math.abs(dmy)*TILT_SKEW){
+          pinch.lock="tilt"; tilted=true;
+          /* Alaprajzról a döntés emel át Épület nézetbe — ott van egyáltalán
+             dőlés. A nézet marad, ahol van, és a legkisebb dőlésről indulunk,
+             hogy a tervlap lapos állásából folytatódjon a mozdulat. Az irány
+             (rot.z) nyersen megy át, tehát ugyanoda érkezel, ahova az Épület
+             gombbal: az izometrikus alapállásba. */
+          if(S.mode!==3){ setMode(3,true); S.rot.x=TILT_MIN; }
+          pinch.rx=S.rot.x; pinch.tslack=dmy;
+          // a küszöbig megtett tolást visszavonjuk, hogy a döntés tisztán induljon
+          S.view.k=pinch.k; S.view.x=pinch.x; S.view.y=pinch.y;
+        }
+      }
+      if(pinch.lock==="tilt"){
+        // Felfelé húzva emelkedik a dőlés (élből nézet) — ugyanaz az irány,
+        // mint az Épület nézet egyujjas mozdulatánál.
+        const nx=Math.max(TILT_MIN,Math.min(TILT_MAX,
+                 pinch.rx-(dmy-pinch.tslack)*TILT_RATE));
+        if(Number.isFinite(nx)) S.rot.x=nx;
+        S.dirty=true; scheduleRot(); moved=99; return;
+      }
 
       const r=getRect();
       const cx=pinch.mx-r.left-r.width/2, cy=pinch.my-r.top-r.height/2;
@@ -1325,7 +1368,18 @@ function dive(lv){
     // Az utolsó pozíciót még a .now osztály alatt véglegesítjük, különben a
     // visszakapcsoló 1s-os transition ráugrana a függőben lévő képkockára.
     if(raf){cancelAnimationFrame(raf); paint();}
-    if(pts.size===0){window.__moved=moved>6;drag=null;setTimeout(nowOff,40);}
+    if(pts.size===0){
+      window.__moved=moved>6;drag=null;
+      /* A döntés oda-vissza jár: ha a mozdulat a legalsó dőlésen ér véget,
+         visszateszünk Alaprajzra. Az ujjak felemelésekor döntünk, nem közben —
+         így a határon nem billeg ide-oda a két nézet közt. Csak a kétujjas
+         döntés vált nézetet; az Épület nézet egyujjas mozdulata körbejárás,
+         attól nem szabad kiesni a nézetből. A váltás a .navving levétele UTÁN
+         megy, hogy a szintek összezáródása átúszhasson, ne csattanjon. */
+      const leszall = tilted && S.mode===3 && S.rot.x<=TILT_MIN+.5;
+      tilted=false;
+      setTimeout(()=>{ nowOff(); if(leszall) setMode(2,true); },40);
+    }
     else if(pts.size===1){
       /* A csippentésből egy ujjra fogyva tolunk tovább: a gesztus két ujjal
          indult, hirtelen forgatásba váltani meglepő lenne. */

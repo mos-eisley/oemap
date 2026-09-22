@@ -112,6 +112,56 @@ run("gesztusok (csippentés, forgatás, tolás)", async ({ t, ctx, base }) => {
     out.fit2D = { bearing:+bearing().toFixed(1), kVeges:Number.isFinite(S.view.k),
                   xVeges:Number.isFinite(S.view.x) };
 
+    /* Döntés két ujjal. Két ujj egymás mellett, párhuzamosan húzva — se a
+       távolságuk, se a szögük nem változik, tehát se nagyítás, se csavarás
+       nem keveredik bele. Ez a mozdulat az egyetlen, amelyik nézetet vált:
+       az Alaprajzon nincs dőlés, oda csak Épület nézetben lehet menni. */
+    async function drag2(x1,y1,x2,y2,dx,dy,steps){
+      s("pointerdown",x1,y1,1); s("pointerdown",x2,y2,2);
+      for(let i=1;i<=steps;i++){
+        const gx=dx*i/steps, gy=dy*i/steps;
+        s("pointermove",x1+gx,y1+gy,1); s("pointermove",x2+gx,y2+gy,2); await f();
+      }
+      s("pointerup",x1+dx,y1+dy,1); s("pointerup",x2+dx,y2+dy,2);
+      await new Promise(r => setTimeout(r,250));
+    }
+
+    // Alaprajzról felfelé húzva emel át, és a nézetet nem rántja ki a kéz alól
+    const v0 = { k:S.view.k, x:S.view.x };
+    await drag2(600,600,760,600, 0,-140, 16);
+    out.felemel = { mode:S.mode, rx:+S.rot.x.toFixed(1),
+                    nezetMaradt:Math.abs(S.view.k-v0.k)<1e-6 && Math.abs(S.view.x-v0.x)<1e-6 };
+    // tovább felfelé: meredekebb lesz
+    const rxA = S.rot.x;
+    await drag2(600,600,760,600, 0,-120, 14);
+    out.meredekebb = { rx:+S.rot.x.toFixed(1), nott:S.rot.x > rxA };
+    // lefelé a földig: visszatesz Alaprajzra
+    await drag2(600,400,760,400, 0,300, 20);
+    out.visszaesik = { mode:S.mode, rx:+S.rot.x.toFixed(1) };
+
+    /* A következő három eset azt méri, hogy a döntés NEM lop el más
+       mozdulatot. Mindháromban mozdul az ujj függőlegesen is — különben a
+       „mindkét ujj azonos irányba, függőlegesen" feltétel egyedül elintézné
+       őket, és a küszöbök meglazulása észrevétlen maradna. */
+    setMode(3); await new Promise(r => setTimeout(r,1400));
+
+    // ferde tolás: túlnyomóan vízszintes, de van függőleges összetevője is
+    const rxB = S.rot.x, vxB = S.view.x;
+    await drag2(600,500,760,500, 160,60, 14);
+    out.ferdeTolas = { dolt:Math.abs(S.rot.x-rxB)>0.5, tolt:Math.abs(S.view.x-vxB)>50 };
+
+    // csippentés, közben lefelé csúszva: a távolságváltozás dönt, nem a döntés
+    const rxC = S.rot.x, kC = S.view.k;
+    s("pointerdown",600,500,1); s("pointerdown",760,500,2);
+    for (let i=1;i<=12;i++){ s("pointermove",600-i*6,500+i*5,1); s("pointermove",760+i*6,500+i*5,2); await f(); }
+    s("pointerup",528,560,1); s("pointerup",832,560,2); await new Promise(r => setTimeout(r,250));
+    out.csippentNemDont = { dolt:Math.abs(S.rot.x-rxC)>0.5, nagyit:S.view.k>kC };
+
+    // apró függőleges mozdulat: a küszöb alatt marad, nem dönt
+    const rxD = S.rot.x;
+    await drag2(600,500,760,500, 0,-10, 6);
+    out.aproNemDont = Math.abs(S.rot.x-rxD) < 0.01;
+
     out.transzformOk = !/NaN/.test(world.style.transform) &&
                        !/NaN/.test(document.querySelector(".ftag").style.transform);
     return out;
@@ -140,6 +190,18 @@ run("gesztusok (csippentés, forgatás, tolás)", async ({ t, ctx, base }) => {
     JSON.stringify(r.lapos2D));
   t("a ⤢ az elforgatott tervlapot visszaállítja", r.fit2D.bearing === 0, "irány=" + r.fit2D.bearing);
   t("és véges nézetet illeszt rá", r.fit2D.kVeges && r.fit2D.xVeges, JSON.stringify(r.fit2D));
+
+  t("felfelé húzva a tervlap Épület nézetbe emelkedik", r.felemel.mode === 3 && r.felemel.rx > 20,
+    `mód=${r.felemel.mode}, dőlés=${r.felemel.rx}°`);
+  t("és a nézet nem ugrik ki a kéz alól", r.felemel.nezetMaradt);
+  t("tovább húzva meredekebb lesz", r.meredekebb.nott, `${r.felemel.rx}° → ${r.meredekebb.rx}°`);
+  t("a földig visszahúzva Alaprajzra esik vissza",
+    r.visszaesik.mode === 2 && r.visszaesik.rx === 15, JSON.stringify(r.visszaesik));
+  t("a ferde kétujjas húzás tol, nem dönt",
+    !r.ferdeTolas.dolt && r.ferdeTolas.tolt, JSON.stringify(r.ferdeTolas));
+  t("a csippentés nagyít, nem dönt",
+    !r.csippentNemDont.dolt && r.csippentNemDont.nagyit, JSON.stringify(r.csippentNemDont));
+  t("apró függőleges mozdulattól nem dől meg", r.aproNemDont);
 
   t("semmilyen transzformációban nincs NaN", r.transzformOk);
   t("nincs JS hiba", p.jsErrors.length === 0, p.jsErrors.join(" | "));
