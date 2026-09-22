@@ -299,7 +299,10 @@ button{cursor:pointer;background:none;border:0}
 
 .navving .rail,.navving .plate,.navving .tools button,.navving .legend-btn{backdrop-filter:none}
 .navving .ring{animation-play-state:paused}
-.navving .floor{pointer-events:none}
+/* Navigálás közben a szintek átlátszósága képkockánként változik (a dőléstől
+   függ); a .55s-os áttűnés ilyenkor minden képkockán újraindulna, és a köteg
+   lomhán kullogna a mozdulat után. */
+.navving .floor{pointer-events:none;transition:none}
 .navving .room.pick:hover{opacity:1}
 
 /* módfüggő interakció */
@@ -1014,8 +1017,9 @@ function buildLabels(lv){
 
 /* A világ rotateX(x) rotateZ(z)-t kap; ennek az inverze rotateZ(-z) rotateX(-x),
    így a felirat a forgatás közben is a néző felé néz. */
-const tagTransform=()=>
-  `translate(-100%,-50%) rotateZ(${-S.rot.z}deg) rotateX(${-S.rot.x}deg)`;
+const tagTransform=()=> S.mode===3
+  ? `translate(-100%,-50%) rotateZ(${-S.rot.z}deg) rotateX(${-S.rot.x}deg)`
+  : `translate(-100%,-50%) rotate(${-bearing()}deg)`;
 function orientTags(){ for(const lv of LV) FLOOR[lv].tag.style.transform=tagTransform(); }
 
 function placeTags(){
@@ -1028,10 +1032,42 @@ function placeTags(){
   }
 }
 
+/* Az irány (bearing) mindkét nézetben ugyanaz az `S.rot.z`, de alaprajzon az
+   izometrikus alapálláshoz KÉPEST értendő: `rot.z === ROT0.z` esetén a tervlap
+   úgy áll, ahogy meg van rajzolva. Így egy csavarás ugyanannyit fordít a két
+   nézetben, és a váltás megtartja az irányt. */
+function bearing(){ return S.mode===3 ? S.rot.z : S.rot.z-ROT0.z; }
 function worldTransform(){
   const v=S.view;
   const base=`translate(${v.x}px,${v.y}px) scale(${v.k})`;
-  return S.mode===3 ? `${base} rotateX(${S.rot.x}deg) rotateZ(${S.rot.z}deg)` : base;
+  // Alaprajzon sima 2D-s rotate() megy, nem rotateZ(): az nem kér 3D kontextust,
+  // így a .flat2d lapos gyorsútvonala (76 fps telefonon) megmarad.
+  return S.mode===3 ? `${base} rotateX(${S.rot.x}deg) rotateZ(${S.rot.z}deg)`
+                    : `${base} rotate(${bearing()}deg)`;
+}
+/* Az aktív szintet a FÖLÖTTE lévők takarják el: a +Z a néző felé mutat, tehát
+   a magasabb emelet van elöl, és a födémje ráfekszik az alaprajzra. Öt egymásra
+   tett, egyenként 0,82-es födémen keresztül semmi nem látszik — a földszint
+   alaprajza gyakorlatilag eltűnt, és minél laposabb volt a dőlés, annál inkább.
+   Ezért a fölöttes szintek szintenként halványodnak, a dőlés pedig visszaadja
+   őket: élből nézve elcsúsznak az aktív mellől, ott nem takarnak, és a köteg
+   megint elmondja, hogy hány emeletes az épület. Az aktív alatti szintek nem
+   takarnak, ők maradnak teljes értékű kontextusnak. */
+const FLOOR_OP=.82, ABOVE_FADE=.42;
+function floorOpacity(idx,ai){
+  if(idx===ai) return 1;
+  if(idx<ai) return FLOOR_OP;
+  const faded=FLOOR_OP*ABOVE_FADE**(idx-ai);
+  const cover=Math.cos(S.rot.x*Math.PI/180);      // 1 laposan … 0 élből
+  return faded+(FLOOR_OP-faded)*(1-cover)**2;
+}
+/* A dőléstől függ, ezért nem elég a szintváltáskor beállítani: a gesztus alatt
+   képkockánként újra kell számolni, különben a döntés közben a köteg a régi
+   átlátszóságával marad. Egy helyen íródik, hogy a két hívó ne csússzon szét. */
+function syncFloorOpacity(){
+  const ai=LVI[S.level];
+  for(const lv of LV){ const F=FLOOR[lv];
+    F.box.style.opacity = S.mode===3 ? floorOpacity(F.idx,ai) : (F.idx===ai?1:0); }
 }
 function updateView(){
   world.style.transform=worldTransform();
@@ -1042,7 +1078,7 @@ function updateView(){
     F.box.style.transform=`translate(-50%,-50%) translate(${OFFX}px,${OFFY}px) translateZ(${z}px)`;
     const on=lv===S.level;
     F.box.classList.toggle("on",on);
-    F.box.style.opacity = S.mode===3 ? (on?1:.82) : (on?1:0);
+    // az átlátszóságot a syncFloorOpacity() írja, a ciklus után
     F.rooms.style.opacity = S.mode===3 ? (on?1:0) : 1;
     F.walls.style.opacity = S.mode===3 ? (on?1:.32) : 1;
     F.box.style.pointerEvents = S.mode===3 ? "auto" : (on?"auto":"none");
@@ -1064,6 +1100,7 @@ function updateView(){
     if(on && S.mode===2) buildLabels(lv);
     F.labels.style.opacity = S.mode===3 ? 0 : 1;
   }
+  syncFloorOpacity();
   const g=world.querySelector(".ground");
   if(g) g.style.transform=`translateZ(${-ai*GAP-26}px)`;
 }
@@ -1115,21 +1152,22 @@ function riser(lv,p,h,upward){
 
 /* ------------------------------------------------------------------ nézet */
 function projBBox(){
-  const b=S.rot.z*Math.PI/180, a=S.rot.x*Math.PI/180;
-  const cb=Math.cos(b), sb=Math.sin(b), ca=Math.cos(a), sa=Math.sin(a);
+  const three=S.mode===3;
+  // Ugyanaz a képlet szolgálja ki a két nézetet: alaprajzon a dőlés 0 (ca=1,
+  // sa=0) és nincs szintek közti távolság, de a forgatás ott is beleszámít —
+  // enélkül az elforgatott tervlapra rosszul illesztene a ⤢.
+  const b=bearing()*Math.PI/180, a=S.rot.x*Math.PI/180;
+  const cb=Math.cos(b), sb=Math.sin(b);
+  const ca=three?Math.cos(a):1, sa=three?Math.sin(a):0;
   let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
-  const ai=LVI[S.level], three=S.mode===3;
+  const ai=LVI[S.level];
   for(const r of D.rooms){
     if(!three && r.level!==S.level) continue;
     const z = three ? (LVI[r.level]-ai)*GAP : 0;
     for(let i=0;i<r.poly.length;i+=2){
       const X=(r.poly[i][0]-BB.cx)*PXM, Y=(r.poly[i][1]-BB.cy)*PXM;
-      const px=X*cb-Y*sb, py=(X*sb+Y*cb)*(three?ca:1) - (three?z*sa:0);
-      if(three){
-        if(px<x0)x0=px; if(px>x1)x1=px; if(py<y0)y0=py; if(py>y1)y1=py;
-      }else{
-        if(X<x0)x0=X; if(X>x1)x1=X; if(Y<y0)y0=Y; if(Y>y1)y1=Y;
-      }
+      const px=X*cb-Y*sb, py=(X*sb+Y*cb)*ca - z*sa;
+      if(px<x0)x0=px; if(px>x1)x1=px; if(py<y0)y0=py; if(py>y1)y1=py;
     }
   }
   return {w:Math.max(1,x1-x0), h:Math.max(1,y1-y0), cx:(x0+x1)/2, cy:(y0+y1)/2};
@@ -1174,9 +1212,17 @@ function dive(lv){
   let drag=null,moved=0,pinch=null;
   const nowOn =()=>{world.classList.add("now");    app.classList.add("navving");};
   const nowOff=()=>{world.classList.remove("now"); app.classList.remove("navving");};
-  const mid=()=>{const a=[...pts.values()];
+  /* A két ujj fogása: középpont, távolság és az általuk bezárt szög. A szög a
+     csavaráshoz kell — enélkül a kétujjas gesztus csak nagyítani és tolni
+     tudott, forgatni nem. */
+  const mid=()=>{const a=[...pts.values()], dx=a[1].x-a[0].x, dy=a[1].y-a[0].y;
     return {x:(a[0].x+a[1].x)/2,y:(a[0].y+a[1].y)/2,
-            d:Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)};};
+            d:Math.hypot(dx,dy), a:Math.atan2(dy,dx)};};
+  /* Ennyi fok elcsavarás után indul a forgatás. Holtjáték nélkül minden
+     csippentés forgatna is valamennyit, mert a két ujj sosem pontosan egy
+     tengely mentén mozdul; a küszöböt utána levonjuk, hogy induláskor ne
+     ugorjon egyet a térkép. */
+  const TWIST_DEAD=8;
 
   /* A pointermove sűrűbben tüzel, mint ahány képkocka van (telefonon 120 Hz+),
      ezért az írást egy rAF-ra fogjuk össze: képkockánként pontosan egy transform. */
@@ -1188,7 +1234,8 @@ function dive(lv){
 
   let raf=0, needTags=false;
   const paint=()=>{ raf=0; world.style.transform=worldTransform();
-                    if(needTags){ needTags=false; orientTags(); } };
+                    // a szintek átlátszósága a dőléstől függ, döntés közben is
+                    if(needTags){ needTags=false; orientTags(); syncFloorOpacity(); } };
   const schedule=()=>{ if(!raf) raf=requestAnimationFrame(paint); };
   const scheduleRot=()=>{ needTags=true; schedule(); };
 
@@ -1212,7 +1259,8 @@ function dive(lv){
       moved=0;
     }
     else if(pts.size===2){const m=mid();
-      pinch={d:m.d,k:S.view.k,x:S.view.x,y:S.view.y,mx:m.x,my:m.y};drag=null;}
+      pinch={d:m.d,k:S.view.k,x:S.view.x,y:S.view.y,mx:m.x,my:m.y,
+             last:m.a,tw:0,rz:S.rot.z,rot:false,slack:0};drag=null;}
   });
   stage.addEventListener("pointermove",e=>{
     if(!pts.has(e.pointerId))return;
@@ -1220,12 +1268,37 @@ function dive(lv){
     if(pinch&&pts.size>=2){
       const m=mid(), f=m.d/pinch.d;
       const nk=Math.max(.15,Math.min(10,pinch.k*f)), g=nk/pinch.k;
+
+      /* Csavarás. A teljes elfordulást képkockánként gyűjtjük, nem a
+         kiinduló szöghöz képest mérjük: így a ±180°-on átfordulva sem ugrik,
+         és egy gesztuson belül akárhányszor körbe lehet forgatni. */
+      let da=m.a-pinch.last;
+      if(da> Math.PI) da-=2*Math.PI; else if(da<-Math.PI) da+=2*Math.PI;
+      pinch.last=m.a; pinch.tw+=da;
+      const twDeg=pinch.tw*180/Math.PI;
+      if(!pinch.rot && Math.abs(twDeg)>TWIST_DEAD){
+        pinch.rot=true; pinch.slack=Math.sign(twDeg)*TWIST_DEAD*Math.PI/180;
+      }
+      const th=pinch.rot ? pinch.tw-pinch.slack : 0;
+
       const r=getRect();
       const cx=pinch.mx-r.left-r.width/2, cy=pinch.my-r.top-r.height/2;
+      /* Alaprajzon a forgatás a két ujj közepe köré megy: a világ ott sima
+         2D-s forgatást kap, így a fogáspont alatti térképrész pontosan a hely
+         marad. Épület nézetben a rotateZ a megdöntött síkban hat, azt egy
+         képernyő-síkú eltolással nem lehet pontosan kiegyenlíteni — ott a
+         forgatás az épület közepe körül fordul, ami körbejárásnál amúgy is a
+         várt viselkedés. */
+      const ct=S.mode===3?1:Math.cos(th), st=S.mode===3?0:Math.sin(th);
+      const ox=pinch.x-cx, oy=pinch.y-cy;
       S.view.k=nk;
-      S.view.x=cx-(cx-pinch.x)*g+(m.x-pinch.mx);
-      S.view.y=cy-(cy-pinch.y)*g+(m.y-pinch.my);
-      S.dirty=true; schedule(); moved=99; return;
+      S.view.x=cx+(ox*ct-oy*st)*g+(m.x-pinch.mx);
+      S.view.y=cy+(ox*st+oy*ct)*g+(m.y-pinch.my);
+      if(pinch.rot){
+        const nz=pinch.rz+th*180/Math.PI;
+        if(Number.isFinite(nz)) S.rot.z=nz;          // sose ragadjon be
+      }
+      S.dirty=true; pinch.rot?scheduleRot():schedule(); moved=99; return;
     }
     if(!drag)return;
     const dx=e.clientX-drag.x, dy=e.clientY-drag.y;

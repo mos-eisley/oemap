@@ -32,6 +32,12 @@ Az app **Alaprajzzal indul** — telefonon ez a nézet 76 fps az Épület 13-áv
 szemben, és nagyításkor éles marad, mert nincs 3D kontextus. Az Épület nézet
 gombbal érhető el.
 
+Épület nézetben az **aktív szint alaprajza mindig olvasható marad**: a fölötte
+lévő emeletek födémje halványodik, mert az a néző felé esik, és egymásra
+rétegződve kitakarná. Minél meredekebben nézed, annál inkább visszajönnek —
+élből úgysem takarnak, és ott a köteg mondja el, hogy hány emeletes az épület.
+Az aktív szint alatti emeletek végig teljes erősséggel maradnak.
+
 A fejlécben a **Hallgatói / Minden** kapcsoló dönti el, mely helyiségek
 látszanak. Hallgatói nézetben az irodák, üzemeltetési terek, raktárak és
 dolgozói területek semleges szürkén, felirat nélkül jelennek meg — ez a 183
@@ -44,10 +50,22 @@ esnek ki, csak nem versenyeznek a figyelemért.
 | | Alaprajz | Épület |
 | --- | --- | --- |
 | egy ujj / egér húzás | tolás | **forgatás** — vízszintesen a tengely körül, függőlegesen a dőlés (15°–85°) |
-| két ujj | tolás + nagyítás | tolás + nagyítás |
+| két ujj: húzás | tolás | tolás |
+| két ujj: csippentés | nagyítás | nagyítás |
+| két ujj: **csavarás** | **forgatás** az ujjak közepe körül | forgatás |
 | görgő | nagyítás | nagyítás |
 | Shift + húzás (egérrel) | tolás | tolás |
-| ⤢ gomb | képre igazít | képre igazít **és visszaállítja az alapállást** |
+| ⤢ gomb | képre igazít **és visszaforgatja** a tervlap rajzolt állásába | képre igazít **és visszaállítja az alapállást** |
+
+A három kétujjas mozdulat egyszerre is mehet, ahogy a térképalkalmazásokban
+megszokott: csippentés közben csavarva a térkép egyszerre nagyít és fordul. A
+forgatás 8° elcsavarás után indul — enélkül minden csippentés fordítana is egy
+keveset, mert a két ujj sosem pontosan egy tengely mentén mozdul.
+
+Az irány a két nézet közt átmegy: ha az Alaprajzot elfordítod és átváltasz
+Épületre, ugyanabból az irányból nézed tovább. A dőlés (15°–85°) továbbra is az
+Épület nézet egyujjas mozdulata — az Alaprajz szándékosan lapos marad, mert
+telefonon ez a nézet 76 fps a 3D 13-ával szemben.
 
 Az alsó lapot a fejléc bármely pontjáról lehet húzni, és a lista tetejéről lefelé
 is. Az elengedés sebessége számít: egy határozott pöccintés a mozgás irányában
