@@ -99,6 +99,23 @@ gyorsútvonalát, amin a telefonos 76 fps múlik. A `projBBox()` ugyanezt a
 `bearing()`-et használja, különben a ⤢ az elforgatott tervlapra rosszul
 illesztene.
 
+**A kétujjas döntés kizárja a többi mozdulatot.** Ugyanaz a függőleges
+elmozdulás tolásnak is olvasható, ezért a `pinch.lock` az első határozott
+mozzanatnál eldől (`"tilt"` vagy `"map"`), és a fogás végéig ott marad. A
+küszöbök (`TILT_TAKE`, `TILT_SKEW`, `PINCH_BAND`, `PAN_TAKE`) ezt a döntést
+teszik határozottá — ha lazítasz rajtuk, a döntés elkezdi ellopni a tolást és a
+csippentést. A `tests/gestures.js` három állítása pont ezt méri, és mindegyik
+ferde vagy függőleges összetevőt is tartalmazó mozdulatot játszik le: egy
+tisztán vízszintes húzást a „mindkét ujj azonos irányba, függőlegesen" feltétel
+egyedül is elintézne, és a küszöbök meglazulása észrevétlen maradna.
+
+**A döntés nézetet vált, és ez az egyetlen gesztus, ami ezt teszi.** Alaprajzról
+felfelé húzva `setMode(3,true)` emel át — a `keepView` ág azért kell, hogy a
+`fit()` ne rántsa ki a térképet a kéz alól. Vissza csak az ujjak felemelésekor
+kapcsol, nem menet közben: a határon különben billegne a két nézet közt. A
+visszakapcsolás a `.navving` levétele után fut, hogy a szintek összezáródása
+átúszhasson.
+
 **A lejárt órarendi adat nem „szabad”.** A `tmNow()` az érvényességi ablakon
 kívül `nodata`-t ad, és a sor egy `–` jelet kap `tmb none` osztállyal. Aki egy
 üres teremre számít és órára érkezik, rosszabbul jár, mintha meg se kérdezte

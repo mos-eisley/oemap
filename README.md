@@ -53,19 +53,37 @@ esnek ki, csak nem versenyeznek a figyelemért.
 | két ujj: húzás | tolás | tolás |
 | két ujj: csippentés | nagyítás | nagyítás |
 | két ujj: **csavarás** | **forgatás** az ujjak közepe körül | forgatás |
+| két ujj: **függőleges húzás** | **felemel Épület nézetbe** és dönteni kezd | **dőlés** (15°–85°) |
 | görgő | nagyítás | nagyítás |
 | Shift + húzás (egérrel) | tolás | tolás |
 | ⤢ gomb | képre igazít **és visszaforgatja** a tervlap rajzolt állásába | képre igazít **és visszaállítja az alapállást** |
 
-A három kétujjas mozdulat egyszerre is mehet, ahogy a térképalkalmazásokban
-megszokott: csippentés közben csavarva a térkép egyszerre nagyít és fordul. A
-forgatás 8° elcsavarás után indul — enélkül minden csippentés fordítana is egy
-keveset, mert a két ujj sosem pontosan egy tengely mentén mozdul.
+A tolás, a nagyítás és a forgatás egyszerre is mehet, ahogy a
+térképalkalmazásokban megszokott: csippentés közben csavarva a térkép egyszerre
+nagyít és fordul. A forgatás 8° elcsavarás után indul — enélkül minden
+csippentés fordítana is egy keveset, mert a két ujj sosem pontosan egy tengely
+mentén mozdul.
 
-Az irány a két nézet közt átmegy: ha az Alaprajzot elfordítod és átváltasz
-Épületre, ugyanabból az irányból nézed tovább. A dőlés (15°–85°) továbbra is az
-Épület nézet egyujjas mozdulata — az Alaprajz szándékosan lapos marad, mert
-telefonon ez a nézet 76 fps a 3D 13-ával szemben.
+**A döntés kivétel: az kizárja a többit.** Ugyanaz a függőleges elmozdulás
+tolásnak is olvasható, a kettő nem mehet egyszerre, ezért a mozdulat az első
+határozott mozzanatnál eldől, és a fogás végéig ott marad. Döntésnek az számít,
+ha mindkét ujj legalább 16 px-et mozdul függőlegesen, azonos irányba, a
+függőlegeshez képest ~19°-os kúpon belül, és közben a távolságuk alig változik.
+Ennek ára van: **Épület nézetben a majdnem függőleges kétujjas húzás már nem
+tol, hanem dönt** — így működik a Google Maps is. Tolni ferdén vagy vízszintesen
+lehet, asztali gépen Shift + húzással is.
+
+A döntés oda-vissza jár. Az Alaprajzon nincs dőlés, ezért a felfelé húzás
+átemel Épület nézetbe, és onnan folytatja — a nézet a kéz alatt marad, nem
+illeszt újra. Ha a mozdulat a legalsó dőlésen ér véget, az ujjak felemelésekor
+visszakapcsol Alaprajzra. A döntés közben nem vált oda-vissza, csak a végén, így
+a határon nem billeg. Az Épület nézet egyujjas mozdulata körbejárás marad, attól
+nem esel ki a nézetből.
+
+Az irányt a csavarás mindkét nézetben ugyanannyival fordítja, és a váltás
+megtartja. A két nézet alapállása közt 30° eltérés van: az Alaprajz úgy áll,
+ahogy a tervlap meg van rajzolva, az Épület pedig az izometrikus nézetben —
+a felemelkedés is ide érkezik, ugyanoda, ahova az Épület gomb visz.
 
 Az alsó lapot a fejléc bármely pontjáról lehet húzni, és a lista tetejéről lefelé
 is. Az elengedés sebessége számít: egy határozott pöccintés a mozgás irányában
