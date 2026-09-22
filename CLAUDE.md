@@ -82,6 +82,23 @@ eshetnek ki.
 Szintváltáskor a NÉZETET is frissíteni kell, különben az új szint láthatatlan
 marad. A `tests/view.js` ezt méri.
 
+**3D-ben a fölöttes szintek takarnak.** A `+Z` a néző felé mutat, tehát a
+magasabb emelet van ELÖL. Egyenként 0,82-es födémmel öt emelet alatt a
+földszint alaprajzából 0,02% jött át — gyakorlatilag eltűnt. A
+`floorOpacity()` ezért szintenként halványítja a fölöttes emeleteket, és a
+dőléssel adja vissza őket (élből nézve elcsúsznak, nem takarnak). Két buktató:
+az érték a dőléstől függ, ezért a `syncFloorOpacity()`-t a gesztus `paint()`-je
+is hívja képkockánként, és a `.navving .floor{transition:none}` nélkül a
+0,55s-os áttűnés minden képkockán újraindulna.
+
+**Az Alaprajz is forgatható**, két ujjal csavarva. A `bearing()` adja meg az
+irányt: 3D-ben nyersen `rot.z`, alaprajzon `rot.z - ROT0.z`, hogy a kiinduló
+állapot elforgatatlan tervlapot mutasson. **2D-ben sima `rotate()` megy, nem
+`rotateZ()`** — az utóbbi 3D kontextust kérne, és elvinné a `.flat2d` lapos
+gyorsútvonalát, amin a telefonos 76 fps múlik. A `projBBox()` ugyanezt a
+`bearing()`-et használja, különben a ⤢ az elforgatott tervlapra rosszul
+illesztene.
+
 **A lejárt órarendi adat nem „szabad”.** A `tmNow()` az érvényességi ablakon
 kívül `nodata`-t ad, és a sor egy `–` jelet kap `tmb none` osztállyal. Aki egy
 üres teremre számít és órára érkezik, rosszabbul jár, mintha meg se kérdezte

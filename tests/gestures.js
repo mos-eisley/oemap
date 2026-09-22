@@ -54,6 +54,64 @@ run("gesztusok (csippentés, forgatás, tolás)", async ({ t, ctx, base }) => {
     out.nagyitas = S.view.k > k0;
     document.getElementById("zfit").click(); await new Promise(r => setTimeout(r,400));
     out.fitVisszaall = { x:S.rot.x, z:S.rot.z, kVeges:Number.isFinite(S.view.k) };
+
+    /* Kétujjas csavarás. Két ujj egy kör két átellenes pontján, a kört
+       forgatjuk — ez a mozdulat se nem nagyít (a távolságuk állandó), se nem
+       tol (a középpont áll), tehát amit mér, az tisztán a forgatás. */
+    const at = (cx,cy,R,deg) => [cx+R*Math.cos(deg*Math.PI/180), cy+R*Math.sin(deg*Math.PI/180)];
+    async function twist(cx,cy,R,from,to,steps){
+      let [ax,ay]=at(cx,cy,R,from), [bx,by]=at(cx,cy,R,from+180);
+      s("pointerdown",ax,ay,1); s("pointerdown",bx,by,2);
+      for(let i=1;i<=steps;i++){
+        const g=from+(to-from)*i/steps;
+        [ax,ay]=at(cx,cy,R,g); [bx,by]=at(cx,cy,R,g+180);
+        s("pointermove",ax,ay,1); s("pointermove",bx,by,2); await f();
+      }
+      s("pointerup",ax,ay,1); s("pointerup",bx,by,2);
+      await new Promise(r => setTimeout(r,200));
+    }
+
+    // Épület nézetben (itt vagyunk) forgasson
+    const z3 = S.rot.z;
+    await twist(195,420,110,0,40,12);
+    out.csavar3D = +(S.rot.z - z3).toFixed(1);
+
+    // …és Alaprajzon is, ez volt a hiányzó fele
+    setMode(2); await new Promise(r => setTimeout(r,1300));
+    const z2 = S.rot.z, k2 = S.view.k, b2 = bearing();
+    await twist(195,420,110,0,45,12);
+    out.csavar2D = { dz:+(S.rot.z-z2).toFixed(1), dk:+(S.view.k-k2).toFixed(4),
+                     dbearing:+(bearing()-b2).toFixed(1),
+                     forog:/rotate\(/.test(world.style.transform),
+                     nemHarmad:!/rotateX|rotateZ/.test(world.style.transform) };
+
+    // holtjáték: egy apró elcsavarodás ne fordítsa el a térképet
+    const z1 = S.rot.z;
+    await twist(195,420,110,0,4,8);
+    out.holtjatek = +(S.rot.z - z1).toFixed(2);
+
+    // két ujjal nagyítani Alaprajzon is lehet, a csavarás nem vette el
+    const k3 = S.view.k;
+    s("pointerdown",150,420,1); s("pointerdown",240,420,2);
+    for (let i=1;i<=10;i++){ s("pointermove",150-i*5,420,1); s("pointermove",240+i*5,420,2); await f(); }
+    s("pointerup",100,420,1); s("pointerup",290,420,2); await new Promise(r => setTimeout(r,250));
+    out.csippent2D = S.view.k > k3;
+
+    /* A forgatás nem veheti el a lapos gyorsútvonalat: a .flat2d kapcsolja ki
+       a perspektívát és a preserve-3d-t, ezen múlik a telefonos 76 fps. Egy
+       2D-s rotate() nem kér 3D kontextust, tehát a csavarás után is állnia
+       kell — a fenti `nemHarmad` ezt a transzform oldaláról nézi, ez itt a
+       tényleges renderelési útvonal felől. */
+    await new Promise(r => setTimeout(r,1200));          // a .flat2d 1050ms-mal később kerül fel
+    out.lapos2D = { flat:document.getElementById("app").classList.contains("flat2d"),
+                    persp:getComputedStyle(document.getElementById("stage")).perspective,
+                    elforgatva:Math.abs(bearing()) > 20 };
+
+    // a ⤢ az elforgatott tervlapot is visszaállítja, és rá is illeszti
+    document.getElementById("zfit").click(); await new Promise(r => setTimeout(r,400));
+    out.fit2D = { bearing:+bearing().toFixed(1), kVeges:Number.isFinite(S.view.k),
+                  xVeges:Number.isFinite(S.view.x) };
+
     out.transzformOk = !/NaN/.test(world.style.transform) &&
                        !/NaN/.test(document.querySelector(".ftag").style.transform);
     return out;
@@ -67,6 +125,22 @@ run("gesztusok (csippentés, forgatás, tolás)", async ({ t, ctx, base }) => {
   t("csippentés után még tolható", r.tolasUtana);
   t("a nagyítás gomb nagyít", r.nagyitas);
   t.eq("a ⤢ visszaállítja az alapállást", { x:r.fitVisszaall.x, z:r.fitVisszaall.z }, { x:58, z:-30 });
+
+  t("két ujjal csavarva Épület nézetben forog", Math.abs(r.csavar3D) > 20, "Δz=" + r.csavar3D);
+  t("Alaprajzon is forog — ez hiányzott", Math.abs(r.csavar2D.dz) > 20, "Δz=" + r.csavar2D.dz);
+  t("a tervlap iránya ugyanannyit fordul", Math.abs(r.csavar2D.dbearing - r.csavar2D.dz) < 0.1,
+    `Δz=${r.csavar2D.dz}, Δirány=${r.csavar2D.dbearing}`);
+  t("a transzformba sima 2D-s rotate() kerül", r.csavar2D.forog && r.csavar2D.nemHarmad,
+    "a .flat2d lapos útvonala csak így marad meg");
+  t("a tiszta csavarás nem nagyít", Math.abs(r.csavar2D.dk) < 0.01, "Δk=" + r.csavar2D.dk);
+  t("apró elcsavarodástól nem fordul el", r.holtjatek === 0, "Δz=" + r.holtjatek);
+  t("két ujjal Alaprajzon is lehet nagyítani", r.csippent2D);
+  t("az elforgatott tervlap megtartja a lapos gyorsútvonalat",
+    r.lapos2D.flat && r.lapos2D.persp === "none" && r.lapos2D.elforgatva,
+    JSON.stringify(r.lapos2D));
+  t("a ⤢ az elforgatott tervlapot visszaállítja", r.fit2D.bearing === 0, "irány=" + r.fit2D.bearing);
+  t("és véges nézetet illeszt rá", r.fit2D.kVeges && r.fit2D.xVeges, JSON.stringify(r.fit2D));
+
   t("semmilyen transzformációban nincs NaN", r.transzformOk);
   t("nincs JS hiba", p.jsErrors.length === 0, p.jsErrors.join(" | "));
 });
