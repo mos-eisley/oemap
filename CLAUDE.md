@@ -19,7 +19,7 @@ A projekt meetingjén ez a kettő lett kimondva, és minden vitás kérdést ez 
 
 ## Felépítés
 
-`index.html` (231 KB) **maga a teljes alkalmazás** — HTML, CSS és JS egy
+`index.html` (245 KB) **maga a teljes alkalmazás** — HTML, CSS és JS egy
 fájlban, build lépés és futásidejű függőség nélkül. Ez szándékos: a
 GitHub Pages statikusan szolgálja ki, és offline is működik. Az egyetlen külső
 fájl a `fonts/`, az `icons/`, a `data/` és a `sw.js`.
@@ -136,8 +136,13 @@ MÁSODIK `github-pages` artifactot hoz létre — a `deploy-pages` ilyenkor
 
 ## Szokások
 
-- **A kód és a commitok magyarul kommentálva**, mert a projekt magyar
-  csapatnak készül. A kommentek azt mondják el, hogy MIÉRT, nem azt, hogy mit.
+- **A nyelvhatár a kód és a git-történet közt húzódik.** A kódkommentek, a
+  dokumentáció (README, ez a fájl, `docs/`) és a tesztek leírásai magyarul
+  vannak, mert a projekt magyar csapatnak készül; a **commit üzenetek angolul**,
+  mert a repó egész története így épült fel. A felhasználói felület külön eset:
+  az kétnyelvű, az `I18N` tömb `hu`/`en` ága adja — ha új szöveget veszel fel,
+  mindkettőbe kerüljön be.
+- A kommentek azt mondják el, hogy MIÉRT, nem azt, hogy mit.
 - **Commit üzenet: mit old meg és miért**, nem a fájlok felsorolása.
 - **Mérj, ne tippelj.** A teljesítmény-döntések (2D vs 3D, render sűrűség)
   mind mért számokon állnak, nem érzésen. Ha optimalizálsz, előbb mérd meg.
