@@ -128,6 +128,24 @@ fókusz elveszik. Egyik sem teszi használhatatlanná a felületet — a kurzor
 állapota megmarad, a következő nyíl ugyanoda tér vissza —, de egy
 billentyűzetes felhasználónak felesleges visszaút.
 
+**A nézetváltás asztalon még akad.** Az Alaprajz ↔ Épület váltásnál a
+szintek SVG-jét a böngésző képkockánként újraraszterizálja. Az átmenet
+idejére feltett `contain:paint` telefonon felezi az akadást (1050 → 534 ms
+összesen), asztalon a leghosszabb képkockát (567 → 267 ms), de asztalon
+összesen így is ~1,3 s marad. A maradék oka a raszter mérete: asztalon
+`SS=2`, és a negyedére csökkentett raszter a leghosszabb képkockát is
+negyedére vitte.
+
+**A döntés, ami ezen múlik:** az `SS=2` azért van, hogy az Épület nézet
+nagyításkor éles maradjon. Csökkentése megoldaná az asztali akadást, de
+elmosná a nagyított 3D-t. Egyszer már élesség felé döntöttünk; ha a
+simaság fontosabb, ez egysoros változtatás (`const SS = ...` az
+`index.html` adat-szakaszában).
+
+A számok szoftveres renderelőből (SwiftShader) jönnek — valódi GPU-n
+mindkét érték jobb, és a kettő aránya is eltolódhat. Mielőtt a fenti
+döntést meghozzuk, érdemes valódi eszközön megmérni.
+
 **Épületválasztó.** A meetingen eldőlt, hogy GPS-alapú épületválasztó kell —
 de csak akkor, ha lesz több épület. Addig nincs mit választani. A beltéri
 „hol vagyok?" kérdést a QR-kódok már megoldják.

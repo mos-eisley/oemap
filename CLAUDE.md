@@ -91,6 +91,24 @@ az érték a dőléstől függ, ezért a `syncFloorOpacity()`-t a gesztus `paint
 is hívja képkockánként, és a `.navving .floor{transition:none}` nélkül a
 0,55s-os áttűnés minden képkockán újraindulna.
 
+**A nézetváltás a raszterizálástól akad.** Alaprajz ↔ Épület váltáskor a
+szintek SVG-je egy 1s-os 3D-animáción megy át, és a böngésző képkockánként
+újraraszterizálja őket. Mérve: nem a hét réteg SZÁMA a baj (hatot kivéve sem
+javul), hanem a MÉRETE — asztalon `SS=2`, szintenként 1314×1600 px, és a
+negyedére csökkentve a leghosszabb képkocka is negyedére esik. A
+`markSwitching()` ezért az átmenet idejére `contain:paint`-et tesz az SVG-re
+(saját réteg, egyszer rajzolódik), és utána LEVESZI: nyugvó állapotban a
+textúra nagyításkor elmosódna — közelről a pixelek ~9%-a eltért —, és pont
+ezt az élességet vette meg a sűrűbb SVG. A `contain` az SVG-re megy, nem a
+`.floor`-ra: az utóbbi levágná a szintfeliratot, ami a dobozon kívülre lóg.
+Asztalon ez csak részben segít; a teljes megoldás az `SS` csökkentése lenne,
+ami élességbe kerül — lásd `docs/NYITOTT-KERDESEK.md`.
+
+**A mérőkörnyezet szoftveres.** A tesztböngésző SwiftShaderrel fut, GPU
+nélkül. Teljesítménymérésnél az abszolút számok jóval rosszabbak egy valódi
+eszköznél, és a rétegpromóciós trükkök hatása is eltérhet — a RELATÍV
+összehasonlítás megbízható, az abszolút nem.
+
 **Az Alaprajz is forgatható**, két ujjal csavarva. A `bearing()` adja meg az
 irányt: 3D-ben nyersen `rot.z`, alaprajzon `rot.z - ROT0.z`, hogy a kiinduló
 állapot elforgatatlan tervlapot mutasson. **2D-ben sima `rotate()` megy, nem
