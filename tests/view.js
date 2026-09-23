@@ -63,13 +63,13 @@ run("nézetek és szintváltás", async ({ t, ctx, base }) => {
       alap:     +atjut(58).toFixed(3),
       elbol:    +atjut(85).toFixed(3),
     };
-    /* A dőlés tényleg mozgatja, és a syncFloorOpacity() ki is írja: döntés
+    /* A dőlés tényleg mozgatja, és a syncFloors() ki is írja: döntés
        közben a paint() ezt hívja képkockánként. A beírt (inline) értéket
        olvassuk, nem a számítottat — az utóbbi az áttűnés közepét adná. */
     const felsoOp = () => +(+FLOOR[LV[ai+1]].box.style.opacity).toFixed(3);
-    S.rot.x = 20; syncFloorOpacity(); const lapos = felsoOp();
-    S.rot.x = 80; syncFloorOpacity(); const meredek = felsoOp();
-    S.rot.x = 58; syncFloorOpacity();
+    S.rot.x = 20; syncFloors(); const lapos = felsoOp();
+    S.rot.x = 80; syncFloors(); const meredek = felsoOp();
+    S.rot.x = 58; syncFloors();
     out.dolesKoveti = { lapos, meredek };
 
     /* Nézetváltás közben SVG-n BELÜL semmi nem animálhat. Egy belső elem
