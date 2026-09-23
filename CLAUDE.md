@@ -91,6 +91,28 @@ az érték a dőléstől függ, ezért a `syncFloorOpacity()`-t a gesztus `paint
 is hívja képkockánként, és a `.navving .floor{transition:none}` nélkül a
 0,55s-os áttűnés minden képkockán újraindulna.
 
+**A ritkás aktív szint elveszhet az alatta lévők fölött.** Az alatta lévő
+szintek nem takarnak, de vizuálisan elnyomhatják az aktívat: a Félemelet 9
+apró pihenője (160 m², mind szürke közlekedő vagy halványított raktár) nyom
+nélkül eltűnt a földszint 1733 m²-es födémje fölött — ezt jelentették úgy,
+hogy „bizonyos szögnél eltűnik az alaprajz". Ezért Épület nézetben az aktív
+födém akcentszínű kontúrt kap. A környezet halványítását is kipróbáltuk,
+de a felső szinteknél szétfolyt tőle az épület formája. Tanulság a
+méréshez: `elementsFromPoint` 3D-ben megbízhatatlan (a rajzolt szintet is
+„hiányzónak" mondta), és egy szint minden eleme (födém, SVG, doboz) külön
+szerepel a veremben — szintenként egyszer, csak a `.hit`-et számold.
+
+**Egy kamera, két állás.** Az Alaprajz ugyanaz a 3D-s jelenet, egyenesen
+felülről nézve (`rotateX(0)`), így a nézetváltás mindkét végén ugyanaz a
+függvénylista áll, és a böngésző a dőlést és az irányt külön úsztatja át.
+Eltérő listáknál (`rotate()` ↔ `rotateX() rotateZ()`) mátrixként
+interpolálna. Nyugalomban viszont az alaprajz LELAPUL (`flat`, sima
+`rotate()` + `.flat2d`) — ugyanaz a kép, de 3D kontextus nélkül, és ezen
+múlik a telefonos 76 fps. A `setMode()` a lapos formából előbb a vele azonos
+3D-s formára vált (`setWorldInstant()`, áttűnés nélkül), a `syncFlat()` az
+átmenet után vissza. A `tests/view.js` a böngésző saját kulcskockáiból
+ellenőrzi, hogy a váltás tényleg azonos formákon megy.
+
 **Nézetváltás közben SVG-n BELÜL semmi nem animálhat.** A szintdoboz
 (`.floor`) és a világ saját kompozitor-rétegen mozog: a böngésző egyszer
 megrajzolja, utána csak tologatja. Ha viszont az SVG egy belső eleme áttűnik
@@ -125,9 +147,10 @@ eszköznél, és a rétegpromóciós trükkök hatása is eltérhet — a RELAT�
 
 **Az Alaprajz is forgatható**, két ujjal csavarva. A `bearing()` adja meg az
 irányt: 3D-ben nyersen `rot.z`, alaprajzon `rot.z - ROT0.z`, hogy a kiinduló
-állapot elforgatatlan tervlapot mutasson. **2D-ben sima `rotate()` megy, nem
-`rotateZ()`** — az utóbbi 3D kontextust kérne, és elvinné a `.flat2d` lapos
-gyorsútvonalát, amin a telefonos 76 fps múlik. A `projBBox()` ugyanezt a
+állapot elforgatatlan tervlapot mutasson. **Nyugvó alaprajzon sima `rotate()`
+megy, nem `rotateZ()`** — az utóbbi 3D kontextust kérne, és elvinné a
+`.flat2d` lapos gyorsútvonalát, amin a telefonos 76 fps múlik (a váltás
+idejére ettől eltérünk, lásd „Egy kamera, két állás"). A `projBBox()` ugyanezt a
 `bearing()`-et használja, különben a ⤢ az elforgatott tervlapra rosszul
 illesztene.
 

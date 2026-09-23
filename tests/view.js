@@ -115,6 +115,38 @@ run("nézetek és szintváltás", async ({ t, ctx, base }) => {
     setMode(2); await w(1600);
     out.valtas3 = await valtas(3); await w(1600);
     out.valtas2 = await valtas(2); await w(1600);
+    /* Egy kamera, két állás. A váltás mindkét végén ugyanaz a függvénylista
+       kell álljon (rotateX … rotateZ), különben a böngésző mátrixként
+       interpolál, és a dőlés meg a fordulás egyetlen átlós lendítéssé mosódik.
+       Nem azt nézzük, mit írt a kód, hanem hogy a böngésző MIT animál: a futó
+       áttűnés kulcskockáit. */
+    const vilagKf = () => document.getAnimations()
+      .filter(a => a.effect && a.effect.target === world && a.transitionProperty === "transform")
+      .map(a => a.effect.getKeyframes().map(k => k.transform))[0] || [];
+    const illeszkedik = kf => kf.length === 2 && kf.every(s => /rotateX\(.*rotateZ\(/.test(s));
+    setMode(3); out.kfEpuletre = vilagKf(); await w(1600);
+    /* Visszafelé a kiírt CÉLformát nézzük, nem a kulcskockát: a szoftveres
+       renderelő torlódásakor a böngésző néha csak később rögzíti a kiinduló
+       állapotot, és egy pillanatra nincs mit kiolvasni — valódi eszközön ez nem
+       fordul elő (12 váltásból 12-szer elindult). A régi hiba épp a cél volt:
+       rotate() a rotateX…rotateZ helyett. */
+    setMode(2); out.kfAlaprajzra = [world.style.transform, world.style.transform]; await w(1600);
+    // nyugalomban az alaprajz lelapul: ugyanaz a kép, de 3D kontextus nélkül
+    out.nyugvoAlaprajz = { forma:world.style.transform.replace(/translate\([^)]*\)\s*|scale\([^)]*\)\s*/g, ""),
+                           flat2d:document.getElementById("app").classList.contains("flat2d") };
+    out.illeszkedik = { be:illeszkedik(out.kfEpuletre), ki:illeszkedik(out.kfAlaprajzra) };
+
+    /* Az aktív szint kontúrja: Épület nézetben ez különbözteti meg a többi
+       fehér födémtől, ha a helyiségei mind szürkék (a Félemelet ilyen). */
+    setMode(3); await w(1500);
+    const minta = document.createElement("i"); minta.style.color = "var(--accent)";
+    document.body.appendChild(minta); const akcent = getComputedStyle(minta).color; minta.remove();
+    const korvonal = lv => getComputedStyle(FLOOR[lv].svg.querySelector(".slab")).stroke;
+    out.kontur = { aktiv:korvonal(S.level), akcent,
+                   masik:korvonal(LV.find(lv => lv !== S.level)) };
+    setMode(2); await w(1600);
+    out.kontur.alaprajzon = korvonal(S.level);
+
     // nyugalomban minden visszaáll: a gyűrű újra pulzál
     out.utana = { switching:document.getElementById("app").classList.contains("switching"),
                   gyuru:document.getAnimations().some(a => a.playState === "running" &&
@@ -155,6 +187,15 @@ run("nézetek és szintváltás", async ({ t, ctx, base }) => {
     r.valtas2.svgBelso.join(", "));
   t("a váltás után a célgyűrű újra pulzál", !r.utana.switching && r.utana.gyuru,
     JSON.stringify(r.utana));
+  t("Épületre: a kamera ugyanazon a függvénylistán dől fel", r.illeszkedik.be,
+    r.kfEpuletre.join("  →  "));
+  t("Alaprajzra: ugyanúgy, visszafelé", r.illeszkedik.ki, r.kfAlaprajzra.join("  →  "));
+  t("nyugalomban az alaprajz lapos 2D-s formát kap",
+    /^rotate\(/.test(r.nyugvoAlaprajz.forma) && r.nyugvoAlaprajz.flat2d, JSON.stringify(r.nyugvoAlaprajz));
+  t("Épület nézetben az aktív szint akcentszínű kontúrt kap",
+    r.kontur.aktiv === r.kontur.akcent && r.kontur.masik !== r.kontur.akcent, JSON.stringify(r.kontur));
+  t("alaprajzon nincs kontúr — ott úgyis csak egy szint látszik",
+    r.kontur.alaprajzon !== r.kontur.akcent, r.kontur.alaprajzon);
   t("alaprajzon is lehet termet választani", r.kivalasztas);
   t("nincs JS hiba", p.jsErrors.length === 0, p.jsErrors.join(" | "));
 }, DESKTOP);

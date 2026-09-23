@@ -32,9 +32,10 @@ Az app **Alaprajzzal indul** — telefonon ez a nézet 76 fps az Épület 13-áv
 szemben, és nagyításkor éles marad, mert nincs 3D kontextus. Az Épület nézet
 gombbal érhető el.
 
-Épület nézetben az **aktív szint alaprajza mindig olvasható marad**: a fölötte
-lévő emeletek födémje halványodik, mert az a néző felé esik, és egymásra
-rétegződve kitakarná. Minél meredekebben nézed, annál inkább visszajönnek —
+Épület nézetben az **aktív szint alaprajza mindig olvasható marad**: akcentszínű
+kontúrt kap, így akkor is kiválik, ha a helyiségei mind szürkék (a Félemelet
+csupa lépcsőpihenő), a fölötte lévő emeletek födémje pedig halványodik, mert az
+a néző felé esik, és egymásra rétegződve kitakarná. Minél meredekebben nézed, annál inkább visszajönnek —
 élből úgysem takarnak, és ott a köteg mondja el, hogy hány emeletes az épület.
 Az aktív szint alatti emeletek végig teljes erősséggel maradnak.
 
