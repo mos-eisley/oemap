@@ -347,5 +347,31 @@ run("gesztusok (csippentés, forgatás, tolás)", async ({ t, ctx, base }) => {
     JSON.stringify(L.fel));
   t("és a fogás alatti pont ekkor sem mozdul", L.fel.d < 1, `elmozdulás ${L.fel.d} px`);
   t("a felemelés után sincs NaN", L.nemNaN);
+
+  /* A félúti határ nem billeghet. Egyetlen határon (7,5°) a remegő ujj minden
+     képkockában át-vissza billentette a 3D-s megjelenést (30 lépésből
+     30-szor), és vele villogott a kontúr, az árnyék és a teremszámok. Most
+     fölfelé 7,5°-nál, lefelé 5°-nál vált. Elengedve pedig az dönt, amit a kép
+     épp mutat. */
+  const H = await p.evaluate(async () => {
+    const st = document.getElementById("stage"), app = document.getElementById("app");
+    const s = (type,x,y,id) => st.dispatchEvent(new PointerEvent(type,
+      { pointerId:id, clientX:x, clientY:y, bubbles:true, pointerType:"touch", isPrimary:id===1 }));
+    const f = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const w = ms => new Promise(r => setTimeout(r, ms));
+    setMode(2); await w(1600);
+    s("pointerdown",140,330,1); s("pointerdown",250,330,2);
+    let y = 330;
+    for (let i = 1; i <= 12; i++) { y -= 4; s("pointermove",140,y,1); s("pointermove",250,y,2); await f(); }  // ≈ 7°
+    let valt = 0, elozo = app.classList.contains("deep");
+    for (let i = 0; i < 30; i++) { y += (i % 2 ? 4 : -4); s("pointermove",140,y,1); s("pointermove",250,y,2); await f();
+      const d = app.classList.contains("deep"); if (d !== elozo) valt++; elozo = d; }
+    const mutat = app.classList.contains("deep"), rx = S.rot.x;
+    s("pointerup",140,y,1); s("pointerup",250,y,2); await w(1500);
+    return { valt, rx:+rx.toFixed(1), mutat, mode:S.mode, rxUtana:+S.rot.x.toFixed(1), tilt:TILT_MIN };
+  });
+  t("a félúti határon remegő ujj alatt sem billeg", H.valt <= 1, `30 lépés alatt ${H.valt} váltás, ${H.rx}°-on`);
+  t("elengedve az dönt, amit a kép épp mutat",
+    H.mutat ? (H.mode === 3 && H.rxUtana === H.tilt) : H.mode === 2, JSON.stringify(H));
   t("nincs JS hiba", p.jsErrors.length === 0, p.jsErrors.join(" | "));
 });

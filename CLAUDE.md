@@ -57,7 +57,7 @@ hagytak egy hibás kódot.
 | `tests/url.js` | mély linkek, a vissza gomb, hibás link |
 | `tests/share.js` | megosztás gomb mindkét ága |
 | `tests/gestures.js` | csippentés, forgatás, tolás, a kétujjas felemelés — **élesben bejelentett fagyás** és „csúnya átmenet" |
-| `tests/labels.js` | teremszámok Épület nézetben: ott vannak, állnak, a termük fölött — gesztus közben is |
+| `tests/labels.js` | teremszámok Épület nézetben: ott vannak, állnak, a termük fölött, élből nézve is, és nem villognak |
 | `tests/lift.js` | lépcső vs. lift alternatíva |
 | `tests/sheet.js` | az alsó panel aljának elérhetősége |
 | `tests/staff.js` | hallgatói/minden szűrő |
@@ -185,12 +185,15 @@ most ezt adja, és amit ezért ne bonts meg:
   (`REVEAL_DEG = TILT_MIN`) közt nyitja szét a köteget. Félúton (`DEEP_AT`)
   billen át a 3D-s megjelenés (`.deep`: kontúr, árnyék, szintfeliratok, a
   síkbeli feliratok helyett az álló teremszámok), és a többi szint is csak
-  innen úszik be. A
-  kettő szándékosan egy ponton van, mert mindkettő rajzolással jár — a
-  `.deep` az SVG-n belül vált, a beúszó szinteket pedig most kell először
-  kifesteni. Így a mozdulat alatt egyszer kell rajzolni, és a felemelés első
-  fele olyan olcsó, mint maga az alaprajz. A 15° fölötti nyugvó állásokon
-  mindez már teljesen kinyitva áll, ott semmi nem változott.
+  innen úszik be. A kettő szándékosan egy ponton van, mert mindkettő
+  rajzolással jár — a `.deep` az SVG-n belül vált, a beúszó szinteket pedig
+  most kell először kifesteni. Így a mozdulat alatt egyszer kell rajzolni, és
+  a felemelés első fele olyan olcsó, mint maga az alaprajz. A 15° fölötti
+  nyugvó állásokon mindez már teljesen kinyitva áll, ott semmi nem változott.
+- A félúti határ kétirányú: fölfelé 7,5°-nál (`DEEP_AT`) billen át, lefelé
+  csak 5°-nál (`DEEP_OFF`) vissza. Egyetlen határon a remegő ujj minden
+  képkockában át-vissza billentette, és vele villogott a kontúr, az árnyék és
+  a teremszámok (élesben jelentették: „bizonyos szögben villog").
 - A sík az ujjak alatti pont körül billen, nem az épület közepe körül:
   nagyítva az utóbbi messze a képen kívül lehet, és a látott részt
   százpixelnyit elhúzta volna. A `planeAt`/`viewKeeping` a böngésző saját
@@ -201,8 +204,9 @@ most ezt adja, és amit ezért ne bonts meg:
 - A döntés felismeréséig megtett tolás marad, nem rántjuk vissza, és a
   lezáró mozdulatot még a két ujj szerint vesszük át: az események ujjanként
   jönnek, és csak az első ujjéig jutva fél lépést ugrott volna a kép.
-- Elengedve oda úszik, aminek a kép épp mutatja magát: a `.deep` előtt vissza
-  Alaprajzra — pontosan oda, ahonnan felemelted —, utána föl 15°-ra.
+- Elengedve oda úszik, aminek a kép épp mutatja magát, ezért a `.deep`
+  állapota dönt, nem a szög: nélküle vissza Alaprajzra — pontosan oda,
+  ahonnan felemelted —, vele föl 15°-ra.
 
 Mérve (CDP `Tracing`, SwiftShader, tehát csak arányaiban): a régi felemelés
 a lezáráskor egyszerre rajzolt mindent, telefonprofilon két 130–140 ms-os
@@ -227,10 +231,27 @@ Ami ezt működteti, és amit ezért ne bonts meg:
   panel) a világot a kompozitor úsztatja, azt innen nem lehet képkockára
   követni: a mozgás idejére eltűnnek, és a végén úsznak be. Csak ha a kamera
   tényleg mozdult (`camSig`) — különben minden frissítés elvillantaná őket.
-- Egy szám csak akkor látszik, ha belefér a terme feliratnak szánt
-  dobozának vetületébe (`fitsIn`), így nagyítva sűrűsödnek, és nem lógnak
-  egymásra. Megjelenni 20%-kal több hely kell, mint ottmaradni, különben a
-  határon mozgás közben villognának.
+- Hogy egy terem elég nagy-e a számához, azt a nagyítás és a mélység dönti
+  el, a dőlés és az irány NEM (`placeTlabels()`). Az első változat a terem
+  vetületéhez mérte, és élből nézve, ahol a terem vékony csík, a számok
+  eltűntek (58°-on 16, 85°-on 1), a határon pedig ki-be kapcsoltak — ezt
+  jelentették úgy, hogy „bizonyos szögben villog, és nagyon lapos szögben
+  eltűnnek a számok". Most 85°-on is 14–16 marad.
+- Élből nézve a számok egy keskeny sávba torlódnak: amelyik egy nagyobb
+  terem számával ütközne, az kimarad, így sosem lógnak egymásra.
+- Mindkét döntés kétirányú: megjelenni nagyobb terem (15%) és szabad hely
+  (6 px) kell, mint ottmaradni, és ami már látszik, azt egy újonnan beférő
+  nem szoríthatja ki. Hiszterézis nélkül a remegő ujj alatt 24 lépésből
+  120-szor kapcsoltak; bármelyik egyedül is elég, együtt biztos. Egy
+  időzítős várakozást is kipróbáltunk, az mérhetően nem segített, ezért
+  nincs benne.
+- A kép szélén a szám a térképpel együtt lép ki és be, a keret levágja —
+  ahogy magát a termet is —, ezért addig látszik, amíg bármelyik része bent
+  van. Egy változat a szélen is döntött (új szám csak egészen bent), és
+  erős nagyításnál a remegő ujj alatt ott ingázott.
+- A tesztben villogásnak az számít, ha ugyanaz a szám pár lépésen belül
+  újra vált, miközben végig a képen belül áll. A kép szélén át ki-be lépő,
+  vagy egy nagyobb terem száma mögé egyszer elbújó szám jogosan vált.
 - Mindegyik saját rétegen van (`will-change`), így a mozgatásuk csak
   tologatás. Mérve (SwiftShader) Épület nézetes gesztus közben 30 lépésre
   összesen ~1 ms festést adnak, a lépésidő a mérési zajon belül marad.

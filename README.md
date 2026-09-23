@@ -41,10 +41,12 @@ Az aktív szint alatti emeletek végig teljes erősséggel maradnak.
 
 Épület nézetben az aktív szint **teremszámai egyenesen állnak** a termük
 fölött, bármerre forgatod vagy döntöd a képet, mint egy térképalkalmazásban.
-Csak az a szám jelenik meg, amelyik belefér a terme képébe: nagyítva egyre
-több jön elő, élből nézve kevesebb marad, és sosem lógnak egymásra. A
-nézetváltás, az illesztés vagy a szintváltás mozgása alatt eltűnnek, és a
-végén az új helyükön úsznak be; ujjal mozgatva végig követik a képet.
+Hogy mennyi szám fér ki, azt a nagyítás dönti el, nem a dőlés: nagyítva
+egyre több jön elő, és élből nézve is ott maradnak. Ahol egymásra lógnának,
+ott a nagyobb terem száma marad. Mozgás közben nem villognak: ami látszik,
+az a helyén marad, amíg van helye. A nézetváltás, az illesztés vagy a
+szintváltás mozgása alatt eltűnnek, és a végén az új helyükön úsznak be;
+ujjal mozgatva végig követik a képet.
 
 A fejlécben a **Hallgatói / Minden** kapcsoló dönti el, mely helyiségek
 látszanak. Hallgatói nézetben az irodák, üzemeltetési terek, raktárak és
