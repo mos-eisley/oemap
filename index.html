@@ -277,6 +277,14 @@ button{cursor:pointer;background:none;border:0}
 .walls{transition:opacity .5s var(--ease)}
 .floor svg{display:block;overflow:visible}
 .slab{fill:var(--slab);stroke:var(--slab);stroke-width:.55;stroke-linejoin:round}
+/* Épület nézetben az aktív szint födémje akcentszínű kontúrt kap. Ha a szint
+   helyiségei mind szürkék — közlekedők, hallgatói nézetben halványított
+   irodák —, semmi más nem különbözteti meg a többi fehér födémtől: a Félemelet
+   9 apró pihenője (160 m²) így tűnt el a földszint 1733 m²-es födémje fölött.
+   A környezet halványítását is kipróbáltuk, de a felső szinteknél szétfolyt
+   tőle az épület formája. A helyiségek színéhez nem nyúlunk, az a
+   jelmagyarázaté. Nincs rajta áttűnés: váltáskor egyszer rajzolódik. */
+.m3 .floor.on .slab{stroke:var(--accent);stroke-width:.7}
 .slabsh{fill:var(--fsh);stroke:var(--fsh);stroke-width:1.1;stroke-linejoin:round;opacity:0;
   transition:opacity .5s var(--ease)}
 .m3 .slabsh{opacity:1}
@@ -1053,13 +1061,34 @@ function placeTags(){
    úgy áll, ahogy meg van rajzolva. Így egy csavarás ugyanannyit fordít a két
    nézetben, és a váltás megtartja az irányt. */
 function bearing(){ return S.mode===3 ? S.rot.z : S.rot.z-ROT0.z; }
+/* Egy kamera, két rögzített állás. Az Alaprajz ugyanaz a 3D-s jelenet,
+   egyenesen felülről nézve: rotateX(0). Így a nézetváltás mindkét végén
+   UGYANAZ a függvénylista áll (translate scale rotateX rotateZ), és a böngésző
+   a dőlést és az irányt függvényenként, külön-külön úsztatja át. Eltérő
+   listáknál (rotate() ↔ rotateX() rotateZ()) mátrixként interpolálna, és a
+   dőlés meg a fordulás egyetlen átlós lendítéssé mosódna össze.
+   Nyugalomban viszont az alaprajz lelapul: `flat` esetén sima 2D-s rotate()
+   megy, ami ugyanazt a képet adja, de nem kér 3D kontextust — ezen a lapos
+   útvonalon múlik a telefonos 76 fps (a 3D 13-ával szemben). A lelapítást a
+   syncFlat() végzi, az átmenet lefutása után. */
+let flat=true;
 function worldTransform(){
   const v=S.view;
   const base=`translate(${v.x}px,${v.y}px) scale(${v.k})`;
-  // Alaprajzon sima 2D-s rotate() megy, nem rotateZ(): az nem kér 3D kontextust,
-  // így a .flat2d lapos gyorsútvonala (76 fps telefonon) megmarad.
-  return S.mode===3 ? `${base} rotateX(${S.rot.x}deg) rotateZ(${S.rot.z}deg)`
-                    : `${base} rotate(${bearing()}deg)`;
+  if(S.mode===3) return `${base} rotateX(${S.rot.x}deg) rotateZ(${S.rot.z}deg)`;
+  return flat ? `${base} rotate(${bearing()}deg)`
+              : `${base} rotateX(0deg) rotateZ(${bearing()}deg)`;
+}
+/* Ugyanazt a képet más függvénylistával írja ki, áttűnés nélkül. A kiolvasás
+   rögzíti a böngészőben a kiinduló állapotot, így a következő írás már innen
+   úszik át. Ha gesztus közben hívódik (a .now már fent van), azt nem vesszük
+   le — különben a mozdulat hátralévő része késve, áttűnéssel követné az ujjat. */
+function setWorldInstant(){
+  const volt=world.classList.contains("now");
+  world.classList.add("now");
+  world.style.transform=worldTransform();
+  void getComputedStyle(world).transform;
+  if(!volt) world.classList.remove("now");
 }
 /* Az aktív szintet a FÖLÖTTE lévők takarják el: a +Z a néző felé mutat, tehát
    a magasabb emelet van elöl, és a födémje ráfekszik az alaprajzra. Öt egymásra
@@ -1206,7 +1235,10 @@ let flatT=0;
 function syncFlat(){
   clearTimeout(flatT);
   if(S.mode===3){ app.classList.remove("flat2d"); return; }
-  flatT=setTimeout(()=>{ if(S.mode===2) app.classList.add("flat2d"); },1050);
+  // Az átmenet lefutása után lapul le az alaprajz: a kép nem változik, csak a
+  // 3D-s kameraforma cserélődik a lapos 2D-sre, és a gyors útvonal visszajön.
+  flatT=setTimeout(()=>{ if(S.mode!==2) return;
+    flat=true; setWorldInstant(); app.classList.add("flat2d"); },1050);
 }
 /* Az átmenet idejére az SVG-belső áttűnések kikapcsolnak — lásd a .switching
    szabályt. Kicsivel az 1s-os mozgás után vesszük le, és minden váltás
@@ -1222,6 +1254,9 @@ function markSwitching(){
 function setMode(m,keepView){
   if(S.mode===m)return;
   markSwitching();
+  // A lapos alaprajzból előbb a vele azonos képet adó 3D-s kameraformára
+  // váltunk, még a régi módban — innen úszik át a dőlés tisztán.
+  if(flat){ flat=false; setWorldInstant(); }
   S.mode=m;
   app.classList.toggle("m3",m===3); app.classList.toggle("m2",m===2);
   $("m2").setAttribute("aria-pressed",m===2); $("m3").setAttribute("aria-pressed",m===3);
