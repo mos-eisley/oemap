@@ -42,7 +42,7 @@ honnan/hova, útvonal, forgatás, panelállás). Aki ezt megérti, érti az appo
 
 ```
 npm install          # playwright (a böngésző a képen már megvan)
-npm test             # mind a 10 tesztfájl
+npm test             # mind a 11 tesztfájl
 node tests/run.js url share     # csak egy-kettő
 ```
 
@@ -57,6 +57,7 @@ hagytak egy hibás kódot.
 | `tests/url.js` | mély linkek, a vissza gomb, hibás link |
 | `tests/share.js` | megosztás gomb mindkét ága |
 | `tests/gestures.js` | csippentés, forgatás, tolás, a kétujjas felemelés — **élesben bejelentett fagyás** és „csúnya átmenet" |
+| `tests/labels.js` | teremszámok Épület nézetben: ott vannak, állnak, a termük fölött — gesztus közben is |
 | `tests/lift.js` | lépcső vs. lift alternatíva |
 | `tests/sheet.js` | az alsó panel aljának elérhetősége |
 | `tests/staff.js` | hallgatói/minden szűrő |
@@ -183,7 +184,8 @@ most ezt adja, és amit ezért ne bonts meg:
 - Minden „3D-sség" a dőlésből jön, nem a módból: a `reveal()` 0 és 15°
   (`REVEAL_DEG = TILT_MIN`) közt nyitja szét a köteget. Félúton (`DEEP_AT`)
   billen át a 3D-s megjelenés (`.deep`: kontúr, árnyék, szintfeliratok, a
-  helyiségfeliratok eltűnése), és a többi szint is csak innen úszik be. A
+  síkbeli feliratok helyett az álló teremszámok), és a többi szint is csak
+  innen úszik be. A
   kettő szándékosan egy ponton van, mert mindkettő rajzolással jár — a
   `.deep` az SVG-n belül vált, a beúszó szinteket pedig most kell először
   kifesteni. Így a mozdulat alatt egyszer kell rajzolni, és a felemelés első
@@ -192,9 +194,10 @@ most ezt adja, és amit ezért ne bonts meg:
 - A sík az ujjak alatti pont körül billen, nem az épület közepe körül:
   nagyítva az utóbbi messze a képen kívül lehet, és a látott részt
   százpixelnyit elhúzta volna. A `planeAt`/`viewKeeping` a böngésző saját
-  leképezését számolja vissza (a világ `translate·scale·rotateX·rotateZ`
-  transzformja, utána a színpad perspektívája); ha ehhez a lánchoz nyúlsz,
-  ezt is vidd.
+  leképezését számolja vissza (`camK`/`screenOf`: a világ
+  `translate·scale·rotateX·rotateZ` transzformja, utána a színpad
+  perspektívája); ugyanebből kapják a helyüket a teremszámok is. Ha ehhez a
+  lánchoz nyúlsz, a leképezést is vidd.
 - A döntés felismeréséig megtett tolás marad, nem rántjuk vissza, és a
   lezáró mozdulatot még a két ujj szerint vesszük át: az események ujjanként
   jönnek, és csak az első ujjéig jutva fél lépést ugrott volna a kép.
@@ -209,6 +212,28 @@ elosztva, utána semmit; a lépésidők átlaga telefonon és asztalon is a fel�
 esett. A `tests/gestures.js` a felemelést a síkra tett apró körökkel méri, a
 böngésző `getBoundingClientRect()`-jével — nem a kód saját képletével, mert az
 a saját hibáját nem látná.
+
+**3D-ben a síkbeli felirat olvashatatlan — ott álló teremszámok vannak.**
+Perspektívánál a böngésző a megdöntött szintet a nézet nagyításától független
+felbontással rajzolja textúrába: a szöveg nagyítva elmosódott folt, illesztve
+pár pixeles. Az első verzió ezért 3D-ben egyszerűen elrejtette a feliratokat,
+amit élesben úgy jelentettek, hogy „eltűntek a teremszámok". Most az aktív
+szint teremszámai egy lapos, a jeleneten kívüli rétegben állnak (`.tlabels`,
+`syncLabels()`), a helyüket a közös leképezés (`camK`/`screenOf`) adja.
+Ami ezt működteti, és amit ezért ne bonts meg:
+
+- Gesztus közben (`.now`) a `paint()` képkockánként, a világgal egy írásban
+  teszi őket a helyükre. Animált mozgásnál (gomb, illesztés, szintváltás, a
+  panel) a világot a kompozitor úsztatja, azt innen nem lehet képkockára
+  követni: a mozgás idejére eltűnnek, és a végén úsznak be. Csak ha a kamera
+  tényleg mozdult (`camSig`) — különben minden frissítés elvillantaná őket.
+- Egy szám csak akkor látszik, ha belefér a terme feliratnak szánt
+  dobozának vetületébe (`fitsIn`), így nagyítva sűrűsödnek, és nem lógnak
+  egymásra. Megjelenni 20%-kal több hely kell, mint ottmaradni, különben a
+  határon mozgás közben villognának.
+- Mindegyik saját rétegen van (`will-change`), így a mozgatásuk csak
+  tologatás. Mérve (SwiftShader) Épület nézetes gesztus közben 30 lépésre
+  összesen ~1 ms festést adnak, a lépésidő a mérési zajon belül marad.
 
 **A lejárt órarendi adat nem „szabad”.** A `tmNow()` az érvényességi ablakon
 kívül `nodata`-t ad, és a sor egy `–` jelet kap `tmb none` osztállyal. Aki egy

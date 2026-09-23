@@ -39,6 +39,13 @@ a néző felé esik, és egymásra rétegződve kitakarná. Minél meredekebben 
 élből úgysem takarnak, és ott a köteg mondja el, hogy hány emeletes az épület.
 Az aktív szint alatti emeletek végig teljes erősséggel maradnak.
 
+Épület nézetben az aktív szint **teremszámai egyenesen állnak** a termük
+fölött, bármerre forgatod vagy döntöd a képet, mint egy térképalkalmazásban.
+Csak az a szám jelenik meg, amelyik belefér a terme képébe: nagyítva egyre
+több jön elő, élből nézve kevesebb marad, és sosem lógnak egymásra. A
+nézetváltás, az illesztés vagy a szintváltás mozgása alatt eltűnnek, és a
+végén az új helyükön úsznak be; ujjal mozgatva végig követik a képet.
+
 A fejlécben a **Hallgatói / Minden** kapcsoló dönti el, mely helyiségek
 látszanak. Hallgatói nézetben az irodák, üzemeltetési terek, raktárak és
 dolgozói területek semleges szürkén, felirat nélkül jelennek meg — ez a 183
@@ -260,7 +267,7 @@ python3 -m http.server 8000
 
 ```
 npm install     # playwright
-npm test        # mind a 10 tesztfájl
+npm test        # mind a 11 tesztfájl
 ```
 
 A tesztek maguk indítanak szervert és böngészőt szabad porton, így nem kell
