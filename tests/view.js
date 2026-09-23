@@ -72,19 +72,54 @@ run("nézetek és szintváltás", async ({ t, ctx, base }) => {
     S.rot.x = 58; syncFloorOpacity();
     out.dolesKoveti = { lapos, meredek };
 
-    /* Nézetváltás közben a szintek SVG-je saját réteget kap, különben a
-       böngésző képkockánként újraraszterizálja őket, és a váltás megakad.
-       Csak az átmenet idejére: nyugvó állapotban a textúra nagyításkor
-       elmosódna, és pont azt az élességet vette meg a sűrűbb SVG. */
+    /* Nézetváltás közben SVG-n BELÜL semmi nem animálhat. Egy belső elem
+       áttűnése (helyiségek, falak, födémárnyék, feliratok) az egész szintet
+       képkockánként újrafesteti, hét szinten, a mozgás közepén — ez volt a
+       döccenés. A mozgást a szintdobozok és a világ adják, azok saját rétegen
+       mennek. Nem egy CSS-tulajdonságot kérünk számon, hanem magát az elvet:
+       a böngésző megmondja, mi animál éppen.
+       Útvonallal mérjük, mert akkor a pulzáló célgyűrű is kint van — az is
+       SVG-n belül van, és ugyanúgy koszolná a réteget.
+
+       Csak azt kérjük számon, amit a váltás INDÍT, plusz a végtelen
+       ismétlődésűeket. Egy frissen kirajzolt útvonal beúszása és a végpontok
+       beugrása egyszeri, az útvonal rajzolásához tartozik, nem a váltáshoz —
+       lassú gépen még futhat a mérés pillanatában, és az első változat ettől
+       pelyhes volt. A getAnimations() maga kiüríti a függő stílusváltozásokat,
+       így a váltás által indított áttűnések a hívás pillanatában már léteznek:
+       ez az ellenőrzés nem függ az időzítéstől. */
+    /* Kétszer nézünk rá: azonnal, és két képkockával később. Terhelt gépen a
+       böngésző néha csak a következő képkockában hozza létre az áttűnéseket,
+       egy túl lassú képkocka alatt viszont egy fél másodperces áttűnés le is
+       futhat — a kettő uniója egyiken sem csúszik át.
+       Csak a váltási ablakon BELÜL számít, amíg a .switching fent van: a
+       szoftveres renderelőn a 3D-be lépés utáni két képkocka túlnyúlhat az
+       1,15 s-os ablakon, és utána a célgyűrű jogosan pulzál újra. */
+    const ket = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const appEl = document.getElementById("app");
+    async function valtas(mode){
+      const elotte = new Set(document.getAnimations());
+      const svgBelso = new Set();
+      const nez = () => { if (!appEl.classList.contains("switching")) return;
+        for (const a of document.getAnimations()) {
+        const el = a.effect && a.effect.target;
+        if (a.playState === "running" && el && el.ownerSVGElement &&
+            (!elotte.has(a) || a.effect.getComputedTiming().iterations === Infinity))
+          svgBelso.add(el.getAttribute("class") || el.tagName);
+      } };
+      setMode(mode);
+      nez(); await ket(); nez();
+      return { mode:S.mode, svgBelso:[...svgBelso] };
+    }
+    S.from = "OA00FK1"; S.to = "OA10E18"; recompute(); await w(1500);
     setMode(2); await w(1600);
-    const app2 = document.getElementById("app");
-    const svgContain = () => getComputedStyle(document.querySelector(".floor svg")).contain;
-    setMode(3); await w(200);
-    out.valtasKozben = { osztaly:app2.classList.contains("switching"), contain:svgContain() };
-    await w(1400);
-    out.valtasUtan = { osztaly:app2.classList.contains("switching"), contain:svgContain() };
-    // a szintfelirat a doboz MÁSIK gyereke, így a réteg nem vághatja le
-    out.feliratKivul = !document.querySelector(".floor svg").contains(document.querySelector(".ftag"));
+    out.valtas3 = await valtas(3); await w(1600);
+    out.valtas2 = await valtas(2); await w(1600);
+    // nyugalomban minden visszaáll: a gyűrű újra pulzál
+    out.utana = { switching:document.getElementById("app").classList.contains("switching"),
+                  gyuru:document.getAnimations().some(a => a.playState === "running" &&
+                    a.effect && a.effect.target && a.effect.target.classList.contains("ring")) };
+    S.from = S.to = null; recompute(); await w(300);
 
     // kiválasztás 2D-ben
     setMode(2); await w(1600);
@@ -112,11 +147,14 @@ run("nézetek és szintváltás", async ({ t, ctx, base }) => {
     `${(r.takaras.alap*100).toFixed(0)}%`);
   t("a takarás a dőléssel mozog", r.dolesKoveti.lapos < r.dolesKoveti.meredek,
     `20°-on ${r.dolesKoveti.lapos}, 80°-on ${r.dolesKoveti.meredek}`);
-  t("váltás közben a szint saját réteget kap",
-    r.valtasKozben.osztaly && r.valtasKozben.contain === "paint", JSON.stringify(r.valtasKozben));
-  t("de utána nem marad rajta — nagyításkor élesnek kell maradnia",
-    !r.valtasUtan.osztaly && r.valtasUtan.contain === "none", JSON.stringify(r.valtasUtan));
-  t("a szintfelirat a rétegen kívül van, nem vágódik le", r.feliratKivul);
+  t("Épületre vált", r.valtas3.mode === 3, "mód=" + r.valtas3.mode);
+  t("de SVG-n belül semmi nem animál közben", r.valtas3.svgBelso.length === 0,
+    r.valtas3.svgBelso.join(", "));
+  t("Alaprajzra vált", r.valtas2.mode === 2, "mód=" + r.valtas2.mode);
+  t("és ott sem animál semmi SVG-n belül", r.valtas2.svgBelso.length === 0,
+    r.valtas2.svgBelso.join(", "));
+  t("a váltás után a célgyűrű újra pulzál", !r.utana.switching && r.utana.gyuru,
+    JSON.stringify(r.utana));
   t("alaprajzon is lehet termet választani", r.kivalasztas);
   t("nincs JS hiba", p.jsErrors.length === 0, p.jsErrors.join(" | "));
 }, DESKTOP);

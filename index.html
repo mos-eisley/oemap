@@ -297,14 +297,21 @@ button{cursor:pointer;background:none;border:0}
 .flat2d .stage{perspective:none}
 .flat2d .world,.flat2d .floor{transform-style:flat}
 
-/* Nézetváltáskor a szintek SVG-je egy ~1s-os 3D-animáción megy át, és a
-   böngésző képkockánként újraraszterizálja őket — asztalon szintenként
-   1314×1600 px. Mérve ez az, ami a váltást megakasztja. A contain:paint saját
-   réteget ad az SVG-nek: egyszer rajzolódik meg, utána már csak mozog.
-   CSAK az átmenet idejére kerül fel (markSwitching): nyugvó állapotban a
-   textúra nagyításkor elmosódna, és pont azt az élességet vette meg a sűrűbb
-   SVG. A szintfelirat a doboz másik gyereke, azt ez nem érinti. */
-.switching .floor svg{contain:paint}
+/* Nézetváltás közben SVG-n BELÜL semmi nem animálhat. A szint doboza (.floor)
+   és a világ saját kompozitor-rétegen mozog, azt a böngésző egyszer megrajzolja
+   és utána csak tologatja. Ha viszont az SVG egy belső eleme áttűnik (a
+   helyiségek, a falak, a födémárnyék vagy a feliratok átlátszósága), az egész
+   szintet újra kell festeni minden képkockán, amíg az áttűnés tart — hét
+   szinten, az animáció közepén. Mérve ez volt a döccenés: a böngésző saját
+   nyomkövetése szerint 500–600 ms-nál 70–84 ms raszterezés, pont a mozgás
+   közben. Így ezek az értékek váltáskor azonnal ugranak, a látható áttűnést a
+   szintdobozok átlátszósága adja, és az animáció alatt nulla a raszterezés.
+   A pulzáló célgyűrű ugyanezért áll meg.
+   Korábban itt contain:paint volt: az elszigetelte a koszolódó rétegeket, de
+   a végén a levétele egy újabb raszterezést okozott, és közben textúraként
+   elmosta a nagyítást. Az okot megszüntetve egyikre sincs szükség. */
+.switching .rooms,.switching .walls,.switching .slabsh,.switching .glabel{transition:none}
+.switching .ring{animation-play-state:paused}
 
 .navving .rail,.navving .plate,.navving .tools button,.navving .legend-btn{backdrop-filter:none}
 .navving .ring{animation-play-state:paused}
@@ -1201,8 +1208,8 @@ function syncFlat(){
   if(S.mode===3){ app.classList.remove("flat2d"); return; }
   flatT=setTimeout(()=>{ if(S.mode===2) app.classList.add("flat2d"); },1050);
 }
-/* Az átmenet idejére a szintek SVG-je saját réteget kap — lásd a .switching
-   szabályt. Kicsivel az 1s-os áttűnés után vesszük le, és minden váltás
+/* Az átmenet idejére az SVG-belső áttűnések kikapcsolnak — lásd a .switching
+   szabályt. Kicsivel az 1s-os mozgás után vesszük le, és minden váltás
    újraindítja az órát, hogy egy gyors oda-vissza kattintás se hagyja fent. */
 let switchT=0;
 function markSwitching(){
