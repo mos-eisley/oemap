@@ -54,7 +54,7 @@ esnek ki, csak nem versenyeznek a figyelemért.
 | két ujj: húzás | tolás | tolás |
 | két ujj: csippentés | nagyítás | nagyítás |
 | két ujj: **csavarás** | **forgatás** az ujjak közepe körül | forgatás |
-| két ujj: **függőleges húzás** | **felemel Épület nézetbe** és dönteni kezd | **dőlés** (15°–85°) |
+| két ujj: **függőleges húzás** | **felemeli** a tervlapot Épület nézetbe, 0°-ról, folyamatosan | **dőlés** (15°–85°), az ujjak alatti pont körül |
 | görgő | nagyítás | nagyítás |
 | Shift + húzás (egérrel) | tolás | tolás |
 | ⤢ gomb | képre igazít **és visszaforgatja** a tervlap rajzolt állásába | képre igazít **és visszaállítja az alapállást** |
@@ -74,17 +74,25 @@ Ennek ára van: **Épület nézetben a majdnem függőleges kétujjas húzás m�
 tol, hanem dönt** — így működik a Google Maps is. Tolni ferdén vagy vízszintesen
 lehet, asztali gépen Shift + húzással is.
 
-A döntés oda-vissza jár. Az Alaprajzon nincs dőlés, ezért a felfelé húzás
-átemel Épület nézetbe, és onnan folytatja — a nézet a kéz alatt marad, nem
-illeszt újra. Ha a mozdulat a legalsó dőlésen ér véget, az ujjak felemelésekor
-visszakapcsol Alaprajzra. A döntés közben nem vált oda-vissza, csak a végén, így
-a határon nem billeg. Az Épület nézet egyujjas mozdulata körbejárás marad, attól
-nem esel ki a nézetből.
+A döntés oda-vissza jár, és folytonos. Az Alaprajz maga a 0°-os kamera: a
+felfelé húzás innen emeli fel a tervlapot, ugrás nélkül — az első pillanatban a
+kép pontosan az alaprajz, és a dőlés az ujjal együtt nő. A sík az ujjak alatti
+pont körül billen, nem az épület közepe körül, így nagyítva sem csúszik ki a
+kéz alól. Félúton, 7,5°-nál vált át a kép 3D-s megjelenésbe (kontúr, árnyék,
+szintfeliratok), innen úsznak be a többi szintek, és 15°-ra nyílik szét a
+köteg.
 
-Az irányt a csavarás mindkét nézetben ugyanannyival fordítja, és a váltás
-megtartja. A két nézet alapállása közt 30° eltérés van: az Alaprajz úgy áll,
-ahogy a tervlap meg van rajzolva, az Épület pedig az izometrikus nézetben —
-a felemelkedés is ide érkezik, ugyanoda, ahova az Épület gomb visz.
+Az Épület nézet 15° alatt nem nyugszik meg: elengedve oda úszik, aminek a kép
+épp mutatja magát. A 3D-s megjelenés előtt vissza Alaprajzra — pontosan oda,
+ahonnan felemelted —, utána föl 15°-ra. Lefelé húzva ugyanez visz vissza az
+Épület nézetből. A döntés közben nem vált oda-vissza, csak az ujjak
+felemelésekor, így a határon nem billeg. Az Épület nézet egyujjas mozdulata
+körbejárás marad, attól nem esel ki a nézetből.
+
+Az irány a két nézetben közös, és mindkettő alapállása a tervlap rajzolt
+állása: a csavarás mindkettőben ugyanannyival fordít, és a nézetváltás meg a
+felemelés is megtartja. (Az Épület nézet korábban 30°-kal elfordítva,
+izometrikusan indult — ettől a felemelés első pillanatában elfordult a kép.)
 
 Az alsó lapot a fejléc bármely pontjáról lehet húzni, és a lista tetejéről lefelé
 is. Az elengedés sebessége számít: egy határozott pöccintés a mozgás irányában

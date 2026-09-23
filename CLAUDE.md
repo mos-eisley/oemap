@@ -56,7 +56,7 @@ hagytak egy hibás kódot.
 | `tests/view.js` | alaprajz/épület váltás, szintváltás, kiválasztás |
 | `tests/url.js` | mély linkek, a vissza gomb, hibás link |
 | `tests/share.js` | megosztás gomb mindkét ága |
-| `tests/gestures.js` | csippentés, forgatás, tolás — **élesben bejelentett fagyás** |
+| `tests/gestures.js` | csippentés, forgatás, tolás, a kétujjas felemelés — **élesben bejelentett fagyás** és „csúnya átmenet" |
 | `tests/lift.js` | lépcső vs. lift alternatíva |
 | `tests/sheet.js` | az alsó panel aljának elérhetősége |
 | `tests/staff.js` | hallgatói/minden szűrő |
@@ -87,7 +87,7 @@ magasabb emelet van ELÖL. Egyenként 0,82-es födémmel öt emelet alatt a
 földszint alaprajzából 0,02% jött át — gyakorlatilag eltűnt. A
 `floorOpacity()` ezért szintenként halványítja a fölöttes emeleteket, és a
 dőléssel adja vissza őket (élből nézve elcsúsznak, nem takarnak). Két buktató:
-az érték a dőléstől függ, ezért a `syncFloorOpacity()`-t a gesztus `paint()`-je
+az érték a dőléstől függ, ezért a `syncFloors()`-t a gesztus `paint()`-je
 is hívja képkockánként, és a `.navving .floor{transition:none}` nélkül a
 0,55s-os áttűnés minden képkockán újraindulna.
 
@@ -145,9 +145,11 @@ nélkül. Teljesítménymérésnél az abszolút számok jóval rosszabbak egy v
 eszköznél, és a rétegpromóciós trükkök hatása is eltérhet — a RELATÍV
 összehasonlítás megbízható, az abszolút nem.
 
-**Az Alaprajz is forgatható**, két ujjal csavarva. A `bearing()` adja meg az
-irányt: 3D-ben nyersen `rot.z`, alaprajzon `rot.z - ROT0.z`, hogy a kiinduló
-állapot elforgatatlan tervlapot mutasson. **Nyugvó alaprajzon sima `rotate()`
+**Az Alaprajz is forgatható**, két ujjal csavarva. Az irány (`bearing()`,
+vagyis `rot.z`) a két nézetben KÖZÖS, és az alapállása 0: a tervlap rajzolt
+állása. Egy kamera dőlése nem forgatja a képet. Korábban az Épület nézet
+−30°-kal elforgatva, izometrikusan indult, és a kétujjas felemelés első
+pillanatában ennyit ugrott a kép. **Nyugvó alaprajzon sima `rotate()`
 megy, nem `rotateZ()`** — az utóbbi 3D kontextust kérne, és elvinné a
 `.flat2d` lapos gyorsútvonalát, amin a telefonos 76 fps múlik (a váltás
 idejére ettől eltérünk, lásd „Egy kamera, két állás"). A `projBBox()` ugyanezt a
@@ -170,6 +172,43 @@ felfelé húzva `setMode(3,true)` emel át — a `keepView` ág azért kell, hog
 kapcsol, nem menet közben: a határon különben billegne a két nézet közt. A
 visszakapcsolás a `.navving` levétele után fut, hogy a szintek összezáródása
 átúszhasson.
+
+**A felemelés folytonos, 0°-ról indul.** Élesben jelentett hiba volt, hogy
+„csúnya az átmenet": a felemelés 15°-on indult, a kép 30°-ot fordult, a többi
+szint egy csapásra bukkant elő, és a sík az épület közepe körül billent. Ami
+most ezt adja, és amit ezért ne bonts meg:
+
+- Az alaprajz maga a 0°-os kamera. A lezáráskor a `rot.x`-et a `setMode()`
+  ELŐTT nullázzuk, különben a váltás egy képkockát még a régi 58°-kal írna ki.
+- Minden „3D-sség" a dőlésből jön, nem a módból: a `reveal()` 0 és 15°
+  (`REVEAL_DEG = TILT_MIN`) közt nyitja szét a köteget. Félúton (`DEEP_AT`)
+  billen át a 3D-s megjelenés (`.deep`: kontúr, árnyék, szintfeliratok, a
+  helyiségfeliratok eltűnése), és a többi szint is csak innen úszik be. A
+  kettő szándékosan egy ponton van, mert mindkettő rajzolással jár — a
+  `.deep` az SVG-n belül vált, a beúszó szinteket pedig most kell először
+  kifesteni. Így a mozdulat alatt egyszer kell rajzolni, és a felemelés első
+  fele olyan olcsó, mint maga az alaprajz. A 15° fölötti nyugvó állásokon
+  mindez már teljesen kinyitva áll, ott semmi nem változott.
+- A sík az ujjak alatti pont körül billen, nem az épület közepe körül:
+  nagyítva az utóbbi messze a képen kívül lehet, és a látott részt
+  százpixelnyit elhúzta volna. A `planeAt`/`viewKeeping` a böngésző saját
+  leképezését számolja vissza (a világ `translate·scale·rotateX·rotateZ`
+  transzformja, utána a színpad perspektívája); ha ehhez a lánchoz nyúlsz,
+  ezt is vidd.
+- A döntés felismeréséig megtett tolás marad, nem rántjuk vissza, és a
+  lezáró mozdulatot még a két ujj szerint vesszük át: az események ujjanként
+  jönnek, és csak az első ujjéig jutva fél lépést ugrott volna a kép.
+- Elengedve oda úszik, aminek a kép épp mutatja magát: a `.deep` előtt vissza
+  Alaprajzra — pontosan oda, ahonnan felemelted —, utána föl 15°-ra.
+
+Mérve (CDP `Tracing`, SwiftShader, tehát csak arányaiban): a régi felemelés
+a lezáráskor egyszerre rajzolt mindent, telefonprofilon két 130–140 ms-os
+lépéssel. Az új az elején csak az aktív szintet rajzolja újra (a lapos
+útvonalról 3D-be lépve, ~14 ms), a többit a `.deep`-nél, három-négy lépésre
+elosztva, utána semmit; a lépésidők átlaga telefonon és asztalon is a felére
+esett. A `tests/gestures.js` a felemelést a síkra tett apró körökkel méri, a
+böngésző `getBoundingClientRect()`-jével — nem a kód saját képletével, mert az
+a saját hibáját nem látná.
 
 **A lejárt órarendi adat nem „szabad”.** A `tmNow()` az érvényességi ablakon
 kívül `nodata`-t ad, és a sor egy `–` jelet kap `tmb none` osztállyal. Aki egy
