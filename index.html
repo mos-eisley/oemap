@@ -294,10 +294,21 @@ button{cursor:pointer;background:none;border:0}
 .lbl{font-family:"IBM Plex Mono",ui-monospace,monospace;font-weight:600;fill:var(--ink);text-anchor:middle;letter-spacing:-.04em}
 .lbl2{font-family:"Metropolis","Open Sans",system-ui,sans-serif;fill:var(--muted);text-anchor:middle}
 .glabel{pointer-events:none;transition:opacity .4s var(--ease)}
-/* Megdöntve a feliratok eltűnnek: a síkkal együtt torzulnának, és a köteg
-   fölött csak zajt adnának. Nem a mód, hanem a dőlés kapcsolja (.deep), így a
-   kétujjas felemeléskor mozgás közben tűnnek el, nem az első pillanatban. */
+/* Megdöntve a síkban fekvő feliratok helyére az álló teremszámok lépnek
+   (.tlabels): a megdöntött szintet a böngésző a nagyítástól független
+   felbontással rajzolja, a szöveg benne elmosódott folt lenne. Nem a mód,
+   hanem a dőlés kapcsolja (.deep), így a kétujjas felemeléskor mozgás közben
+   cserélődnek, nem az első pillanatban. */
 .deep .glabel{opacity:0}
+/* Az álló teremszámok. Mindegyik saját rétegen van (will-change), így a
+   gesztus alatti mozgatásuk csak tologatás, nem újrarajzolás. */
+.tlabels{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden;
+  transition:opacity .25s var(--ease)}
+.tlabels.off{opacity:0;transition:none}
+.tlabel{position:absolute;left:0;top:0;white-space:nowrap;will-change:transform;
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-weight:600;font-size:11px;line-height:1;
+  letter-spacing:-.02em;color:var(--ink);transition:opacity .15s}
+.tlabel.off{opacity:0}
 
 /* Navigálás közben minden per-frame költséget kikapcsolunk: a backdrop-blur
    újraszámolná a mozgó térképet minden képkockán, a ping animáció folyamatosan
@@ -593,6 +604,9 @@ button{cursor:pointer;background:none;border:0}
          182-szer kellene tabbolnia, hogy a térképen túljusson. -->
     <div class="stage" id="stage" tabindex="0" role="group"
          aria-describedby="mapHint"><div class="world" id="world"></div></div>
+    <!-- Épület nézetben a teremszámok itt állnak, a 3D-s jeleneten kívül —
+         lásd syncLabels(). A helyiségeknek saját nevük van, ez csak látvány. -->
+    <div class="tlabels off" id="tlabels" aria-hidden="true"></div>
     <p id="mapHint" class="sr-only"></p>
     <!-- A kiválasztás, az útvonal és a szintváltás vizuális visszajelzés; élő
          régió nélkül a képernyőolvasó egyikről sem tudna. -->
@@ -1188,6 +1202,115 @@ function updateView(){
     if(on && S.mode===2) buildLabels(lv);
   }
   syncFloors();
+  syncLabels();
+}
+
+/* ---------- a kamera leképezése ---------- */
+/* Ahogy a böngésző a világot a képernyőre teszi: a világ transzformja
+   translate·scale·rotateX·rotateZ, utána a színpad perspektívája. Az aktív
+   szint síkja z=0 (a köteg körülötte nyílik szét), tehát egy síkbeli pont
+   (x1,y1) — a rotateZ UTÁNI koordinátákban — a képernyőn:
+     z = y1·sin(a),  s = o + (v + k·(x1, y1·cos(a)) − o) · P/(P−z)
+   ahol v a nézet eltolása, o a perspektíva origója a világ horgonyához (a
+   térkép közepéhez) képest; a scale(k) síkbeli, a z-t nem nagyítja. Két
+   helyen kell: a döntés forgáspontja ebből számolja vissza a nézetet, a
+   teremszámok ebből kapják a helyüket. Csak Épület nézetben érvényes —
+   alaprajzon (.flat2d) nincs perspektíva, ott null. */
+const RAD=Math.PI/180;
+let camKc=null;
+function camK(){
+  if(camKc) return camKc;
+  const cs=getComputedStyle($("stage")), r=$("mapwrap").getBoundingClientRect();
+  const P=parseFloat(cs.perspective), o=cs.perspectiveOrigin.split(" ").map(parseFloat);
+  if(!(P>0)) return null;
+  return camKc={P, ox:o[0]-r.width/2, oy:o[1]-r.height/2, w:r.width, h:r.height};
+}
+function screenOf(K,p,a){
+  const v=S.view, ca=Math.cos(a*RAD), f=K.P/(K.P-p.y1*Math.sin(a*RAD));
+  return { x:K.ox+(v.x+v.k*p.x1-K.ox)*f, y:K.oy+(v.y+v.k*p.y1*ca-K.oy)*f };
+}
+// A térkép mérete nem csak ablakméret-váltáskor változhat, ezért figyeljük.
+// Méretváltáskor a világ horgonya (a térkép közepe) áttűnés nélkül mozdul,
+// a teremszámok vele mennek.
+new ResizeObserver(()=>{ camKc=null; if(!labWait && LABS.length) placeTlabels(); })
+  .observe($("mapwrap"));
+
+/* ---------- teremszámok Épület nézetben ---------- */
+/* A síkban fekvő feliratok 3D-ben olvashatatlanok: perspektívánál a böngésző
+   a szintet a nézet nagyításától független felbontással rajzolja textúrába,
+   így a szöveg nagyítva elmosódik, illesztve pedig pár pixeles. Ezért
+   Épület nézetben a teremszámok egy lapos, a jeleneten kívüli rétegben
+   állnak: élesek, mindig egyenesen olvashatók, és a helyüket ugyanaz a
+   leképezés adja, amelyikkel a döntés forgáspontja számol. Csak az aktív
+   szintről, és csak ha a szám belefér a terem vetületébe — így nagyítva
+   maguktól sűrűsödnek, élből nézve maguktól ritkulnak, és nem lógnak át a
+   szomszéd termekre. */
+const tlab=$("tlabels");
+let LABS=[], labFor=null, labStaff=null, labSig="", labT=0, labWait=false;
+function labelSet(){
+  const F=FLOOR[S.level];
+  if(labFor===F.rs && labStaff===S.staff) return;
+  labFor=F.rs; labStaff=S.staff; LABS=[]; tlab.textContent="";
+  for(const r of F.rs){
+    // ugyanaz a szabály, mint az alaprajzi feliratoknál
+    if(!r.code || (!S.staff && STAFF.has(r.cat))) continue;
+    const e=document.createElement("span");
+    e.className="tlabel off"; e.textContent=r.code.slice(4); tlab.appendChild(e);
+    // a felirat helye és a terem feliratnak szánt doboza, a világ síkjában
+    const X=(r.cx-BB.cx)*PXM, Y=(r.cy-BB.cy)*PXM, t=r.ang*RAD;
+    const ux=Math.cos(t), uy=Math.sin(t), hw=r.lw*PXM/2, hh=r.lh*PXM/2;
+    const box=[[-1,-1],[1,-1],[1,1],[-1,1]].map(([i,j])=>[X+ux*hw*i-uy*hh*j, Y+uy*hw*i+ux*hh*j]);
+    LABS.push({e,r,X,Y,box,w:0,h:0,on:false});
+  }
+  for(const L of LABS){ L.w=L.e.offsetWidth; L.h=L.e.offsetHeight; }
+}
+// a c körüli ±hx×±hy téglalap a q konvex négyszögön (a terem vetületén) belül van-e
+function fitsIn(q,c,hx,hy){
+  let A=0; for(let i=0;i<4;i++){ const p=q[i], n=q[(i+1)%4]; A+=p[0]*n[1]-n[0]*p[1]; }
+  for(const [dx,dy] of [[-hx,-hy],[hx,-hy],[hx,hy],[-hx,hy]]){
+    const x=c[0]+dx, y=c[1]+dy;
+    for(let i=0;i<4;i++){ const p=q[i], n=q[(i+1)%4];
+      if(((n[0]-p[0])*(y-p[1])-(n[1]-p[1])*(x-p[0]))*A<0) return false; }
+  }
+  return true;
+}
+function placeTlabels(){
+  const K=camK(); if(!K) return;
+  const b=S.rot.z*RAD, cb=Math.cos(b), sb=Math.sin(b), a=S.rot.x, d=devicePixelRatio||1;
+  const pr=(X,Y)=>{ const s=screenOf(K,{x1:X*cb-Y*sb, y1:X*sb+Y*cb},a); return [s.x+K.w/2, s.y+K.h/2]; };
+  for(const L of LABS){
+    const c=pr(L.X,L.Y);
+    // Megjelenni több hely kell, mint ottmaradni: a határon a mozgás közben
+    // különben ki-be villogna.
+    const m=L.on?1:1.2;
+    const fit=fitsIn(L.box.map(p=>pr(p[0],p[1])),c,L.w*m/2,L.h*m/2);
+    // eszközpixelre kerekítve, hogy nyugalomban a szöveg éles maradjon
+    if(fit) L.e.style.transform=`translate(${Math.round((c[0]-L.w/2)*d)/d}px,${Math.round((c[1]-L.h/2)*d)/d}px)`;
+    if(fit!==L.on){ L.on=fit; L.e.classList.toggle("off",!fit); }
+  }
+}
+/* Mikor látszanak. Gesztus közben (.now) képkockánként mennek a világgal,
+   ugyanabban a képkockában írva. Animált váltáskor (gomb, illesztés,
+   szintváltás, a panel mozgása) a világot a böngésző úsztatja a
+   kompozitoron, azt innen nem lehet képkockára pontosan követni: a mozgás
+   idejére eltűnnek, és a végén az új helyükön úsznak be. Csak ha a kamera
+   tényleg mozdult — egy kiválasztás vagy útvonal-frissítés nem villantja el
+   őket. */
+const camSig=()=>[S.mode,S.level,S.view.x,S.view.y,S.view.k,S.rot.x,S.rot.z].join();
+function syncLabels(){
+  if(S.mode!==3 || !app.classList.contains("deep")){
+    clearTimeout(labT); labWait=false; labSig=""; tlab.classList.add("off"); return;
+  }
+  labelSet();
+  const sig=camSig(), moved=sig!==labSig; labSig=sig;
+  if(world.classList.contains("now")){ clearTimeout(labT); labWait=false; }
+  else if(moved){
+    tlab.classList.add("off"); labWait=true; clearTimeout(labT);
+    labT=setTimeout(()=>{ labWait=false; syncLabels(); },1050);
+    return;
+  }
+  if(labWait) return;
+  placeTlabels(); tlab.classList.remove("off");
 }
 
 /* ---------- útvonal rajzolása ---------- */
@@ -1350,20 +1473,9 @@ function dive(lv){
      épület közepe) körül. Nagyítva az épület közepe messze a képen kívül
      lehet, és a körülötte billenő sík a látott részt százpixelnyit elhúzta
      volna az ujjak alól. Így a pont ott marad, ahová az ujjak letették — mint
-     a Google Mapsnél.
-     A számítás a böngésző saját leképezése: a világ transzformja
-     translate·scale·rotateX·rotateZ, utána a színpad perspektívája. Az aktív
-     szint síkja z=0, tehát egy síkbeli pont (x1,y1) — a rotateZ UTÁNI
-     koordinátákban — a képernyőn:
-       z = y1·sin(a),  s = o + (v + k·(x1, y1·cos(a)) − o) · P/(P−z)
-     ahol v a nézet eltolása, o a perspektíva origója a világ horgonyához
-     képest. Ebből egy adott dőléshez visszaszámolható az a v, amelynél a pont
-     ugyanott marad. */
-  const RAD=Math.PI/180;
-  const perspOf=()=>{
-    const cs=getComputedStyle(stage), r=getRect(), o=cs.perspectiveOrigin.split(" ").map(parseFloat);
-    return { P:parseFloat(cs.perspective), ox:o[0]-r.width/2, oy:o[1]-r.height/2 };
-  };
+     a Google Mapsnél. A leképezés (camK, screenOf) közös a teremszámokkal;
+     egy adott dőléshez ebből visszaszámolható az a nézet-eltolás, amelynél
+     a pont ugyanott marad. */
   // a képernyőpont (a világ horgonyához képest) alatti síkbeli pont
   const planeAt=(K,sx,sy,a)=>{
     const v=S.view, ca=Math.cos(a*RAD), sa=Math.sin(a*RAD), e=sy-K.oy;
@@ -1376,10 +1488,6 @@ function dive(lv){
     y1=Math.max(-R,Math.min(R,y1));
     const x1=((sx-K.ox)*(K.P-y1*sa)/K.P+K.ox-v.x)/v.k;
     return {x1,y1};
-  };
-  const screenOf=(K,p,a)=>{
-    const v=S.view, ca=Math.cos(a*RAD), f=K.P/(K.P-p.y1*Math.sin(a*RAD));
-    return { x:K.ox+(v.x+v.k*p.x1-K.ox)*f, y:K.oy+(v.y+v.k*p.y1*ca-K.oy)*f };
   };
   // az a nézet-eltolás, amelynél a p síkbeli pont a dőlés mellett is s-en marad
   const viewKeeping=(K,p,s,a)=>{
@@ -1403,7 +1511,8 @@ function dive(lv){
   let raf=0, needTags=false;
   const paint=()=>{ raf=0; world.style.transform=worldTransform();
                     // a szintek átlátszósága a dőléstől függ, döntés közben is
-                    if(needTags){ needTags=false; orientTags(); syncFloors(); } };
+                    if(needTags){ needTags=false; orientTags(); syncFloors(); }
+                    syncLabels(); };
   const schedule=()=>{ if(!raf) raf=requestAnimationFrame(paint); };
   const scheduleRot=()=>{ needTags=true; schedule(); };
 
@@ -1505,10 +1614,10 @@ function dive(lv){
         if(S.mode!==3){ S.rot.x=0; setMode(3,true); }
         pinch.rx=S.rot.x; pinch.tslack=dmy;
         // A forgáspont az ujjak közepe — alatta még mindig ugyanaz a pont
-        // van, ahová letették őket. A perspektívát a setMode() után olvassuk:
-        // alaprajzon (.flat2d) nincs.
-        const K=perspOf();
-        if(K.P>0){
+        // van, ahová letették őket. A leképezést a setMode() után kérjük:
+        // alaprajzon (.flat2d) nincs perspektíva.
+        const K=camK();
+        if(K){
           const p=planeAt(K,m.x-r.left-r.width/2,m.y-r.top-r.height/2,S.rot.x);
           pivot={K,p,s:screenOf(K,p,S.rot.x)};
         }
