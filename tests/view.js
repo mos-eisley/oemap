@@ -72,8 +72,22 @@ run("nézetek és szintváltás", async ({ t, ctx, base }) => {
     S.rot.x = 58; syncFloorOpacity();
     out.dolesKoveti = { lapos, meredek };
 
+    /* Nézetváltás közben a szintek SVG-je saját réteget kap, különben a
+       böngésző képkockánként újraraszterizálja őket, és a váltás megakad.
+       Csak az átmenet idejére: nyugvó állapotban a textúra nagyításkor
+       elmosódna, és pont azt az élességet vette meg a sűrűbb SVG. */
+    setMode(2); await w(1600);
+    const app2 = document.getElementById("app");
+    const svgContain = () => getComputedStyle(document.querySelector(".floor svg")).contain;
+    setMode(3); await w(200);
+    out.valtasKozben = { osztaly:app2.classList.contains("switching"), contain:svgContain() };
+    await w(1400);
+    out.valtasUtan = { osztaly:app2.classList.contains("switching"), contain:svgContain() };
+    // a szintfelirat a doboz MÁSIK gyereke, így a réteg nem vághatja le
+    out.feliratKivul = !document.querySelector(".floor svg").contains(document.querySelector(".ftag"));
+
     // kiválasztás 2D-ben
-    setMode(2); await w(1300);
+    setMode(2); await w(1600);
     document.querySelector(".floor.on .room.pick")
       .dispatchEvent(new MouseEvent("click", { bubbles:true }));
     await w(300);
@@ -98,6 +112,11 @@ run("nézetek és szintváltás", async ({ t, ctx, base }) => {
     `${(r.takaras.alap*100).toFixed(0)}%`);
   t("a takarás a dőléssel mozog", r.dolesKoveti.lapos < r.dolesKoveti.meredek,
     `20°-on ${r.dolesKoveti.lapos}, 80°-on ${r.dolesKoveti.meredek}`);
+  t("váltás közben a szint saját réteget kap",
+    r.valtasKozben.osztaly && r.valtasKozben.contain === "paint", JSON.stringify(r.valtasKozben));
+  t("de utána nem marad rajta — nagyításkor élesnek kell maradnia",
+    !r.valtasUtan.osztaly && r.valtasUtan.contain === "none", JSON.stringify(r.valtasUtan));
+  t("a szintfelirat a rétegen kívül van, nem vágódik le", r.feliratKivul);
   t("alaprajzon is lehet termet választani", r.kivalasztas);
   t("nincs JS hiba", p.jsErrors.length === 0, p.jsErrors.join(" | "));
 }, DESKTOP);

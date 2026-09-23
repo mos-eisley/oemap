@@ -297,6 +297,15 @@ button{cursor:pointer;background:none;border:0}
 .flat2d .stage{perspective:none}
 .flat2d .world,.flat2d .floor{transform-style:flat}
 
+/* Nézetváltáskor a szintek SVG-je egy ~1s-os 3D-animáción megy át, és a
+   böngésző képkockánként újraraszterizálja őket — asztalon szintenként
+   1314×1600 px. Mérve ez az, ami a váltást megakasztja. A contain:paint saját
+   réteget ad az SVG-nek: egyszer rajzolódik meg, utána már csak mozog.
+   CSAK az átmenet idejére kerül fel (markSwitching): nyugvó állapotban a
+   textúra nagyításkor elmosódna, és pont azt az élességet vette meg a sűrűbb
+   SVG. A szintfelirat a doboz másik gyereke, azt ez nem érinti. */
+.switching .floor svg{contain:paint}
+
 .navving .rail,.navving .plate,.navving .tools button,.navving .legend-btn{backdrop-filter:none}
 .navving .ring{animation-play-state:paused}
 /* Navigálás közben a szintek átlátszósága képkockánként változik (a dőléstől
@@ -1192,10 +1201,20 @@ function syncFlat(){
   if(S.mode===3){ app.classList.remove("flat2d"); return; }
   flatT=setTimeout(()=>{ if(S.mode===2) app.classList.add("flat2d"); },1050);
 }
+/* Az átmenet idejére a szintek SVG-je saját réteget kap — lásd a .switching
+   szabályt. Kicsivel az 1s-os áttűnés után vesszük le, és minden váltás
+   újraindítja az órát, hogy egy gyors oda-vissza kattintás se hagyja fent. */
+let switchT=0;
+function markSwitching(){
+  app.classList.add("switching");
+  clearTimeout(switchT);
+  switchT=setTimeout(()=>app.classList.remove("switching"),1150);
+}
 /* keepView: a nézet marad, ahol van. A kétujjas döntés gesztus közben vált
    Alaprajzról Épületre, ott egy újraillesztés kiugratná a térképet a kéz alól. */
 function setMode(m,keepView){
   if(S.mode===m)return;
+  markSwitching();
   S.mode=m;
   app.classList.toggle("m3",m===3); app.classList.toggle("m2",m===2);
   $("m2").setAttribute("aria-pressed",m===2); $("m3").setAttribute("aria-pressed",m===3);
