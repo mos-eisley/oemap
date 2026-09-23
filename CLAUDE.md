@@ -91,18 +91,32 @@ az érték a dőléstől függ, ezért a `syncFloorOpacity()`-t a gesztus `paint
 is hívja képkockánként, és a `.navving .floor{transition:none}` nélkül a
 0,55s-os áttűnés minden képkockán újraindulna.
 
-**A nézetváltás a raszterizálástól akad.** Alaprajz ↔ Épület váltáskor a
-szintek SVG-je egy 1s-os 3D-animáción megy át, és a böngésző képkockánként
-újraraszterizálja őket. Mérve: nem a hét réteg SZÁMA a baj (hatot kivéve sem
-javul), hanem a MÉRETE — asztalon `SS=2`, szintenként 1314×1600 px, és a
-negyedére csökkentve a leghosszabb képkocka is negyedére esik. A
-`markSwitching()` ezért az átmenet idejére `contain:paint`-et tesz az SVG-re
-(saját réteg, egyszer rajzolódik), és utána LEVESZI: nyugvó állapotban a
-textúra nagyításkor elmosódna — közelről a pixelek ~9%-a eltért —, és pont
-ezt az élességet vette meg a sűrűbb SVG. A `contain` az SVG-re megy, nem a
-`.floor`-ra: az utóbbi levágná a szintfeliratot, ami a dobozon kívülre lóg.
-Asztalon ez csak részben segít; a teljes megoldás az `SS` csökkentése lenne,
-ami élességbe kerül — lásd `docs/NYITOTT-KERDESEK.md`.
+**Nézetváltás közben SVG-n BELÜL semmi nem animálhat.** A szintdoboz
+(`.floor`) és a világ saját kompozitor-rétegen mozog: a böngésző egyszer
+megrajzolja, utána csak tologatja. Ha viszont az SVG egy belső eleme áttűnik
+(`.rooms`, `.walls`, `.slabsh`, `.glabel` átlátszósága, vagy a pulzáló
+`.ring`), az egész szintet újra kell festeni minden képkockán, amíg tart — hét
+szinten, a mozgás közepén. Ez volt a döccenés: a böngésző saját nyomkövetése
+szerint 500–600 ms-nál 70–84 ms raszterezés esett a mozgás közepére. A
+`markSwitching()` a váltás idejére felteszi a `.switching` osztályt, ami
+ezeket azonnal ugratja, a gyűrűt megállítja. Azóta az animáció alatt a
+raszterezés telefonon 0–5 ms. A `tests/view.js` ezt elvként kéri számon, nem
+CSS-tulajdonságként: a `getAnimations()` szerint a váltás alatt semmi nem
+futhat SVG-n belül — ha új belső animáció kerül be, az is pirosra fut.
+
+Tanulság a korábbi próbálkozásból: előbb `contain:paint` került az SVG-re.
+Az elszigetelte a koszolódó rétegeket, és javított is, de tünetkezelés volt:
+a levételekor újabb raszterezés jött, közben pedig textúraként elmosta a
+nagyítást. Az ok megszüntetésével egyikre sincs szükség. **Teljesítménynél
+ne a képkockaidőt nézd, hanem a raszterezés időbeli eloszlását** (CDP
+`Tracing`, `RasterTask` események a váltáshoz képest): az mondja meg, hogy a
+munka a mozgás közepére esik-e, és ez a mérés a szoftveres renderelőn is
+megbízható.
+
+Asztalon még marad raszterezés a mozgás első felében: ott `SS=2`, szintenként
+1314×1600 px, és az újonnan láthatóvá váló szinteket a böngésző nem tudja egy
+képkockában megrajzolni. Ennek teljes megoldása az `SS` csökkentése lenne, ami élességbe
+kerül — lásd `docs/NYITOTT-KERDESEK.md`.
 
 **A mérőkörnyezet szoftveres.** A tesztböngésző SwiftShaderrel fut, GPU
 nélkül. Teljesítménymérésnél az abszolút számok jóval rosszabbak egy valódi

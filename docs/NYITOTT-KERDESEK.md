@@ -128,13 +128,15 @@ fókusz elveszik. Egyik sem teszi használhatatlanná a felületet — a kurzor
 állapota megmarad, a következő nyíl ugyanoda tér vissza —, de egy
 billentyűzetes felhasználónak felesleges visszaút.
 
-**A nézetváltás asztalon még akad.** Az Alaprajz ↔ Épület váltásnál a
-szintek SVG-jét a böngésző képkockánként újraraszterizálja. Az átmenet
-idejére feltett `contain:paint` telefonon felezi az akadást (1050 → 534 ms
-összesen), asztalon a leghosszabb képkockát (567 → 267 ms), de asztalon
-összesen így is ~1,3 s marad. A maradék oka a raszter mérete: asztalon
-`SS=2`, és a negyedére csökkentett raszter a leghosszabb képkockát is
-negyedére vitte.
+**A nézetváltás asztalon még akad.** Telefonon megoldva: a váltás alatt SVG-n
+belül már semmi nem animál, így a mozgás közben a raszterezés 0–5 ms (előtte
+70–84 ms esett a mozgás közepére). Minden rajzolás az első 100 ms-ra kerül,
+utána a mozgás tisztán kompozitoros.
+
+Asztalon viszont a mozgás első felében még 120–280 ms raszterezés marad. Oka a
+raszter mérete: asztalon `SS=2`, szintenként 1314×1600 px, és a böngésző nem
+tudja egy képkockában megrajzolni az újonnan láthatóvá váló szinteket. A
+negyedére csökkentett raszter a leghosszabb képkockát is negyedére vitte.
 
 **A döntés, ami ezen múlik:** az `SS=2` azért van, hogy az Épület nézet
 nagyításkor éles maradjon. Csökkentése megoldaná az asztali akadást, de
