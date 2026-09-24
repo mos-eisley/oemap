@@ -164,6 +164,29 @@ run("gesztusok (csippentés, forgatás, tolás)", async ({ t, ctx, base }) => {
     await drag2(600,500,760,500, 0,-10, 6);
     out.aproNemDont = Math.abs(S.rot.x-rxD) < 0.01;
 
+    /* Ugyanezek akadozó képnél. A mozdulat kevés, nagy lépésben jön (itt
+       ujjanként 50–75 px), és az ujjak eseményei külön-külön. Eseményenként
+       értékelve az egyik ujj már az új helyén állt, a másik még a régin: a
+       két ujj távolsága és szöge egy pillanatra annyit változott, hogy a
+       döntést csippentésnek és csavarásnak vette. Élesben a lefelé húzás alig
+       akart visszaváltani, amikor az Épület nézet lelassult. Az ujjak közel
+       vannak egymáshoz (110 px), mert ott a legérzékenyebb a szög. */
+    setMode(3); await new Promise(r => setTimeout(r,1400));
+    await drag2(600,400,710,400, 0,300, 4);
+    out.akadozvaLe = { mode:S.mode };
+    setMode(2); await new Promise(r => setTimeout(r,1600));
+    await drag2(600,600,710,600, 0,-150, 3);
+    out.akadozvaFel = { mode:S.mode, rx:+S.rot.x.toFixed(1) };
+    setMode(3); await new Promise(r => setTimeout(r,1400));
+    const rxE = S.rot.x, kE = S.view.k;
+    s("pointerdown",600,500,1); s("pointerdown",710,500,2);
+    for (let i=1;i<=3;i++){ s("pointermove",600-i*24,500+i*20,1); s("pointermove",710+i*24,500+i*20,2); await f(); }
+    s("pointerup",528,560,1); s("pointerup",782,560,2); await new Promise(r => setTimeout(r,250));
+    out.akadozvaCsippent = { dolt:Math.abs(S.rot.x-rxE)>0.5, nagyit:S.view.k>kE };
+    const rxF = S.rot.x, vxF = S.view.x;
+    await drag2(600,500,710,500, 180,50, 3);
+    out.akadozvaTol = { dolt:Math.abs(S.rot.x-rxF)>0.5, tolt:Math.abs(S.view.x-vxF)>50 };
+
     out.transzformOk = !/NaN/.test(world.style.transform) &&
                        !/NaN/.test(document.querySelector(".ftag").style.transform);
     return out;
@@ -204,6 +227,14 @@ run("gesztusok (csippentés, forgatás, tolás)", async ({ t, ctx, base }) => {
   t("a csippentés nagyít, nem dönt",
     !r.csippentNemDont.dolt && r.csippentNemDont.nagyit, JSON.stringify(r.csippentNemDont));
   t("apró függőleges mozdulattól nem dől meg", r.aproNemDont);
+  t("akadozó képnél is: két ujjal lefelé húzva visszavált Alaprajzra",
+    r.akadozvaLe.mode === 2, JSON.stringify(r.akadozvaLe));
+  t("és felfelé húzva Épület nézetbe emel", r.akadozvaFel.mode === 3 && r.akadozvaFel.rx > 15,
+    JSON.stringify(r.akadozvaFel));
+  t("a csippentés akadozva is nagyít, nem dönt",
+    !r.akadozvaCsippent.dolt && r.akadozvaCsippent.nagyit, JSON.stringify(r.akadozvaCsippent));
+  t("a ferde húzás akadozva is tol, nem dönt",
+    !r.akadozvaTol.dolt && r.akadozvaTol.tolt, JSON.stringify(r.akadozvaTol));
 
   t("semmilyen transzformációban nincs NaN", r.transzformOk);
 
@@ -284,14 +315,13 @@ run("gesztusok (csippentés, forgatás, tolás)", async ({ t, ctx, base }) => {
                 ujjakAlatt:+Math.hypot(p0[0]-(X1+X2)/2, p0[1]-y).toFixed(2) };
     A.remove(); B.remove();
     const lepesek = [];
-    // a kiemelkedő falak: mennyivel esik feljebb a képen a tetejük, mint a tövük
-    const fal = () => { const F = FLOOR[S.level];
-      if (!F.wx || getComputedStyle(F.wx).display === "none") return 0;
-      return F.walls.getBoundingClientRect().top - F.wx.querySelector(".wtop").getBoundingClientRect().top; };
+    // a falak oldallapja: látszik-e az aktív szinten
+    const sav = () => { const F = FLOOR[S.level];
+      return !!F.band && getComputedStyle(F.band).display !== "none"; };
     for (let j = 0; j < 50; j++) {
       y = await tovabb(y, 4);
       const p = hol(c);
-      lepesek.push({ rx:S.rot.x, deep:deep(), tobbi:tobbi(), fal:fal(), d:Math.hypot(p[0]-p0[0], p[1]-p0[1]) });
+      lepesek.push({ rx:S.rot.x, deep:deep(), tobbi:tobbi(), sav:sav(), d:Math.hypot(p[0]-p0[0], p[1]-p0[1]) });
     }
     out.lepesek = lepesek;
     await elenged(y);
@@ -339,13 +369,11 @@ run("gesztusok (csippentés, forgatás, tolás)", async ({ t, ctx, base }) => {
   t("a 3D-s megjelenés félúton kapcsol, nem a mozdulat elején",
     korai.length > 0 && korai.every(l => !l.deep) && kesei.every(l => l.deep),
     JSON.stringify(L.lepesek.map(l => [+l.rx.toFixed(1), l.deep])));
-  t("a falak a 3D-s megjelenéssel együtt kezdenek kiemelkedni",
-    korai.every(l => Math.abs(l.fal) < .3) && L.lepesek.at(-1).fal > 2,
-    JSON.stringify(L.lepesek.map(l => [+l.rx.toFixed(1), +l.fal.toFixed(1)])));
-  t("és a dőléssel együtt nőnek, ugrás nélkül",
-    kesei.every((l,i,a) => !i || l.fal >= a[i-1].fal - .3) &&
-    Math.max(...kesei.map((l,i,a) => i ? l.fal - a[i-1].fal : l.fal)) < 1.5,
-    JSON.stringify(kesei.map(l => [+l.rx.toFixed(1), +l.fal.toFixed(1)])));
+  // Egy ponton rajzol: ha külön küszöbön jönne, a mozdulat alatt kétszer
+  // kellene az aktív szintet újrafesteni.
+  t("a falak oldallapja a 3D-s megjelenéssel együtt jelenik meg",
+    korai.every(l => !l.sav) && kesei.every(l => l.sav),
+    JSON.stringify(L.lepesek.map(l => [+l.rx.toFixed(1), l.sav])));
   t("a többi szint vele együtt úszik be, fokozatosan",
     korai.every(l => l.tobbi === 0) && L.lepesek.at(-1).tobbi > .5 &&
     kesei.filter(l => l.rx <= 15).every((l,i,a) => !i || l.tobbi >= a[i-1].tobbi),

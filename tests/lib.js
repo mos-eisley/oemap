@@ -100,11 +100,12 @@ function harness(name) {
 }
 
 /* Minden teszt ugyanígy indul és zár, és a végén a JS hibák is bukást
-   jelentenek — egy néma kivétel épp annyira regresszió, mint egy rossz érték. */
-async function run(name, body, ctxOpts = PHONE) {
+   jelentenek — egy néma kivétel épp annyira regresszió, mint egy rossz érték.
+   Az args a böngésző indítási kapcsolói (lásd perf.js). */
+async function run(name, body, ctxOpts = PHONE, args = []) {
   const t = harness(name);
   const srv = await serve();
-  const browser = await chromium.launch({ executablePath: chromePath() });
+  const browser = await chromium.launch({ executablePath: chromePath(), args });
   const ctx = await browser.newContext(ctxOpts);
   try {
     await body({ t, ctx, browser, url: srv.url, base: srv.url + "index.html" });

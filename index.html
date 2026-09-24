@@ -277,33 +277,23 @@ button{cursor:pointer;background:none;border:0}
 .walls{transition:opacity .5s var(--ease)}
 .floor svg{display:block;overflow:visible}
 .slab{fill:var(--slab);stroke:var(--slab);stroke-width:.55;stroke-linejoin:round}
-/* Épület nézetben az aktív szint falai kiemelkednek (.wx, lásd wallsOf()).
+/* Épület nézetben az aktív szint falai kiemelkedőnek látszanak: alattuk, a
+   néző felé (alapállásban lefelé) világos oldallap (.wband, lásd bandOf()).
    Ha a szint helyiségei mind szürkék — közlekedők, hallgatói nézetben
    halványított irodák —, semmi más nem különbözteti meg a többi fehér
    födémtől: a Félemelet 9 apró pihenője (160 m²) így tűnt el a földszint
-   1733 m²-es födémje fölött. Előbb akcentszínű kontúrt kapott a födém, de az
-   minden fal- és teremhatárt élénk kékkel húzott ki, és élesben tolakodónak
-   találták. A kiemelkedő falak ugyanezt visszafogottan adják: a tetejük az
-   alaprajz falszíne, az oldaluk világos. A környezet halványítását is
+   1733 m²-es födémje fölött. Előbb akcentszínű kontúr tette ezt, de az minden
+   falat élénk kékkel húzott ki, és élesben tolakodónak találták. Utána
+   egymás fölötti 3D-s rétegekből valódi, kiemelkedő fal lett, amitől telefonon
+   akadozott a kép: minden raszterezett 3D-s sík egy külön renderpass, és a
+   kép öttel többől állt össze. Az oldallap ugyanezt a képet adja a szint
+   saját rajzában, képkockánkénti költség nélkül. A környezet halványítását is
    kipróbáltuk, de a felső szinteknél szétfolyt tőle az épület formája. A
-   helyiségek színéhez nem nyúlunk, az a jelmagyarázaté.
-   A magasságot a --wh adja (syncFloors()). Láthatóvá váláskor laposról
-   nőnek fel (@starting-style), és mindig a mozgás második felében: amíg egy
-   szint átlátszósága 1 alatt van, a böngésző laposra nyomja a benne lévő
-   3D-t, szintváltáskor pedig az új szint .55s alatt úszik be. Késleltetés
-   nélkül a falai ennek a végén egy csapásra ugrottak fel. A régi szint falai
-   ugyanezért rögtön eltűnnek: úszás közben úgyis laposak volnának. Lapos
-   alaprajzon (.flat2d) nincsenek: a 3D-s réteg a gyorsútvonalat vinné el. */
-.wx{position:absolute;left:0;top:0;display:none;pointer-events:none;
-  transform-style:preserve-3d;transform-origin:0 0;transform:scale3d(1,1,var(--wh,.001));
-  transition:transform .45s var(--ease) .55s}
-.deep .floor.on .wx,.switching:not(.flat2d) .floor.on .wx{display:block}
-@starting-style{.floor.on .wx{transform:scale3d(1,1,.001)}}
-.navving .wx{transition:none}
-.wx svg{position:absolute;left:0;top:0;overflow:visible;transform-origin:0 0}
-.wx .wtop{fill:var(--wall)}
-.wx .wside{fill:color-mix(in srgb,var(--wall) var(--p),var(--slab));
-  stroke:color-mix(in srgb,var(--wall) var(--p),var(--slab));stroke-width:.1;stroke-linejoin:round}
+   helyiségek színéhez nem nyúlunk, az a jelmagyarázaté. */
+.wband{display:none}
+.deep .floor.on .wband{display:inline}
+.wband .wb1{fill:color-mix(in srgb,var(--wall) 36%,var(--slab))}
+.wband .wb2{fill:color-mix(in srgb,var(--wall) 26%,var(--slab))}
 .slabsh{fill:var(--fsh);stroke:var(--fsh);stroke-width:1.1;stroke-linejoin:round;opacity:0;
   transition:opacity .5s var(--ease)}
 .deep .slabsh{opacity:1}
@@ -1061,7 +1051,7 @@ function buildFloors(){
     tag.innerHTML=`${esc(L.name)}<em>${rs.length}</em>`;
     f.appendChild(tag);
     world.appendChild(f);
-    FLOOR[L.level]={box:f,svg,route:rt,labels:gl,rooms:gr,walls:wallNode,wallD:wallPath,tag,idx,built:false,rs};
+    FLOOR[L.level]={box:f,svg,route:rt,labels:gl,rooms:gr,walls:wallNode,tag,idx,built:false,rs};
   });
 }
 
@@ -1174,39 +1164,70 @@ const reveal=()=>Math.min(1,Math.max(0,camTilt()/REVEAL_DEG));
    át-vissza billentette (mérve: 30 lépésből 30-szor), és vele villogott a
    kontúr, az árnyék és a teremszámok. */
 const DEEP_AT=.5, DEEP_OFF=1/3;
-/* A kiemelkedő falak (lásd a .wx szabályt). A fal alakja néhányszor egymás
-   fölött: legfelül a falszínnel, alatta világos oldalrétegekkel, amelyek
-   lefelé sötétednek, hogy a fal a talajnál „leüljön". Az oldalrétegek a rések
-   ellen kicsit vastagabbak a falnál; felülről a tető takarja őket. Mérve ez a
-   legolcsóbb, ami éles és egybefüggő (SwiftShader, Épület nézetes mozdulat):
-   - falfelületenként egy-egy függőleges lap (szintenként 100–390) 40-szer
-     lassabb mozgást adott: a sok 3D-s síkot képkockánként sorba kell rendezni;
-   - az elmosott oldalrétegek simábbak, de forgatás közben újrarajzolást
-     okoztak (46–75 ms raszterezés a mozgás közepén);
-   - elmosás nélkül, fél felbontással (a felnagyítás magától lágyít) négy
-     oldalréteg egybefüggő falnak hat; egy-kettő közt a rés is látszik.
-   A lépésidő így telefonprofilon 10–15%-kal nő, és ez szinte mind az éles
-   tetőréteg — a rétegek száma alig számít. Fél felbontású tetővel a fele
-   volna, de akkor a vékony falak pontozottá esnek szét.
-   Csak az aktív szintnek épül, először akkor, amikor 3D-ben aktív lesz. */
-const WALL_H=.1, WALL_N=4;
-function wallsOf(F){
-  if(F.wx) return F.wx;
-  const box=document.createElement("div"), H=GAP*WALL_H;
-  box.className="wx"; box.style.width=PW+"px"; box.style.height=PH+"px";
-  const layer=(z,cls,half,p)=>{
-    const svg=el("svg",{width:half?PW/2:PW,height:half?PH/2:PH,
-      viewBox:`0 0 ${D.meta.w} ${D.meta.h}`,"aria-hidden":"true"});
-    const pa=el("path",{d:F.wallD||"M0 0",class:cls,"fill-rule":"evenodd"});
-    if(p) pa.style.setProperty("--p",p+"%");
-    svg.appendChild(pa);
-    svg.style.transform=`translateZ(${z}px)`+(half?" scale(2)":"");
-    box.appendChild(svg);
-  };
-  for(let i=1;i<=WALL_N;i++) layer(H*i/(WALL_N+1),"wside",true,38-(i-1)*4);
-  layer(H,"wtop",false);
-  F.box.appendChild(box);
-  return F.wx=box;
+/* A falak oldallapja (lásd a .wband szabályt): a falak alakja a néző felé —
+   a tervlap +y irányába, ami alapállásban lefelé esik — végigsöpörve, a fal
+   alá. Két kitöltés: a teljes sáv, és rajta a fal felőli fele világosabban,
+   hogy a fal a tövénél sötétebb legyen, és a padlón „üljön".
+   A raszterezés olcsósága itt a lényeg: Épület nézetben forgatás közben a
+   böngésző a szinteket csempénként újrarajzolja, és egy csempe minden
+   path-t feldolgoz, amelyik átfedi. Az első változat a fal eltolt, körvonalas
+   másolataiból rakta össze a sávot: a körbejárás lépésideje a GPU-s úton
+   kétszeres lett. Ezért konvex falnál (a 95%-uk) a söpört alak egyetlen
+   sokszög, a fal és eltolt másolatának konvex burka; a többinél a fal, a
+   másolata és minden éle végighúzva, ugyanarra forgatva, hogy az átfedéseik
+   ne oltsák ki egymást. És cellánként külön path, hogy egy csempe csak a
+   közeli falakat rajzolja, ne az egész szintet.
+   Ez a szint saját rajza, tehát nincs rajta dőlésfüggés: a valódi fal
+   oldala meredekebb nézetben nőne, ez a sáv laposodik. Alapállásban (58°)
+   a kettő ugyanaz; elforgatva a sáv a fal egyik oldalán marad, megvilágított
+   élnek hat. Csak az aktív szintnek épül, először akkor, amikor 3D-ben
+   aktív lesz. */
+const BAND_L=.6, BAND_GRID=6;
+const convex=w=>{
+  let s=0;
+  for(let i=0;i<w.length;i++){ const a=w[i], b=w[(i+1)%w.length], c=w[(i+2)%w.length];
+    const cr=(b[0]-a[0])*(c[1]-b[1])-(b[1]-a[1])*(c[0]-b[0]);
+    if(Math.abs(cr)<1e-9) continue;
+    if(!s) s=Math.sign(cr); else if(Math.sign(cr)!==s) return false; }
+  return true;
+};
+const hull=pts=>{
+  const p=[...pts].sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
+  const cr=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]);
+  const lo=[], hi=[];
+  for(const q of p){ while(lo.length>1&&cr(lo[lo.length-2],lo[lo.length-1],q)<=0) lo.pop(); lo.push(q); }
+  for(let i=p.length-1;i>=0;i--){ const q=p[i];
+    while(hi.length>1&&cr(hi[hi.length-2],hi[hi.length-1],q)<=0) hi.pop(); hi.push(q); }
+  return lo.slice(0,-1).concat(hi.slice(0,-1));
+};
+const sweep=(w,L)=>{
+  const up=w.map(p=>[p[0],p[1]+L]);
+  if(convex(w)) return [hull(w.concat(up))];
+  const out=[w,up];
+  for(let i=0;i<w.length;i++){ const a=w[i], b=w[(i+1)%w.length];
+    out.push([a,b,[b[0],b[1]+L],[a[0],a[1]+L]]); }
+  return out;
+};
+const polyD=ps=>{
+  let a=0;
+  for(let i=0;i<ps.length;i++){ const p=ps[i], q=ps[(i+1)%ps.length]; a+=p[0]*q[1]-q[0]*p[1]; }
+  if(Math.abs(a)<1e-9) return "";                   // függőleges él: nincs területe
+  return "M"+(a>0?ps:[...ps].reverse()).map(p=>p[0].toFixed(3)+" "+p[1].toFixed(3)).join("L")+"Z";
+};
+function bandOf(lv){
+  const F=FLOOR[lv]; if(F.band) return;
+  const g=el("g",{class:"wband","aria-hidden":"true"});
+  for(const [cls,L] of [["wb1",BAND_L],["wb2",BAND_L/2]]){
+    const cells=new Map();
+    for(const w of D.walls[String(lv)]||[]){
+      const cx=w.reduce((s,p)=>s+p[0],0)/w.length, cy=w.reduce((s,p)=>s+p[1],0)/w.length;
+      const k=Math.floor(cx/D.meta.w*BAND_GRID)+","+Math.floor(cy/D.meta.h*BAND_GRID);
+      cells.set(k,(cells.get(k)||"")+sweep(w,L).map(polyD).join(""));
+    }
+    for(const d of cells.values()) if(d) g.appendChild(el("path",{class:cls,d}));
+  }
+  F.svg.insertBefore(g,F.walls);
+  F.band=g;
 }
 /* A szintek térbeli helye és átlátszósága. A dőléstől függ, ezért a gesztus
    paint()-je is hívja képkockánként — csak kompozitoros tulajdonságot ír
@@ -1222,14 +1243,8 @@ function syncFloors(){
   // kötegben kilógna a következő szinten túlra
   for(const d of RISERS) d.style.transform=riserT(d.upward,r);
   const deep=S.mode===3 && r>=(app.classList.contains("deep")?DEEP_OFF:DEEP_AT);
-  /* Az aktív szint falai a többi szinttel együtt emelkednek: a kétujjas
-     felemeléskor a 3D-s megjelenéstől (DEEP_AT) nőnek teljes magasságra
-     15°-ig, és ugyanott rajzolódnak először, ahol a beúszó szintek — egy
-     rajzolás, nem kettő. Nézet- és szintváltáskor a .wx áttűnése viszi őket.
-     A nulla magasság elfajuló mátrix lenne, ezért egy hajszál. */
-  const A=FLOOR[S.level];
-  if(deep) wallsOf(A);
-  if(A.wx) A.wx.style.setProperty("--wh",Math.max(S.mode===3?be:0,.001));
+  // az oldallap a .deep-pel együtt jelenik meg: ugyanaz az egy rajzolás
+  if(deep) bandOf(S.level);
   if(deep!==app.classList.contains("deep")){
     app.classList.toggle("deep",deep);
     // lefelé döntve a feliratok visszajönnek — ha 3D-ben váltottunk szintet,
@@ -1595,8 +1610,10 @@ function dive(lv){
      böngésző eldobta, és a térkép megfagyott. */
   const startDrag=(x,y,pan)=>({x,y,vx:S.view.x,vy:S.view.y,rz:S.rot.z,rx:S.rot.x,pan});
 
-  let raf=0, needTags=false;
-  const paint=()=>{ raf=0; world.style.transform=worldTransform();
+  let raf=0, needTags=false, pinchDue=false;
+  const paint=()=>{ raf=0;
+                    if(pinchDue){ pinchDue=false; if(pinch&&pts.size>=2) pinchStep(); }
+                    world.style.transform=worldTransform();
                     // a szintek átlátszósága a dőléstől függ, döntés közben is
                     if(needTags){ needTags=false; orientTags(); syncFloors(); }
                     syncLabels(); };
@@ -1627,91 +1644,98 @@ function dive(lv){
              last:m.a,tw:0,rz:S.rot.z,rot:false,slack:0,
              ay:m.p[0].y,by:m.p[1].y,lock:null,rx:0,tslack:0};drag=null;}
   });
+  /* A kétujjas mozdulatot képkockánként egyszer értékeljük, a két ujj együttes
+     állásán — a pointermove csak feljegyzi az ujjak helyét. Az események
+     ujjanként jönnek, és eseményenként számolva az egyik ujj már az új helyén
+     állt, a másik még a régin. Akadozó képnél egy lépés 30–75 px, és ettől a
+     fél lépéstől a két ujj távolsága és szöge egy pillanatra annyit változott,
+     hogy a döntést csippentésnek és csavarásnak vette: élesben a lefelé húzás
+     alig akart visszaváltani Alaprajzra, amikor az Épület nézet lelassult. */
+  const pinchStep=()=>{
+    const m=mid(), f=m.d/pinch.d;
+    const nk=Math.max(.15,Math.min(10,pinch.k*f)), g=nk/pinch.k;
+
+    /* Csavarás. A teljes elfordulást képkockánként gyűjtjük, nem a
+       kiinduló szöghöz képest mérjük: így a ±180°-on átfordulva sem ugrik,
+       és egy gesztuson belül akárhányszor körbe lehet forgatni. */
+    let da=m.a-pinch.last;
+    if(da> Math.PI) da-=2*Math.PI; else if(da<-Math.PI) da+=2*Math.PI;
+    pinch.last=m.a; pinch.tw+=da;
+    const twDeg=pinch.tw*180/Math.PI;
+    if(!pinch.rot && Math.abs(twDeg)>TWIST_DEAD){
+      pinch.rot=true; pinch.slack=Math.sign(twDeg)*TWIST_DEAD*Math.PI/180;
+    }
+    const th=pinch.rot ? pinch.tw-pinch.slack : 0;
+
+    /* Döntés vagy minden más — az első határozott mozdulat dönti el. */
+    const dmx=m.x-pinch.mx, dmy=m.y-pinch.my;
+    let felemel=false;
+    if(!pinch.lock){
+      const day=m.p[0].y-pinch.ay, dby=m.p[1].y-pinch.by;
+      const egyutt=day*dby>0 && Math.min(Math.abs(day),Math.abs(dby))>TILT_TAKE;
+      if(Math.abs(f-1)>PINCH_BAND||Math.abs(twDeg)>TWIST_DEAD||Math.abs(dmx)>PAN_TAKE)
+        pinch.lock="map";
+      else if(egyutt && Math.abs(dmx)<Math.abs(dmy)*TILT_SKEW){
+        pinch.lock="tilt"; tilted=true; felemel=true;
+      }
+    }
+    if(pinch.lock==="tilt" && !felemel){
+      // Felfelé húzva emelkedik a dőlés (élből nézet) — ugyanaz az irány,
+      // mint az Épület nézet egyujjas mozdulatánál. Két ujjal egészen 0°-ig
+      // le lehet dönteni: ott a kép már az alaprajz, és elengedve az is lesz.
+      const nx=Math.max(0,Math.min(TILT_MAX,
+               pinch.rx-(dmy-pinch.tslack)*TILT_RATE));
+      if(Number.isFinite(nx)) S.rot.x=nx;
+      keepPivot(pivot,S.rot.x);
+      S.dirty=true; needTags=true; moved=99; return;
+    }
+
+    const r=getRect();
+    const cx=pinch.mx-r.left-r.width/2, cy=pinch.my-r.top-r.height/2;
+    /* Alaprajzon a forgatás a két ujj közepe köré megy: a világ ott sima
+       2D-s forgatást kap, így a fogáspont alatti térképrész pontosan a hely
+       marad. Épület nézetben a rotateZ a megdöntött síkban hat, azt egy
+       képernyő-síkú eltolással nem lehet pontosan kiegyenlíteni — ott a
+       forgatás az épület közepe körül fordul, ami körbejárásnál amúgy is a
+       várt viselkedés. */
+    const ct=S.mode===3?1:Math.cos(th), st=S.mode===3?0:Math.sin(th);
+    const ox=pinch.x-cx, oy=pinch.y-cy;
+    S.view.k=nk;
+    S.view.x=cx+(ox*ct-oy*st)*g+(m.x-pinch.mx);
+    S.view.y=cy+(ox*st+oy*ct)*g+(m.y-pinch.my);
+    if(pinch.rot){
+      const nz=pinch.rz+th*180/Math.PI;
+      if(Number.isFinite(nz)) S.rot.z=nz;          // sose ragadjon be
+    }
+    if(felemel){
+      /* A döntés innen indul. A küszöbig megtett tolás marad — a térkép
+         eddig az ujjakat követte, és a fenti ág ezt az utolsó lépést is még
+         a két ujj szerint vette át. Ha itt visszarántanánk, a döntés egy
+         ugrással indulna.
+         Alaprajzról a döntés emel át Épület nézetbe, 0°-ról: az alaprajz
+         maga a 0°-os kamera, így a felemelés első képkockája pontosan
+         ugyanaz, ami előtte volt. A dőlést még a nézetváltás ELŐTT
+         nullázzuk, hogy a setMode() ne a régi, 58°-os állással írjon ki egy
+         képkockát. A szétnyílást és a beúszást a syncFloors() vezeti a
+         dőlésből. */
+      if(S.mode!==3){ S.rot.x=0; setMode(3,true); }
+      pinch.rx=S.rot.x; pinch.tslack=dmy;
+      // A forgáspont az ujjak közepe — alatta még mindig ugyanaz a pont
+      // van, ahová letették őket. A leképezést a setMode() után kérjük:
+      // alaprajzon (.flat2d) nincs perspektíva.
+      const K=camK();
+      if(K){
+        const p=planeAt(K,m.x-r.left-r.width/2,m.y-r.top-r.height/2,S.rot.x);
+        pivot={K,p,s:screenOf(K,p,S.rot.x)};
+      }
+      S.dirty=true; needTags=true; moved=99; return;
+    }
+    S.dirty=true; if(pinch.rot) needTags=true; moved=99;
+  };
   stage.addEventListener("pointermove",e=>{
     if(!pts.has(e.pointerId))return;
     pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    if(pinch&&pts.size>=2){
-      const m=mid(), f=m.d/pinch.d;
-      const nk=Math.max(.15,Math.min(10,pinch.k*f)), g=nk/pinch.k;
-
-      /* Csavarás. A teljes elfordulást képkockánként gyűjtjük, nem a
-         kiinduló szöghöz képest mérjük: így a ±180°-on átfordulva sem ugrik,
-         és egy gesztuson belül akárhányszor körbe lehet forgatni. */
-      let da=m.a-pinch.last;
-      if(da> Math.PI) da-=2*Math.PI; else if(da<-Math.PI) da+=2*Math.PI;
-      pinch.last=m.a; pinch.tw+=da;
-      const twDeg=pinch.tw*180/Math.PI;
-      if(!pinch.rot && Math.abs(twDeg)>TWIST_DEAD){
-        pinch.rot=true; pinch.slack=Math.sign(twDeg)*TWIST_DEAD*Math.PI/180;
-      }
-      const th=pinch.rot ? pinch.tw-pinch.slack : 0;
-
-      /* Döntés vagy minden más — az első határozott mozdulat dönti el. */
-      const dmx=m.x-pinch.mx, dmy=m.y-pinch.my;
-      let felemel=false;
-      if(!pinch.lock){
-        const day=m.p[0].y-pinch.ay, dby=m.p[1].y-pinch.by;
-        const egyutt=day*dby>0 && Math.min(Math.abs(day),Math.abs(dby))>TILT_TAKE;
-        if(Math.abs(f-1)>PINCH_BAND||Math.abs(twDeg)>TWIST_DEAD||Math.abs(dmx)>PAN_TAKE)
-          pinch.lock="map";
-        else if(egyutt && Math.abs(dmx)<Math.abs(dmy)*TILT_SKEW){
-          pinch.lock="tilt"; tilted=true; felemel=true;
-        }
-      }
-      if(pinch.lock==="tilt" && !felemel){
-        // Felfelé húzva emelkedik a dőlés (élből nézet) — ugyanaz az irány,
-        // mint az Épület nézet egyujjas mozdulatánál. Két ujjal egészen 0°-ig
-        // le lehet dönteni: ott a kép már az alaprajz, és elengedve az is lesz.
-        const nx=Math.max(0,Math.min(TILT_MAX,
-                 pinch.rx-(dmy-pinch.tslack)*TILT_RATE));
-        if(Number.isFinite(nx)) S.rot.x=nx;
-        keepPivot(pivot,S.rot.x);
-        S.dirty=true; scheduleRot(); moved=99; return;
-      }
-
-      const r=getRect();
-      const cx=pinch.mx-r.left-r.width/2, cy=pinch.my-r.top-r.height/2;
-      /* Alaprajzon a forgatás a két ujj közepe köré megy: a világ ott sima
-         2D-s forgatást kap, így a fogáspont alatti térképrész pontosan a hely
-         marad. Épület nézetben a rotateZ a megdöntött síkban hat, azt egy
-         képernyő-síkú eltolással nem lehet pontosan kiegyenlíteni — ott a
-         forgatás az épület közepe körül fordul, ami körbejárásnál amúgy is a
-         várt viselkedés. */
-      const ct=S.mode===3?1:Math.cos(th), st=S.mode===3?0:Math.sin(th);
-      const ox=pinch.x-cx, oy=pinch.y-cy;
-      S.view.k=nk;
-      S.view.x=cx+(ox*ct-oy*st)*g+(m.x-pinch.mx);
-      S.view.y=cy+(ox*st+oy*ct)*g+(m.y-pinch.my);
-      if(pinch.rot){
-        const nz=pinch.rz+th*180/Math.PI;
-        if(Number.isFinite(nz)) S.rot.z=nz;          // sose ragadjon be
-      }
-      if(felemel){
-        /* A döntés innen indul. A küszöbig megtett tolás marad — a térkép
-           eddig az ujjakat követte, és a fenti ág ezt az utolsó mozdulatot is
-           még a két ujj szerint vette át. Ha itt visszarántanánk, vagy csak
-           az egyik ujj mozdulatáig jutnánk el (az események ujjanként jönnek),
-           a döntés egy ugrással indulna.
-           Alaprajzról a döntés emel át Épület nézetbe, 0°-ról: az alaprajz
-           maga a 0°-os kamera, így a felemelés első képkockája pontosan
-           ugyanaz, ami előtte volt. A dőlést még a nézetváltás ELŐTT
-           nullázzuk, hogy a setMode() ne a régi, 58°-os állással írjon ki egy
-           képkockát. A szétnyílást és a beúszást a syncFloors() vezeti a
-           dőlésből. */
-        if(S.mode!==3){ S.rot.x=0; setMode(3,true); }
-        pinch.rx=S.rot.x; pinch.tslack=dmy;
-        // A forgáspont az ujjak közepe — alatta még mindig ugyanaz a pont
-        // van, ahová letették őket. A leképezést a setMode() után kérjük:
-        // alaprajzon (.flat2d) nincs perspektíva.
-        const K=camK();
-        if(K){
-          const p=planeAt(K,m.x-r.left-r.width/2,m.y-r.top-r.height/2,S.rot.x);
-          pivot={K,p,s:screenOf(K,p,S.rot.x)};
-        }
-        S.dirty=true; scheduleRot(); moved=99; return;
-      }
-      S.dirty=true; pinch.rot?scheduleRot():schedule(); moved=99; return;
-    }
+    if(pinch&&pts.size>=2){ pinchDue=true; schedule(); return; }
     if(!drag)return;
     const dx=e.clientX-drag.x, dy=e.clientY-drag.y;
     moved=Math.max(moved,Math.abs(dx)+Math.abs(dy));
@@ -1732,6 +1756,8 @@ function dive(lv){
     }
   },{passive:true});
   const end=e=>{
+    // a még függő kétujjas lépés a két ujj utolsó állásán, mielőtt az egyik kiesne
+    if(pinchDue && pinch && pts.size>=2){ pinchDue=false; pinchStep(); }
     pts.delete(e.pointerId);
     if(pts.size<2)pinch=null;
     // Az utolsó pozíciót még a .now osztály alatt véglegesítjük, különben a

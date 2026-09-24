@@ -33,8 +33,9 @@ szemben, és nagyításkor éles marad, mert nincs 3D kontextus. Az Épület né
 gombbal érhető el.
 
 Épület nézetben az **aktív szint alaprajza mindig olvasható marad**: a falai
-kicsit kiemelkednek, így akkor is kiválik, ha a helyiségei mind szürkék (a
-Félemelet csupa lépcsőpihenő), a fölötte lévő emeletek födémje pedig halványodik, mert az
+alatt, a néző felé világos oldallap van, amitől kicsit kiemelkedőnek látszanak,
+így akkor is kiválik, ha a helyiségei mind szürkék (a Félemelet csupa
+lépcsőpihenő), a fölötte lévő emeletek födémje pedig halványodik, mert az
 a néző felé esik, és egymásra rétegződve kitakarná. Minél meredekebben nézed, annál inkább visszajönnek —
 élből úgysem takarnak, és ott a köteg mondja el, hogy hány emeletes az épület.
 Az aktív szint alatti emeletek végig teljes erősséggel maradnak.
@@ -88,7 +89,7 @@ felfelé húzás innen emeli fel a tervlapot, ugrás nélkül — az első pilla
 kép pontosan az alaprajz, és a dőlés az ujjal együtt nő. A sík az ujjak alatti
 pont körül billen, nem az épület közepe körül, így nagyítva sem csúszik ki a
 kéz alól. Félúton, 7,5°-nál vált át a kép 3D-s megjelenésbe (árnyék,
-szintfeliratok), innen úsznak be a többi szintek és nőnek ki a falak, és
+szintfeliratok, a falak oldallapja), innen úsznak be a többi szintek, és
 15°-ra nyílik szét a köteg.
 
 Az Épület nézet 15° alatt nem nyugszik meg: elengedve oda úszik, aminek a kép
@@ -269,7 +270,7 @@ python3 -m http.server 8000
 
 ```
 npm install     # playwright
-npm test        # mind a 11 tesztfájl
+npm test        # mind a 12 tesztfájl
 ```
 
 A tesztek maguk indítanak szervert és böngészőt szabad porton, így nem kell
