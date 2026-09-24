@@ -1,2 +1,3 @@
-# A kinyert menetrend a döntések után, végleges formában kerül be.
-timetable.json
+# A Neptun-export köztes kivonata (tools/parse-neptun.py): a kliensnek nem kell,
+# a data/termek.json épül belőle.
+neptun.json

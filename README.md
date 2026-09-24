@@ -178,31 +178,38 @@ szintszámok megadásával (`... qr.html 0 1`).
 
 ## Foglalható termek
 
-A kereső alatti gyorsgombok közt a **Foglalható termek** megmutatja, melyik terem
-szabad vagy foglalt éppen, kinyitva pedig a napi sávokat és a felszereltséget.
+A kereső alatti gyorsgombok közt a **Foglalható termek** megmutatja, melyik
+OA-terem szabad vagy foglalt éppen, és ha foglalt, milyen óra van benne
+(tárgy, előadás/gyakorlat/labor, meddig). Kinyitva a napi órák és a
+felszereltség látszik.
 
 Az adat két forrásból áll össze, a hivatalos teremnéven:
 
 | forrás | mit ad | feldolgozó |
 | --- | --- | --- |
 | `ingatlan.uni-obuda.hu/termek` mentett lapjai | név, férőhely, felszereltség | `tools/parse-rooms.py` |
-| teremfoglalási tábla (`terem.xlsx`) | napi/óránkénti foglaltság, kar, típus | `tools/parse-timetable.py` |
+| Neptun kurzusórarend-export (xlsx) | a félév heti órái termenként | `tools/parse-neptun.py` |
 
 ```
 python3 tools/parse-rooms.py mentett*.htm > data/rooms.json
-python3 tools/parse-timetable.py terem.xlsx /tmp/tt.json
-python3 tools/build-termek.py data/rooms.json /tmp/tt.json data/termek.json 2026-08-31
+python3 tools/parse-neptun.py 2026-27-1-NIK-kurzus-orarend-adatok-v1.xlsx /tmp/neptun.json
+python3 tools/build-termek.py data/rooms.json /tmp/neptun.json data/termek.json \
+        --het1 2026-09-07 --hetek 14 --szunnap 2026-10-23
 ```
 
-A `build-termek.py` utolsó paramétere a kezdődátum — enélkül az egész
-munkafüzet bekerülne (919 KB); egy-két héttel 6 KB.
+Egy export egy egész félévre szól, félévente egyszer kell lefuttatni. A
+`--het1` az 1. oktatási hét hétfője, a `--szunnap` az óraszünetes napok
+vesszővel — egyik sincs benne az exportban.
 
-**Az adat lejár.** A `termek.json` `from`/`to` mezői mondják meg, meddig érvényes;
-azon kívüli napra az app „nincs adat"-ot ír, nem „szabad"-ot. Új tábla érkezésekor
-a fenti három parancs újrafuttatandó.
+**Mikor nem mond „szabad"-ot.** A félév oktatási hetein kívül „nincs adat",
+ünnepnapon „nincs óra". Az F-blokkban és az Audmaxban más karok (KVK, RKK) is
+tartanak órát, az ő óráik viszont nincsenek benne a NIK-exportban — ezért ott
+óra híján „Szabad?" áll, nem „Szabad". Ha a többi kar exportja is megvan, az
+ugyanígy feldolgozható.
 
-**Ezek nem az alaprajz kódjai.** Az `F01…F09` és az `Audmax` az egyetem hivatalos
-teremnevei; a tervlap más (üzemeltetési) számozást használ, és a kettő
+**Ezek nem az alaprajz kódjai.** Az `F01…F09`, az `Audmax` és a laborok
+(`1.10`…`2.20`) az egyetem hivatalos teremnevei (a Neptunban `BA.F.01`,
+`BA.1.13`); a tervlap más (üzemeltetési) számozást használ, és a kettő
 összerendelése még nincs meg. Például a hivatalos `F01` 268 fős, míg a tervlap
 `OA00F01`-e 95,7 m². Ezért a foglalható termek nem jelennek meg a térképen.
 Részletek és a teendők: [docs/NYITOTT-KERDESEK.md](docs/NYITOTT-KERDESEK.md).
