@@ -53,7 +53,7 @@ hagytak egy hibás kódot.
 
 | fájl | mit őriz |
 | --- | --- |
-| `tests/view.js` | alaprajz/épület váltás, szintváltás, kiválasztás |
+| `tests/view.js` | alaprajz/épület váltás, szintváltás, kiválasztás, a kiemelkedő falak |
 | `tests/url.js` | mély linkek, a vissza gomb, hibás link |
 | `tests/share.js` | megosztás gomb mindkét ága |
 | `tests/gestures.js` | csippentés, forgatás, tolás, a kétujjas felemelés — **élesben bejelentett fagyás** és „csúnya átmenet" |
@@ -97,11 +97,40 @@ szintek nem takarnak, de vizuálisan elnyomhatják az aktívat: a Félemelet 9
 apró pihenője (160 m², mind szürke közlekedő vagy halványított raktár) nyom
 nélkül eltűnt a földszint 1733 m²-es födémje fölött — ezt jelentették úgy,
 hogy „bizonyos szögnél eltűnik az alaprajz". Ezért Épület nézetben az aktív
-födém akcentszínű kontúrt kap. A környezet halványítását is kipróbáltuk,
+szint falai kiemelkednek (lásd lejjebb). Előtte akcentszínű kontúr tette
+ezt, de az minden falat élénk kékkel húzott ki, és élesben tolakodónak
+találták. A környezet halványítását is kipróbáltuk,
 de a felső szinteknél szétfolyt tőle az épület formája. Tanulság a
 méréshez: `elementsFromPoint` 3D-ben megbízhatatlan (a rajzolt szintet is
 „hiányzónak" mondta), és egy szint minden eleme (födém, SVG, doboz) külön
 szerepel a veremben — szintenként egyszer, csak a `.hit`-et számold.
+
+**A kiemelkedő fal egymás fölötti lapokból áll, nem valódi testből.** A fal
+alakja ötször (`wallsOf()`): legfelül a falszínnel, élesen, alatta négy
+világos, fél felbontású réteg, ami egybefüggő oldalnak hat. Csak az aktív
+szintnek épül, először akkor, amikor 3D-ben aktív lesz. Mérve (SwiftShader):
+- falfelületenként egy-egy függőleges lap (szintenként 100–390) 40-szer
+  lassabb mozgást adott — a sok 3D-s síkot képkockánként sorba kell rendezni;
+- az elmosott oldalrétegek simábbak, de forgatás közben újrarajzolást
+  okoztak (46–75 ms raszterezés a mozgás közepén);
+- a mostani változat Épület nézetben telefonprofilon kb. 10–15%-kal
+  hosszabb lépésidőt ad (körbejárás 70 → 80–83 ms), asztalon 25–35%-ot. A
+  raszterezés nem nő, és nem esik a mozgás közepére; alaprajzon nincs
+  költség, ott a falak nem jelennek meg. A többlet szinte teljes egészében
+  az éles tetőréteg: egy oldalréteggel ugyanennyi, fél felbontású tetővel a
+  fele — de akkor a vékony falak pontozottá esnek szét. Egy-két oldalréteg
+  közt a rés is látszik (dupla vonal), hárommal-néggyel egybefüggő.
+
+Két buktató, mindkettőt a `tests/view.js` méri:
+- **Ha egy szint átlátszósága 1 alatt van, a böngésző laposra nyomja a benne
+  lévő 3D-t** (az `opacity` a szabvány szerint csoportosít). Szintváltáskor
+  az új szint 0,55 s alatt úszik be, ezért a falak a mozgás második felében
+  mozognak (`.55s` késleltetés) — nélküle a beúszás végén egy csapásra
+  ugrottak fel. A régi szint falai ugyanezért rögtön eltűnnek: úszás közben
+  úgyis laposak volnának, és teljes falszínnel ülnének a halványuló szinten.
+- `display:none`-ból előbukkanva a böngésző nem úsztat: a `@starting-style`
+  mondja meg, hogy laposról induljanak. Nélküle szintváltáskor rögtön teljes
+  magasságban jelentek meg.
 
 **Egy kamera, két állás.** Az Alaprajz ugyanaz a 3D-s jelenet, egyenesen
 felülről nézve (`rotateX(0)`), így a nézetváltás mindkét végén ugyanaz a
@@ -144,7 +173,12 @@ kerül — lásd `docs/NYITOTT-KERDESEK.md`.
 **A mérőkörnyezet szoftveres.** A tesztböngésző SwiftShaderrel fut, GPU
 nélkül. Teljesítménymérésnél az abszolút számok jóval rosszabbak egy valódi
 eszköznél, és a rétegpromóciós trükkök hatása is eltérhet — a RELATÍV
-összehasonlítás megbízható, az abszolút nem.
+összehasonlítás megbízható, az abszolút nem. Időzítésre se építs: a lapos
+alaprajzból 3D-be lépve a hét szint újrarajzolása itt 0,6–1,6 s-ig is
+eltarthat (a `main`-en is), és addig egy animáció sem indul el (`pending`,
+még a `requestAnimationFrame` is vár). Tesztben a váltás végét a
+böngészőtől kérdezd (`getAnimations()` … `finished`), egy köztes állapotot
+pedig megállított animációkon mérj (`pause()`, `currentTime`).
 
 **Az Alaprajz is forgatható**, két ujjal csavarva. Az irány (`bearing()`,
 vagyis `rot.z`) a két nézetben KÖZÖS, és az alapállása 0: a tervlap rajzolt
@@ -183,9 +217,10 @@ most ezt adja, és amit ezért ne bonts meg:
   ELŐTT nullázzuk, különben a váltás egy képkockát még a régi 58°-kal írna ki.
 - Minden „3D-sség" a dőlésből jön, nem a módból: a `reveal()` 0 és 15°
   (`REVEAL_DEG = TILT_MIN`) közt nyitja szét a köteget. Félúton (`DEEP_AT`)
-  billen át a 3D-s megjelenés (`.deep`: kontúr, árnyék, szintfeliratok, a
-  síkbeli feliratok helyett az álló teremszámok), és a többi szint is csak
-  innen úszik be. A kettő szándékosan egy ponton van, mert mindkettő
+  billen át a 3D-s megjelenés (`.deep`: kiemelkedő falak, árnyék,
+  szintfeliratok, a síkbeli feliratok helyett az álló teremszámok), és a
+  többi szint is csak innen úszik be. A falak innen nőnek a dőléssel, a
+  beúszó szintekkel azonos ütemben (`be`), és 15°-ra érik el a magasságukat. A kettő szándékosan egy ponton van, mert mindkettő
   rajzolással jár — a `.deep` az SVG-n belül vált, a beúszó szinteket pedig
   most kell először kifesteni. Így a mozdulat alatt egyszer kell rajzolni, és
   a felemelés első fele olyan olcsó, mint maga az alaprajz. A 15° fölötti

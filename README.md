@@ -32,9 +32,9 @@ Az app **Alaprajzzal indul** — telefonon ez a nézet 76 fps az Épület 13-áv
 szemben, és nagyításkor éles marad, mert nincs 3D kontextus. Az Épület nézet
 gombbal érhető el.
 
-Épület nézetben az **aktív szint alaprajza mindig olvasható marad**: akcentszínű
-kontúrt kap, így akkor is kiválik, ha a helyiségei mind szürkék (a Félemelet
-csupa lépcsőpihenő), a fölötte lévő emeletek födémje pedig halványodik, mert az
+Épület nézetben az **aktív szint alaprajza mindig olvasható marad**: a falai
+kicsit kiemelkednek, így akkor is kiválik, ha a helyiségei mind szürkék (a
+Félemelet csupa lépcsőpihenő), a fölötte lévő emeletek födémje pedig halványodik, mert az
 a néző felé esik, és egymásra rétegződve kitakarná. Minél meredekebben nézed, annál inkább visszajönnek —
 élből úgysem takarnak, és ott a köteg mondja el, hogy hány emeletes az épület.
 Az aktív szint alatti emeletek végig teljes erősséggel maradnak.
@@ -87,9 +87,9 @@ A döntés oda-vissza jár, és folytonos. Az Alaprajz maga a 0°-os kamera: a
 felfelé húzás innen emeli fel a tervlapot, ugrás nélkül — az első pillanatban a
 kép pontosan az alaprajz, és a dőlés az ujjal együtt nő. A sík az ujjak alatti
 pont körül billen, nem az épület közepe körül, így nagyítva sem csúszik ki a
-kéz alól. Félúton, 7,5°-nál vált át a kép 3D-s megjelenésbe (kontúr, árnyék,
-szintfeliratok), innen úsznak be a többi szintek, és 15°-ra nyílik szét a
-köteg.
+kéz alól. Félúton, 7,5°-nál vált át a kép 3D-s megjelenésbe (árnyék,
+szintfeliratok), innen úsznak be a többi szintek és nőnek ki a falak, és
+15°-ra nyílik szét a köteg.
 
 Az Épület nézet 15° alatt nem nyugszik meg: elengedve oda úszik, aminek a kép
 épp mutatja magát. A 3D-s megjelenés előtt vissza Alaprajzra — pontosan oda,

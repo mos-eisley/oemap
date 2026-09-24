@@ -284,10 +284,14 @@ run("gesztusok (csippentés, forgatás, tolás)", async ({ t, ctx, base }) => {
                 ujjakAlatt:+Math.hypot(p0[0]-(X1+X2)/2, p0[1]-y).toFixed(2) };
     A.remove(); B.remove();
     const lepesek = [];
+    // a kiemelkedő falak: mennyivel esik feljebb a képen a tetejük, mint a tövük
+    const fal = () => { const F = FLOOR[S.level];
+      if (!F.wx || getComputedStyle(F.wx).display === "none") return 0;
+      return F.walls.getBoundingClientRect().top - F.wx.querySelector(".wtop").getBoundingClientRect().top; };
     for (let j = 0; j < 50; j++) {
       y = await tovabb(y, 4);
       const p = hol(c);
-      lepesek.push({ rx:S.rot.x, deep:deep(), tobbi:tobbi(), d:Math.hypot(p[0]-p0[0], p[1]-p0[1]) });
+      lepesek.push({ rx:S.rot.x, deep:deep(), tobbi:tobbi(), fal:fal(), d:Math.hypot(p[0]-p0[0], p[1]-p0[1]) });
     }
     out.lepesek = lepesek;
     await elenged(y);
@@ -335,6 +339,13 @@ run("gesztusok (csippentés, forgatás, tolás)", async ({ t, ctx, base }) => {
   t("a 3D-s megjelenés félúton kapcsol, nem a mozdulat elején",
     korai.length > 0 && korai.every(l => !l.deep) && kesei.every(l => l.deep),
     JSON.stringify(L.lepesek.map(l => [+l.rx.toFixed(1), l.deep])));
+  t("a falak a 3D-s megjelenéssel együtt kezdenek kiemelkedni",
+    korai.every(l => Math.abs(l.fal) < .3) && L.lepesek.at(-1).fal > 2,
+    JSON.stringify(L.lepesek.map(l => [+l.rx.toFixed(1), +l.fal.toFixed(1)])));
+  t("és a dőléssel együtt nőnek, ugrás nélkül",
+    kesei.every((l,i,a) => !i || l.fal >= a[i-1].fal - .3) &&
+    Math.max(...kesei.map((l,i,a) => i ? l.fal - a[i-1].fal : l.fal)) < 1.5,
+    JSON.stringify(kesei.map(l => [+l.rx.toFixed(1), +l.fal.toFixed(1)])));
   t("a többi szint vele együtt úszik be, fokozatosan",
     korai.every(l => l.tobbi === 0) && L.lepesek.at(-1).tobbi > .5 &&
     kesei.filter(l => l.rx <= 15).every((l,i,a) => !i || l.tobbi >= a[i-1].tobbi),
