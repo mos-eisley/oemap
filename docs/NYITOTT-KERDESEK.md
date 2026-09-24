@@ -31,8 +31,8 @@ jelölhetők a térképen**, és útvonalat sem lehet hozzájuk tervezni. Az
 teremszám: nemsokára megadom".
 
 **Mit kell csinálni, ha megjön.**
-1. A megfeleltetést tedd a `tools/build-termek.py` `ALIAS` táblájába (most
-   csak `{"AM": "AUDMAX"}` van benne).
+1. A megfeleltetést (Neptun-kód → tervlapi kód) tedd a
+   `tools/build-termek.py`-ba, a `names()` mellé.
 2. Vedd fel a `code` mezőt a `data/termek.json` soraiba.
 3. A keresésbe kerüljön be a hivatalos név aliasként, hogy az `„audmax"`
    találjon.
@@ -91,22 +91,31 @@ használja, amint az nem üres.
 
 ---
 
-## 4. Az órarendi adat lejárt, és nincs gazdája a frissítésnek
+## 4. Más karok órái hiányoznak a közös termekből
 
-**Mi a baj.** A `data/termek.json` a **2026-08-31 … 2026-09-11** hétre szól.
-Ezen kívüli napra az app „nincs adat"-ot ír — ami helyes viselkedés (soha nem
-állít hamisan szabad termet), de a panel gyakorlatilag üres.
-
-**Kitől kell.** Rendszeresen érkező `terem.xlsx`, és valaki, aki lefuttatja a
-pipeline-t. Ez heti egy parancs:
+**Mi volt.** Az órarendi adat egy heti teremfoglalási táblából jött, két hétre
+szólt, és 2026-09-11-én lejárt. **Megoldva:** most a Neptun
+kurzusórarend-exportjából jön, egy egész félévre (2026/27/1, 1–14. hét, 24
+OA-terem), félévente egy frissítéssel:
 
 ```
-python3 tools/parse-timetable.py terem.xlsx /tmp/tt.json
-python3 tools/build-termek.py data/rooms.json /tmp/tt.json data/termek.json <kezdődátum>
+python3 tools/parse-neptun.py <export>.xlsx /tmp/neptun.json
+python3 tools/build-termek.py data/rooms.json /tmp/neptun.json data/termek.json \
+        --het1 <az 1. hét hétfője> --hetek 14 --szunnap <ünnepnapok>
 ```
 
-**Érdemes lenne** GitHub Actions ütemezett futtatásra tenni, ha a tábla
-elérhető gépi úton. Amíg nem az, marad a kézi frissítés.
+**Mi a baj.** Az export csak a NIK kurzusait tartalmazza. Az F-blokkban és az
+Audmaxban a KVK és az RKK is tart órát (a régi táblában az ottani foglalások
+~30%-a az övék volt), ezekről most semmit nem tudunk. Az app ott óra híján
+„Szabad?"-ot ír, nem „Szabad"-ot — nem állít hamisat, de nem is teljes.
+
+**Kitől kell.** A KVK és az RKK ugyanilyen Neptun-exportja. A
+`parse-neptun.py` ugyanúgy feldolgozza.
+
+**Mit kell csinálni, ha megjön.** A `build-termek.py` fogadjon több
+`neptun.json`-t, és amelyik termet minden használó kar exportja lefedi, abból
+kerüljön ki a `kozos` jelzés (`SHARED`). Az egyetemi szünnapokat (rektori
+szünet, TDK) a `--szunnap`-nak kell megadni — ezek sincsenek az exportban.
 
 ---
 

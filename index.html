@@ -227,6 +227,9 @@ button{cursor:pointer;background:none;border:0}
 .tmb.free{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}
 .tmb.busy{background:var(--route-soft);color:var(--route)}
 .tmb.none{background:var(--sunk);color:var(--muted)}
+/* „Szabad?": csak a mi karunk órája nincs benne — keretes, nem teli zöld,
+   hogy ne ígérjen többet, mint amit az adat tud */
+.tmb.maybe{color:var(--ok);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ok) 45%,transparent)}
 .tmd{background:var(--sunk);padding:9px 12px 11px;font-size:12.5px}
 .tmdh{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
 .tmr{display:flex;gap:10px;padding:3px 0;color:var(--ink-2)}
@@ -678,11 +681,12 @@ const I18N={hu:{
   qrooms:"Foglalható termek", qroomsSub:"most szabad vagy foglalt",
   tmTitle:"Foglalható termek", tmFree:"Szabad", tmBusy:"Foglalt",
   tmUntil:"%s-ig", tmFrom:"%s-tól", tmNoData:"Erre a napra nincs adat",
-  tmToday:"Ma", tmNothing:"Ma nincs foglalás",
+  tmToday:"Ma", tmNothing:"Ma nincs óra", tmNoMore:"Ma már nincs óra",
+  tmHoliday:"Ünnepnap, nincs óra", tmMaybe:"Szabad?", tmMaybeSub:"Csak a %s órái ismertek",
+  tmShared:"A „Szabad?” termekben más karok is tartanak órát, és azok nincsenek benne az adatban.",
   tmNote:"Az egyetem hivatalos, foglalható teremnevei. Ezek nem az alaprajz kódjai, és a két rendszer összerendelése még nincs meg — ezért nem jelöljük őket a térképen.",
-  tmRange:"Az adat %s és %s között érvényes.",
-  kEloadas:"előadás", kVizsga:"vizsga / ZH", kLevelezos:"levelezős előadás",
-  kTavos:"távoktatás", kFoglalas:"teremfoglalás", kEgyeb:"foglalt",
+  tmRange:"%s. félév, Neptun: %s – %s.",
+  kEloadas:"előadás", kGyakorlat:"gyakorlat", kLabor:"labor", kEgyeb:"egyéb",
   qsub:"innen: %s", qsub0:"a földszinti előtértől", legend2:"Funkció szerinti színek",
   mapLabel:"Alaprajz — %s", mapLabel3:"Épület, 3D nézet — %s",
   mapHint:"Nyílbillentyűkkel léptethetsz a helyiségek közt, Enterrel kiválasztod. A Page Up és Page Down szintet vált.",
@@ -716,11 +720,12 @@ const I18N={hu:{
   qrooms:"Bookable rooms", qroomsSub:"free or busy right now",
   tmTitle:"Bookable rooms", tmFree:"Free", tmBusy:"Busy",
   tmUntil:"until %s", tmFrom:"from %s", tmNoData:"No data for this day",
-  tmToday:"Today", tmNothing:"Nothing booked today",
+  tmToday:"Today", tmNothing:"No classes today", tmNoMore:"No more classes today",
+  tmHoliday:"Public holiday, no classes", tmMaybe:"Free?", tmMaybeSub:"Only %s classes are known",
+  tmShared:"Rooms marked “Free?” are also used by other faculties, whose classes are not in the data.",
   tmNote:"The university's official bookable room names. These are not the floor-plan codes, and the two systems are not yet matched up — so they are not marked on the map.",
-  tmRange:"Data covers %s to %s.",
-  kEloadas:"lecture", kVizsga:"exam", kLevelezos:"correspondence lecture",
-  kTavos:"remote teaching", kFoglalas:"room booking", kEgyeb:"booked",
+  tmRange:"Semester %s, from Neptun: %s to %s.",
+  kEloadas:"lecture", kGyakorlat:"practice", kLabor:"lab", kEgyeb:"other",
   qsub:"from %s", qsub0:"from the ground-floor lobby", legend2:"Function colours",
   mapLabel:"Floor plan — %s", mapLabel3:"Building, 3D view — %s",
   mapHint:"Use the arrow keys to move between rooms and Enter to select. Page Up and Page Down change level.",
@@ -1816,82 +1821,102 @@ $("stage").addEventListener("click",()=>{if(window.__moved)return;
   if(S.sel){S.sel=null;refreshSel();renderPanel();}});
 
 /* --------------------------------------------------- foglalható termek */
-/* Az egyetem hivatalos teremnevei (ingatlan-nyilvántartás) és a hozzájuk
-   tartozó foglalások (teremfoglalási tábla). A két forrás a teremnéven
-   találkozik — a férőhelyek az összes közös teremnél egyeznek. Az alaprajz
-   viszont más kódrendszert használ, ezért ezeket nem tesszük ki a térképre. */
-let TM=null, tmLoading=null;
+/* Az egyetem hivatalos teremnevei (ingatlan-nyilvántartás) és a Neptun
+   órarendje (tools/build-termek.py). A kettő a teremnéven találkozik. Az
+   alaprajz viszont más kódrendszert használ, ezért ezeket nem tesszük ki a
+   térképre. */
+let TM=null, tmLoading=null, tmDone=false;
+/* Más formátumú (régi) adatból inkább semmi, mint hibás állapot: egy
+   gyorsítótárban ragadt régi fájl így „nincs adat"-ot ad, nem kivételt. */
 const tmLoad=()=>tmLoading||(tmLoading=fetch("data/termek.json")
-  .then(r=>r.ok?r.json():null).then(d=>{TM=d;return d;}).catch(()=>null));
+  .then(r=>r.ok?r.json():null)
+  .then(d=>{ TM=d&&d.het1&&d.rooms&&d.targyak?d:null; tmDone=true; return TM; })
+  .catch(()=>{ tmDone=true; return null; }));
 
 const hhmm=m=>String((m/60)|0).padStart(2,"0")+":"+String(m%60).padStart(2,"0");
-/* "8.00 -  8.45" -> [480, 525] */
-function periodSpan(txt){
-  const m=String(txt||"").match(/(\d{1,2})[.:](\d{2})\s*-\s*(\d{1,2})[.:](\d{2})/);
-  if(!m)return null;
-  return [(+m[1])*60+(+m[2]), (+m[3])*60+(+m[4])];
-}
 const isoDay=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const utcOf=iso=>{ const [y,m,d]=iso.split("-").map(Number); return Date.UTC(y,m-1,d); };
 
-/* Egy terem adott napi foglalásai, az egymást követő azonos sávok összevonva. */
+/* Az adat heti ismétlődés (hetek bitmaszkja), nem napra kibontott foglalás:
+   egy ISO naphoz a félév hete és a hét napja kell. UTC-ben számolunk, hogy az
+   óraátállítás ne csússzon bele. null, ha a nap az oktatási heteken kívül
+   esik — ott nincs adatunk, és ezt kell mondani, nem azt, hogy szabad. */
+function tmWeek(iso){
+  const n=Math.round((utcOf(iso)-utcOf(TM.het1))/864e5), w=Math.floor(n/7)+1;
+  return n<0||w>TM.hetek ? null : {w, day:n%7+1};
+}
+const tmLast=()=>new Date(utcOf(TM.het1)+(7*TM.hetek-1)*864e5).toISOString().slice(0,10);
+
+/* Egy terem adott napi órái, időrendben. */
 function tmDay(room,iso){
-  const out=[];
-  for(const [d,per,fac,kind] of room.slots){
-    if(d!==iso) continue;
-    const sp=periodSpan(TM.periods[per]); if(!sp) continue;
-    const last=out[out.length-1];
-    if(last && last.kind===kind && last.fac===fac && last.to===sp[0]) last.to=sp[1];
-    else out.push({from:sp[0],to:sp[1],fac,kind,per});
-  }
-  return out.sort((a,b)=>a.from-b.from);
+  const k=tmWeek(iso);
+  if(!k||TM.szunnap.includes(iso)) return [];
+  return room.slots.filter(s=>s[0]===k.day&&(s[3]>>(k.w-1))&1)
+    .map(([,from,to,,kind,ti])=>({from,to,kind,subj:TM.targyak[ti]}))
+    .sort((a,b)=>a.from-b.from||a.to-b.to);
 }
 
-/* Most szabad-e. Ha a napra nincs adatunk, azt mondjuk meg — nem azt, hogy szabad. */
+/* Most szabad-e. Ha a napra nincs adatunk, azt mondjuk meg — nem azt, hogy
+   szabad. Ünnepnapon nincs óra. A közös termekben (kozos) más kar is tart
+   órát, és azokról az adatban nincs semmi: ott az óra hiánya csak annyit
+   jelent, hogy a mi karunké nincs — „Szabad?", nem „Szabad". */
 function tmNow(room,now){
   const iso=isoDay(now);
-  if(!TM || iso<TM.from || iso>TM.to) return {state:"nodata"};
-  const min=now.getHours()*60+now.getMinutes();
-  const day=tmDay(room,iso);
-  for(const b of day) if(min>=b.from&&min<b.to) return {state:"busy",b};
-  const next=day.find(b=>b.from>min);
-  return {state:"free",next};
+  if(!TM||!tmWeek(iso)) return {state:"nodata"};
+  if(TM.szunnap.includes(iso)) return {state:"holiday"};
+  const min=now.getHours()*60+now.getMinutes(), day=tmDay(room,iso);
+  const cur=day.filter(b=>b.from<=min&&min<b.to);
+  if(cur.length){
+    // az egymásba érő órák végéig foglalt
+    let until=Math.max(...cur.map(b=>b.to));
+    for(const b of day) if(b.from<=until&&b.to>until) until=b.to;
+    return {state:"busy",b:cur[0],until};
+  }
+  return {state:room.kozos?"maybe":"free",next:day.find(b=>b.from>min)};
 }
 
 function renderTermek(){
   const t=T(), box=$("scroll");
-  if(!TM){ box.innerHTML=`<div class="empty" style="padding:18px 16px">…</div>`; return; }
-  const now=new Date(), iso=isoDay(now);
-  const KIND={eloadas:"kEloadas",vizsga:"kVizsga",levelezos:"kLevelezos",
-              tavos:"kTavos",foglalas:"kFoglalas",egyeb:"kEgyeb"};
+  if(!TM){ box.innerHTML=`<div class="empty" style="padding:18px 16px">${tmDone?t.tmNoData:"…"}</div>`; return; }
+  const now=new Date(), iso=isoDay(now), bent=!!tmWeek(iso), unnep=TM.szunnap.includes(iso);
+  const KIND={eloadas:"kEloadas",gyakorlat:"kGyakorlat",labor:"kLabor"};
   const kn=k=>t[KIND[k]||"kEgyeb"];
+  const kar=TM.kar.join(", ")||"NIK";
 
   const rows=TM.rooms.map(r=>{
     const st=tmNow(r,now), open=S.tmOpen===r.nev;
     let badge,sub;
     if(st.state==="nodata"){ badge=`<span class="tmb none">–</span>`; sub=t.tmNoData; }
+    else if(st.state==="holiday"){ badge=`<span class="tmb none">–</span>`; sub=t.tmHoliday; }
     else if(st.state==="busy"){ badge=`<span class="tmb busy">${t.tmBusy}</span>`;
-      sub=`${esc(st.b.fac)} · ${kn(st.b.kind)} · ${t.tmUntil.replace("%s",hhmm(st.b.to))}`; }
-    else { badge=`<span class="tmb free">${t.tmFree}</span>`;
-      sub=st.next?t.tmFrom.replace("%s",hhmm(st.next.from)):t.tmNothing; }
+      sub=`${esc(st.b.subj)} · ${kn(st.b.kind)} · ${t.tmUntil.replace("%s",hhmm(st.until))}`; }
+    else {
+      const nx=st.next?t.tmFrom.replace("%s",hhmm(st.next.from)):t.tmNoMore;
+      badge=st.state==="maybe"?`<span class="tmb maybe">${t.tmMaybe}</span>`
+                              :`<span class="tmb free">${t.tmFree}</span>`;
+      sub=st.state==="maybe"?`${t.tmMaybeSub.replace("%s",esc(kar))} · ${nx}`:nx;
+    }
 
-    const day=TM.from<=iso&&iso<=TM.to?tmDay(r,iso):[];
+    const day=tmDay(r,iso);
     const detail=open?`<div class="tmd">
       <div class="tmdh">${t.tmToday} · ${iso}</div>
       ${day.length?day.map(b=>`<div class="tmr"><span class="mono">${hhmm(b.from)}–${hhmm(b.to)}</span>
-        <span>${esc(b.fac)} · ${kn(b.kind)}</span></div>`).join("")
-       :`<div class="tmr empty2">${TM.from<=iso&&iso<=TM.to?t.tmNothing:t.tmNoData}</div>`}
+        <span>${esc(b.subj)} · ${kn(b.kind)}</span></div>`).join("")
+       :`<div class="tmr empty2">${!bent?t.tmNoData:unnep?t.tmHoliday:t.tmNothing}</div>`}
       ${r.felsz.length?`<div class="tmf">${r.felsz.map(f=>`<span class="tag">${esc(f)}</span>`).join("")}</div>`:""}
     </div>`:"";
 
     return `<button class="tmrow${open?" open":""}" data-tm="${esc(r.nev)}">
-        <span class="tmn"><b>${esc(r.nev)}</b>${r.cim!==r.nev?`<i>${esc(r.cim)}</i>`:""}</span>
+        <span class="tmn"><b>${esc(r.nev)}</b><i>${esc(r.neptun)}</i></span>
         <span class="tms">${sub}</span>
-        <span class="tmc mono">${r.fero} fő</span>${badge}</button>${detail}`;
+        <span class="tmc mono">${r.fero?r.fero+" fő":""}</span>${badge}</button>${detail}`;
   }).join("");
 
+  const shared=TM.rooms.some(r=>r.kozos)?`<br>${t.tmShared}`:"";
   box.innerHTML=`<div class="sec"><div class="eyebrow">${t.tmTitle}</div>
     <div class="tmlist">${rows}</div>
-    <p class="note">${t.tmNote}<br><span class="mono">${t.tmRange.replace("%s",TM.from).replace("%s",TM.to)}</span></p></div>`;
+    <p class="note">${t.tmNote}${shared}<br><span class="mono">${
+      t.tmRange.replace("%s",esc(TM.felev)).replace("%s",TM.het1).replace("%s",tmLast())}</span></p></div>`;
   box.querySelectorAll("[data-tm]").forEach(b=>b.onclick=()=>{
     S.tmOpen=S.tmOpen===b.dataset.tm?null:b.dataset.tm; renderTermek(); });
 }

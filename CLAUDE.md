@@ -61,8 +61,8 @@ hagytak egy hibás kódot.
 | `tests/lift.js` | lépcső vs. lift alternatíva |
 | `tests/sheet.js` | az alsó panel aljának elérhetősége |
 | `tests/staff.js` | hallgatói/minden szűrő |
-| `tests/termek.js` | foglalható termek, és a lejárt adat kezelése |
-| `tests/pwa.js` | manifest, service worker, **offline indulás** |
+| `tests/termek.js` | foglalható termek: heti órák, páros/páratlan hét, ünnepnap, a félév előtti és utáni nap, a más karral közös termek |
+| `tests/pwa.js` | manifest, service worker, **offline indulás**, a teremadat frissessége |
 | `tests/a11y.js` | billentyűzetes bejárás, felolvasónak szóló jelölés |
 | `tests/perf.js` | Épület nézet: képkockánként hány renderpass, a telefon (GPU-s) kódútján — **élesben bejelentett akadozás** |
 
@@ -314,10 +314,14 @@ Ami ezt működteti, és amit ezért ne bonts meg:
   tologatás. Mérve (SwiftShader) Épület nézetes gesztus közben 30 lépésre
   összesen ~1 ms festést adnak, a lépésidő a mérési zajon belül marad.
 
-**A lejárt órarendi adat nem „szabad”.** A `tmNow()` az érvényességi ablakon
-kívül `nodata`-t ad, és a sor egy `–` jelet kap `tmb none` osztállyal. Aki egy
-üres teremre számít és órára érkezik, rosszabbul jár, mintha meg se kérdezte
-volna. Ezt a `tests/termek.js` kötelezővé teszi.
+**A lejárt vagy hiányos órarendi adat nem „szabad”.** A `tmNow()` a félév
+oktatási hetein kívül `nodata`-t ad, ünnepnapon `holiday`-t (mindkettő `–`
+jelet kap, `tmb none`), és a más karral közös termekben (`kozos`: az F-blokk és
+az Audmax) óra híján `maybe`-t: „Szabad?", keretes jelvénnyel, nem teli zölddel
+— ott a KVK és az RKK órái nincsenek benne az adatban. Aki egy üres teremre
+számít és órára érkezik, rosszabbul jár, mintha meg se kérdezte volna. Ezt a
+`tests/termek.js` kötelezővé teszi, szabotázzsal ellenőrizve mind a négy
+szabályt (félévhatár, hetek bitmaszkja, közös termek, ünnepnap).
 
 **A QR-ívet nyomtatás előtt vissza kell olvasni.** A generátor kétszer adott
 hibátlanul KINÉZŐ, de olvashatatlan ívet (hiányzó csendzóna; rossz viewBox;
@@ -344,17 +348,52 @@ ahová visz. Ha új kódütközés jön be, ezt a szabályt tartsd.
 
 ```
 ingatlan.uni-obuda.hu/termek (mentett lapok) --parse-rooms.py--> data/rooms.json
-terem.xlsx (teremfoglalási tábla)         --parse-timetable.py--> /tmp/tt.json
-                                     rooms.json + tt.json --build-termek.py--> data/termek.json
+Neptun kurzusórarend-export (xlsx)           --parse-neptun.py--> /tmp/neptun.json
+                         rooms.json + neptun.json --build-termek.py--> data/termek.json
 ```
 
-A `parse-timetable.py` a cellák **kitöltőszínét** olvassa adatként (ez kódolja a
-foglalás típusát: előadás, vizsga, levelezős, távos, foglalás). A
-`build-termek.py` utolsó paramétere a kezdődátum — enélkül a teljes munkafüzet
-bekerülne (919 KB); egy-két héttel 6 KB.
+```
+python3 tools/parse-neptun.py 2026-27-1-NIK-kurzus-orarend-adatok-v1.xlsx /tmp/neptun.json
+python3 tools/build-termek.py data/rooms.json /tmp/neptun.json data/termek.json \
+        --het1 2026-09-07 --hetek 14 --szunnap 2026-10-23
+```
 
-A `data/timetable.json` szándékosan `.gitignore`-ban van (896 KB, nem kell a
-kliensnek).
+Félévente egyszer kell futtatni. Amit az exportról tudni kell, mert egyik
+sem látszik rajta első ránézésre:
+
+- **Nem csak a kért félévet tartalmazza**, hanem a tárgyak összes korábbi
+  félévét is, 2007-ig vissza: a 2026/27/1-es fájl 24 214 sorából 931 az idei.
+  Az azonosító közepe a félév (`NIROR2SANB-2026271-OR2_EA`). Szűrés nélkül húsz
+  év órarendje kerül egymásra: minden OA-terem 93–100%-ban foglaltnak
+  látszott, egy 25 fős laborban egyszerre 31 tárgy. A `parse-neptun.py` a
+  fájlnévből veszi a félévet (`2026-27-1` → `2026271`).
+- **Dátum nincs benne**, csak a félév hetei (1–14), és ünnepnap sincs. Az 1.
+  hét hétfőjét a `--het1` adja: a régi teremfoglalási tábla (2026. szept.)
+  NIK-előadásaiból 73-ból 70 esik a Neptun szerinti 1. heti órákra, ez adta a
+  2026-09-07-et. Az ünnepnapokat (és ha van, a rektori szünetet) a
+  `--szunnap` kapja.
+- **Csak egy kar kurzusai vannak benne.** A NIK-exportban nincs benne, amit a
+  KVK vagy az RKK tart az F-blokkban és az Audmaxban (a régi táblában az ottani
+  foglalások ~30%-a) — ezért azok a termek `kozos`-ok, lásd fent.
+- **Az oktató neve benne van, a `termek.json`-ba nem kerül be:** személyes
+  adat, és a hallgatónak nem kell ahhoz, hogy üres termet találjon.
+- A teremkód `BA.F.05` / `BA.1.13` / `BA.1.32.Audmax`: a `BA` maga az OA
+  épület. Ezek a nyilvántartás `F05`, `LABOR 1.13`, `Audmax` termei — de nem
+  az alaprajz kódjai (lásd `docs/NYITOTT-KERDESEK.md`, 1.). Az óra fajtája a
+  kurzuskódból jön (`_EA` előadás, `_GY` gyakorlat, `_LA` labor).
+
+Az órák heti ismétlődésként kerülnek a `termek.json`-ba (`[nap, tól, ig,
+hetek bitmaszkja, fajta, tárgy sorszáma]`), nem napokra kibontva: egy félév
+~30 KB, és az app a mai dátumból számolja a hetet. Az előző forrás egy heti
+teremfoglalási tábla (`terem.xlsx`) volt, amit a cellák kitöltőszínéből
+olvastunk; két hétre szólt, és lejárt — a feldolgozója a git-történetben van.
+
+**A `data/` hálózat-először jön** a service workerből (`sw.js`), mint maga a
+dokumentum; a betűk és ikonok gyorsítótár-először. A `termek.json` neve
+félévről félévre ugyanaz, gyorsítótár-először egy telepített app sosem kapná
+meg az újat. Ha a formátuma változik, a `CACHE` nevét is emeld: az dobja el a
+régi példányt. Az app a nem várt formátumú adatot „nincs adat"-nak veszi
+(`tmLoad()`), nem omlik el tőle.
 
 ## Deploy
 

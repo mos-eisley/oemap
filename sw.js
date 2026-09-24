@@ -1,6 +1,8 @@
 /* Az app teljesen önálló: egy HTML, a betűk és az ikonok. Ezeket telepítéskor
    eltesszük, így az épületben gyenge térerővel is elindul. */
-const CACHE = "oemap-v2";
+/* A név cseréje dobja el a régi gyorsítótárat (activate). A v3 a régi,
+   kéthetes teremadatot viszi ki — az új app más formátumot vár. */
+const CACHE = "oemap-v3";
 const SHELL = [
   "./", "./index.html", "./manifest.webmanifest", "./data/termek.json",
   "./icons/icon-192.png", "./icons/icon-512.png",
@@ -46,6 +48,19 @@ self.addEventListener("fetch", e => {
         caches.open(CACHE).then(c => c.put("./index.html", copy));
         return r;
       }).catch(() => caches.match("./index.html").then(r => r || caches.match("./")))
+    );
+    return;
+  }
+
+  /* Az adat (foglalható termek) is hálózat-először: félévente cserélődik, a
+     neve viszont ugyanaz marad. Gyorsítótár-először egy telepített app sosem
+     kapná meg az új félévet; offline a tárolt példány jön. */
+  if (new URL(req.url).pathname.includes("/data/")) {
+    e.respondWith(
+      fetch(req).then(r => {
+        if (r.ok) { const copy = r.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
+        return r;
+      }).catch(() => caches.match(req))
     );
     return;
   }

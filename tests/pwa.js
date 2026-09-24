@@ -50,21 +50,35 @@ const fs = require("fs"), os = require("os"), path = require("path");
     });
     t("eltette a fájlokat a gyorsítótárba", cached && cached.db > 0, JSON.stringify(cached));
 
+    /* A teremadat félévente cserélődik, a neve viszont nem. Gyorsítótár-először
+       a telepített app örökre a régit látná — a lejárt, kéthetes adat így
+       ragadt volna a telefonokon. Hálózat-először kell: a service worker
+       online a szerverhez forduljon érte. */
+    const swKeres = [];
+    ctx.on("request", r => { if (r.serviceWorker() && /termek\.json/.test(r.url())) swKeres.push(r.url()); });
+    const friss = await p.evaluate(async () => (await (await fetch("data/termek.json")).json()).het1);
+    await p.waitForTimeout(300);
+    t("a teremadat online a hálózatról jön, nem a gyorsítótárból", swKeres.length > 0 && !!friss,
+      `${swKeres.length} hálózati kérés, het1=${friss}`);
+
     // Az igazi próba: hálózat nélkül is elindul-e.
     await ctx.setOffline(true);
-    let ok = false, title = "", fonts = 0;
+    let ok = false, title = "", fonts = 0, adat = false;
     try {
       await p.goto(srv.url + "index.html", { waitUntil: "load", timeout: 15000 });
       title = await p.title();
       ok = await p.evaluate(() => document.querySelectorAll(".floor").length > 0
                                 && !!document.querySelector(".floor svg"));
       if (ok) fonts = await p.evaluate(() => [...document.fonts].filter(f => f.status === "loaded").length);
+      if (ok) adat = await p.evaluate(async () => {
+        try { return !!(await (await fetch("data/termek.json")).json()).het1; } catch (e) { return false; } });
     } catch (e) { title = "hiba: " + e.message.split("\n")[0]; }
     await ctx.setOffline(false);
 
     t("offline is elindul", ok, title);
     t("offline is megvan az alaprajz", ok);
     t("offline a betűk is betöltenek", fonts > 0, "betű=" + fonts);
+    t("offline a teremadat is megvan", adat);
     t("nincs JS hiba", errs.length === 0, errs.join(" | "));
   } finally {
     await ctx.close();
