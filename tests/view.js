@@ -136,16 +136,51 @@ run("nézetek és szintváltás", async ({ t, ctx, base }) => {
                            flat2d:document.getElementById("app").classList.contains("flat2d") };
     out.illeszkedik = { be:illeszkedik(out.kfEpuletre), ki:illeszkedik(out.kfAlaprajzra) };
 
-    /* Az aktív szint kontúrja: Épület nézetben ez különbözteti meg a többi
-       fehér födémtől, ha a helyiségei mind szürkék (a Félemelet ilyen). */
-    setMode(3); await w(1500);
+    /* Az aktív szint kiemelkedő falai: Épület nézetben ezek különböztetik meg
+       a többi fehér födémtől, ha a helyiségei mind szürkék (a Félemelet
+       ilyen). Előtte élénk kék kontúr tette ezt, amit élesben tolakodónak
+       találtak. Hogy a fal tényleg magasabban van, azt a böngészőtől kérdezzük:
+       megdöntve a fal tetejének a képe feljebb esik, mint a tövéé. */
+    /* A váltás végét a böngészőtől kérdezzük, nem órával: a szoftveres
+       renderelőn a lapos alaprajzból 3D-be lépve a szintek újrarajzolása
+       másfél másodpercig is eltarthat, és addig egy animáció sem indul el. */
+    const lefutott = async () => {
+      await Promise.all(document.getAnimations()
+        .filter(a => a.effect && a.effect.getComputedTiming().endTime !== Infinity)
+        .map(a => a.finished.catch(() => {})));
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    };
+    setMode(3); await lefutott();
     const minta = document.createElement("i"); minta.style.color = "var(--accent)";
     document.body.appendChild(minta); const akcent = getComputedStyle(minta).color; minta.remove();
     const korvonal = lv => getComputedStyle(FLOOR[lv].svg.querySelector(".slab")).stroke;
-    out.kontur = { aktiv:korvonal(S.level), akcent,
-                   masik:korvonal(LV.find(lv => lv !== S.level)) };
+    const lathato = F => !!F.wx && getComputedStyle(F.wx).display !== "none";
+    const A = FLOOR[S.level];
+    out.falak = { lathato:lathato(A),
+                  emelkedes:A.wx ? +(A.walls.getBoundingClientRect().top - A.wx.querySelector(".wtop").getBoundingClientRect().top).toFixed(1) : 0,
+                  masikon:LV.filter(lv => lv !== S.level).some(lv => lathato(FLOOR[lv])),
+                  kontur:korvonal(S.level), akcent };
+    /* Szintváltáskor az új szint falai laposról nőnek fel, ugrás nélkül. Amíg
+       egy szint átlátszósága 1 alatt van, a böngésző laposra nyomja a benne
+       lévő 3D-t, az új szint pedig .55s alatt úszik be: ha a falai közben
+       nőttek volna, a végén egy csapásra ugranak fel. A régi szint falai
+       ugyanezért rögtön eltűnnek — úszás közben úgyis laposak volnának, és
+       teljes falszínnel ülnének a halványuló szinten. Az animációkat
+       megállítva, pontos időpontokban mérünk. */
+    const regi = S.level, ujLv = LV[LVI[regi] + 1];
+    setLevel(ujLv);
+    const U = FLOOR[ujLv], nyom = [];
+    for (let t = 0; t <= 1000; t += 25) {
+      for (const a of document.getAnimations()) { try { a.pause(); a.currentTime = t; } catch (e) {} }
+      nyom.push(lathato(U) ? +(U.walls.getBoundingClientRect().top - U.wx.querySelector(".wtop").getBoundingClientRect().top).toFixed(2) : 0);
+      if (t === 0) out.falak.regiMarad = lathato(A);
+    }
+    for (const a of document.getAnimations()) a.play();
+    out.falak.szintvaltas = nyom;
+    await lefutott(); setLevel(regi); await lefutott();
     setMode(2); await w(1600);
-    out.kontur.alaprajzon = korvonal(S.level);
+    out.falak.alaprajzon = lathato(A);
+    out.falak.lapos = document.getElementById("app").classList.contains("flat2d");
 
     // nyugalomban minden visszaáll: a gyűrű újra pulzál
     out.utana = { switching:document.getElementById("app").classList.contains("switching"),
@@ -192,10 +227,21 @@ run("nézetek és szintváltás", async ({ t, ctx, base }) => {
   t("Alaprajzra: ugyanúgy, visszafelé", r.illeszkedik.ki, r.kfAlaprajzra.join("  →  "));
   t("nyugalomban az alaprajz lapos 2D-s formát kap",
     /^rotate\(/.test(r.nyugvoAlaprajz.forma) && r.nyugvoAlaprajz.flat2d, JSON.stringify(r.nyugvoAlaprajz));
-  t("Épület nézetben az aktív szint akcentszínű kontúrt kap",
-    r.kontur.aktiv === r.kontur.akcent && r.kontur.masik !== r.kontur.akcent, JSON.stringify(r.kontur));
-  t("alaprajzon nincs kontúr — ott úgyis csak egy szint látszik",
-    r.kontur.alaprajzon !== r.kontur.akcent, r.kontur.alaprajzon);
+  t("Épület nézetben az aktív szint falai kiemelkednek",
+    r.falak.lathato && r.falak.emelkedes >= 2, `a fal teteje ${r.falak.emelkedes} px-szel a töve fölött`);
+  t("a többi szinté nem — az aktív marad a kiemelt", !r.falak.masikon);
+  {
+    const n = r.falak.szintvaltas, veg = n[n.length - 1];
+    const lepes = Math.max(...n.slice(1).map((v, i) => v - n[i]));
+    const visszaeses = Math.min(...n.slice(1).map((v, i) => v - n[i]));
+    t("szintváltáskor az új szint falai laposról nőnek fel, ugrás nélkül",
+      n[0] < .3 && veg >= 2 && lepes < veg * .45 && visszaeses > -.3,
+      `25 ms-onként: ${n.join(" ")}`);
+    t("a régi szint falai rögtön eltűnnek, nem ülnek a halványuló szinten", !r.falak.regiMarad);
+  }
+  t("és nincs élénk kék kontúr a falakon", r.falak.kontur !== r.falak.akcent, r.falak.kontur);
+  t("alaprajzon nincs kiemelés, a lapos gyorsútvonal megmarad",
+    !r.falak.alaprajzon && r.falak.lapos, JSON.stringify(r.falak));
   t("alaprajzon is lehet termet választani", r.kivalasztas);
   t("nincs JS hiba", p.jsErrors.length === 0, p.jsErrors.join(" | "));
 }, DESKTOP);
