@@ -42,7 +42,7 @@ honnan/hova, útvonal, forgatás, panelállás). Aki ezt megérti, érti az appo
 
 ```
 npm install          # playwright (a böngésző a képen már megvan)
-npm test             # mind a 11 tesztfájl
+npm test             # mind a 12 tesztfájl
 node tests/run.js url share     # csak egy-kettő
 ```
 
@@ -53,10 +53,10 @@ hagytak egy hibás kódot.
 
 | fájl | mit őriz |
 | --- | --- |
-| `tests/view.js` | alaprajz/épület váltás, szintváltás, kiválasztás, a kiemelkedő falak |
+| `tests/view.js` | alaprajz/épület váltás, szintváltás, kiválasztás, a falak oldallapja |
 | `tests/url.js` | mély linkek, a vissza gomb, hibás link |
 | `tests/share.js` | megosztás gomb mindkét ága |
-| `tests/gestures.js` | csippentés, forgatás, tolás, a kétujjas felemelés — **élesben bejelentett fagyás** és „csúnya átmenet" |
+| `tests/gestures.js` | csippentés, forgatás, tolás, a kétujjas felemelés, akadozó képnél is — **élesben bejelentett fagyás**, „csúnya átmenet" és a vissza nem váltó lefelé húzás |
 | `tests/labels.js` | teremszámok Épület nézetben: ott vannak, állnak, a termük fölött, élből nézve is, és nem villognak |
 | `tests/lift.js` | lépcső vs. lift alternatíva |
 | `tests/sheet.js` | az alsó panel aljának elérhetősége |
@@ -64,6 +64,7 @@ hagytak egy hibás kódot.
 | `tests/termek.js` | foglalható termek, és a lejárt adat kezelése |
 | `tests/pwa.js` | manifest, service worker, **offline indulás** |
 | `tests/a11y.js` | billentyűzetes bejárás, felolvasónak szóló jelölés |
+| `tests/perf.js` | Épület nézet: képkockánként hány renderpass, a telefon (GPU-s) kódútján — **élesben bejelentett akadozás** |
 
 ## Amit érdemes tudni, mielőtt hozzányúlsz
 
@@ -97,40 +98,42 @@ szintek nem takarnak, de vizuálisan elnyomhatják az aktívat: a Félemelet 9
 apró pihenője (160 m², mind szürke közlekedő vagy halványított raktár) nyom
 nélkül eltűnt a földszint 1733 m²-es födémje fölött — ezt jelentették úgy,
 hogy „bizonyos szögnél eltűnik az alaprajz". Ezért Épület nézetben az aktív
-szint falai kiemelkednek (lásd lejjebb). Előtte akcentszínű kontúr tette
-ezt, de az minden falat élénk kékkel húzott ki, és élesben tolakodónak
-találták. A környezet halványítását is kipróbáltuk,
+szint falai alatt világos oldallap van, amitől kiemelkedőnek látszanak (lásd
+lejjebb). Előtte akcentszínű kontúr tette ezt, de az minden falat élénk
+kékkel húzott ki, és élesben tolakodónak találták. A környezet halványítását is kipróbáltuk,
 de a felső szinteknél szétfolyt tőle az épület formája. Tanulság a
 méréshez: `elementsFromPoint` 3D-ben megbízhatatlan (a rajzolt szintet is
 „hiányzónak" mondta), és egy szint minden eleme (födém, SVG, doboz) külön
 szerepel a veremben — szintenként egyszer, csak a `.hit`-et számold.
 
-**A kiemelkedő fal egymás fölötti lapokból áll, nem valódi testből.** A fal
-alakja ötször (`wallsOf()`): legfelül a falszínnel, élesen, alatta négy
-világos, fél felbontású réteg, ami egybefüggő oldalnak hat. Csak az aktív
-szintnek épül, először akkor, amikor 3D-ben aktív lesz. Mérve (SwiftShader):
-- falfelületenként egy-egy függőleges lap (szintenként 100–390) 40-szer
-  lassabb mozgást adott — a sok 3D-s síkot képkockánként sorba kell rendezni;
-- az elmosott oldalrétegek simábbak, de forgatás közben újrarajzolást
-  okoztak (46–75 ms raszterezés a mozgás közepén);
-- a mostani változat Épület nézetben telefonprofilon kb. 10–15%-kal
-  hosszabb lépésidőt ad (körbejárás 70 → 80–83 ms), asztalon 25–35%-ot. A
-  raszterezés nem nő, és nem esik a mozgás közepére; alaprajzon nincs
-  költség, ott a falak nem jelennek meg. A többlet szinte teljes egészében
-  az éles tetőréteg: egy oldalréteggel ugyanennyi, fél felbontású tetővel a
-  fele — de akkor a vékony falak pontozottá esnek szét. Egy-két oldalréteg
-  közt a rés is látszik (dupla vonal), hárommal-néggyel egybefüggő.
+**A falak kiemelése a szint saját rajzában van, nem külön 3D-s rétegben.**
+Egy ideig valódi, kiemelkedő fal volt: a fal alakja ötször, egymás fölötti
+3D-s rétegekben. A szoftveres tesztböngészőben ez 10–15% lépésidőnek látszott,
+telefonon viszont akadozott tőle az Épület nézet, és a lassú képkockák a
+kétujjas döntést is elrontották (élesben jelentették). A GPU-s kódúton látszott
+az ok: **minden raszterezett 3D-s sík egy külön renderpass** — egy teljesen
+átlátszatlan is —, és a kép 10 helyett 15-ből állt össze. Csempés telefonos
+GPU-n a renderpass a legdrágább dolgok egyike. A `tests/perf.js` ezt
+számolja: Épület nézetben szintenként egy és még három, alaprajzon kettő.
+Egy üres, egyszínű sík ingyen van; ami raszterezett tartalmat hordoz, nem.
 
-Két buktató, mindkettőt a `tests/view.js` méri:
-- **Ha egy szint átlátszósága 1 alatt van, a böngésző laposra nyomja a benne
-  lévő 3D-t** (az `opacity` a szabvány szerint csoportosít). Szintváltáskor
-  az új szint 0,55 s alatt úszik be, ezért a falak a mozgás második felében
-  mozognak (`.55s` késleltetés) — nélküle a beúszás végén egy csapásra
-  ugrottak fel. A régi szint falai ugyanezért rögtön eltűnnek: úszás közben
-  úgyis laposak volnának, és teljes falszínnel ülnének a halványuló szinten.
-- `display:none`-ból előbukkanva a böngésző nem úsztat: a `@starting-style`
-  mondja meg, hogy laposról induljanak. Nélküle szintváltáskor rögtön teljes
-  magasságban jelentek meg.
+Most a falak alatt világos oldallap van (`bandOf()`): a fal alakja a néző felé
+— a tervlap +y irányába, ami alapállásban lefelé esik — végigsöpörve, a szint
+SVG-jében. Alapállásban (58°) ugyanúgy néz ki, mint a valódi kiemelkedés, és
+nincs képkockánkénti költsége. Az ára: nincs rajta dőlésfüggés (a valódi fal
+oldala meredekebb nézetben nőne, ez a sáv laposodik), és elforgatva a fal
+egyik oldalán marad — ott megvilágított élnek hat.
+
+A raszterezés olcsósága itt a döntő, mert **Épület nézetben forgatás közben a
+böngésző a szinteket csempénként újrarajzolja** (a GPU-s úton; a szoftveresen
+ez nem látszik), és egy csempe minden path-t feldolgoz, amelyik átfedi. Mérve
+(GPU-s út, SwiftShader, körbejárás lépésideje):
+- a fal eltolt, körvonalas másolataiból rakott sáv: kétszeres;
+- ugyanez két, az egész szintet átfogó kitöltésként: +20–38%;
+- konvex falnál (95%) egyetlen sokszög, a fal és eltolt másolatának burka, és
+  a sáv cellákra bontva, cellánként külön path-ban: a mérési zajon belül.
+A `tests/view.js` ezért azt is számon kéri, hogy a sáv kis darabokból álljon,
+körvonal nélkül.
 
 **Egy kamera, két állás.** Az Alaprajz ugyanaz a 3D-s jelenet, egyenesen
 felülről nézve (`rotateX(0)`), így a nézetváltás mindkét végén ugyanaz a
@@ -172,8 +175,16 @@ kerül — lásd `docs/NYITOTT-KERDESEK.md`.
 
 **A mérőkörnyezet szoftveres.** A tesztböngésző SwiftShaderrel fut, GPU
 nélkül. Teljesítménymérésnél az abszolút számok jóval rosszabbak egy valódi
-eszköznél, és a rétegpromóciós trükkök hatása is eltérhet — a RELATÍV
-összehasonlítás megbízható, az abszolút nem. Időzítésre se építs: a lapos
+eszköznél — a RELATÍV összehasonlítás megbízható, az abszolút nem. **És
+alapból szoftveres kompozitorral fut, a telefon viszont GPU-val**: a kettő a
+3D-s rétegekkel másképp bánik, és ami a szoftveres úton +10–15%, az telefonon
+akadozás lehet (a kiemelkedő falakkal így jártunk). Rétegekhez, renderpassokhoz,
+raszterezéshez indítsd a böngészőt
+`--use-angle=swiftshader --enable-unsafe-swiftshader --ignore-gpu-blocklist`
+kapcsolókkal: ez a GPU-s kódút SwiftShaderen — lassú, de a szerkezete a
+telefoné (`chrome://gpu`: „Compositing: Hardware accelerated"). A
+renderpassokat a `DirectRenderer::DrawRenderPass` eseményekből számold
+`DirectRenderer::DrawFrame`-enként, ahogy a `tests/perf.js`. Időzítésre se építs: a lapos
 alaprajzból 3D-be lépve a hét szint újrarajzolása itt 0,6–1,6 s-ig is
 eltarthat (a `main`-en is), és addig egy animáció sem indul el (`pending`,
 még a `requestAnimationFrame` is vár). Tesztben a váltás végét a
@@ -201,6 +212,19 @@ ferde vagy függőleges összetevőt is tartalmazó mozdulatot játszik le: egy
 tisztán vízszintes húzást a „mindkét ujj azonos irányba, függőlegesen" feltétel
 egyedül is elintézne, és a küszöbök meglazulása észrevétlen maradna.
 
+**A kétujjas mozdulatot képkockánként egyszer értékeljük** (`pinchStep()` a
+`paint()`-ben), a két ujj együttes állásán; a `pointermove` csak feljegyzi az
+ujjak helyét. Az események ujjanként jönnek, és eseményenként számolva az egyik
+ujj már az új helyén állt, a másik még a régin. Akadozó képnél egy lépés
+30–75 px, és ettől a fél lépéstől a két ujj távolsága és szöge egy pillanatra
+annyit változott, hogy a döntést csippentésnek és csavarásnak vette: élesben a
+lefelé húzás alig akart visszaváltani Alaprajzra, amikor a kiemelkedő falak
+lelassították az Épület nézetet (mérve: 110 px-re lévő ujjakkal 15 px-es
+lépéseknél még váltott, 30 px-esnél már nem; egy 16 px-es fél lépés a
+`TWIST_DEAD` 8°-ánál nagyobb szöget ad). Felemeléskor az `end` még a két ujj
+utolsó állásán lép egyet, mielőtt az egyik kiesne. A `tests/gestures.js`
+ezt nagy lépésekkel játssza le, közeli ujjakkal.
+
 **A döntés nézetet vált, és ez az egyetlen gesztus, ami ezt teszi.** Alaprajzról
 felfelé húzva `setMode(3,true)` emel át — a `keepView` ág azért kell, hogy a
 `fit()` ne rántsa ki a térképet a kéz alól. Vissza csak az ujjak felemelésekor
@@ -217,10 +241,9 @@ most ezt adja, és amit ezért ne bonts meg:
   ELŐTT nullázzuk, különben a váltás egy képkockát még a régi 58°-kal írna ki.
 - Minden „3D-sség" a dőlésből jön, nem a módból: a `reveal()` 0 és 15°
   (`REVEAL_DEG = TILT_MIN`) közt nyitja szét a köteget. Félúton (`DEEP_AT`)
-  billen át a 3D-s megjelenés (`.deep`: kiemelkedő falak, árnyék,
+  billen át a 3D-s megjelenés (`.deep`: a falak oldallapja, árnyék,
   szintfeliratok, a síkbeli feliratok helyett az álló teremszámok), és a
-  többi szint is csak innen úszik be. A falak innen nőnek a dőléssel, a
-  beúszó szintekkel azonos ütemben (`be`), és 15°-ra érik el a magasságukat. A kettő szándékosan egy ponton van, mert mindkettő
+  többi szint is csak innen úszik be. A kettő szándékosan egy ponton van, mert mindkettő
   rajzolással jár — a `.deep` az SVG-n belül vált, a beúszó szinteket pedig
   most kell először kifesteni. Így a mozdulat alatt egyszer kell rajzolni, és
   a felemelés első fele olyan olcsó, mint maga az alaprajz. A 15° fölötti
