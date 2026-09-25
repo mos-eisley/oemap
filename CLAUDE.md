@@ -53,7 +53,7 @@ hagytak egy hibás kódot.
 
 | fájl | mit őriz |
 | --- | --- |
-| `tests/view.js` | alaprajz/épület váltás, szintváltás, kiválasztás, a falak oldallapja |
+| `tests/view.js` | alaprajz/épület váltás, szintváltás, kiválasztás valódi egérrel és érintéssel (Épület nézetben is), a falak oldallapja — **élesben bejelentett: asztalon kattintásra nem jött elő a terem** |
 | `tests/url.js` | mély linkek, a vissza gomb, hibás link |
 | `tests/share.js` | megosztás gomb mindkét ága |
 | `tests/gestures.js` | csippentés, forgatás, tolás, a kétujjas felemelés, akadozó képnél is — **élesben bejelentett fagyás**, „csúnya átmenet" és a vissza nem váltó lefelé húzás |
@@ -377,6 +377,21 @@ szabályt (félévhatár, hetek bitmaszkja, közös termek, ünnepnap).
 hibátlanul KINÉZŐ, de olvashatatlan ívet (hiányzó csendzóna; rossz viewBox;
 majd egy regex, ami az `id="qr-path"`-ra futott rá a rajz helyett).
 `python3 tools/verify-qr.py <ív> <base-url>` — ez mindhármat megfogta volna.
+
+**A kattintás a teremé — a mutatót csak húzáskor vesszük át.** A gesztus
+korábban már a lenyomáskor `setPointerCapture`-rel átvette a mutatót, és
+feltette a `.navving`-et (a szintek nem kapnak kattintást). Egérrel így a
+felengedés és a kattintás a színpadra ment, nem a teremre: asztalon egyetlen
+termet sem lehetett kiválasztani, a színpadra kattintás pedig még a kijelölést
+is törölte. Érintésnél ez nem látszott, ott a koppintás a koppintott elemet
+kapja — és a tesztek szintetikus `click`-kel dolgoztak, ami egyenesen a
+teremnek szól. Most a `take()` csak `CLICK_SLOP` (6 px) elmozdulás után veszi
+át a mutatót, és a `tests/view.js` valódi egérrel és érintéssel kattint.
+Épület nézetben az aktív szint termére koppintva is az adatai jönnek elő (egy
+e-totemen ez az első mozdulat); a fölötte lévő szintek elöl vannak és
+halványak, ezért átengedik a kattintást (`.floor.above`) — előtte egy II.
+emeleti fal kapta el a földszinti terem elől. Az alsó szintekre kattintva
+továbbra is belemerül, a fölsőkre a szintválasztó visz.
 
 **A térkép egyetlen tab-állomás.** A helyiségek `role="button"`-ok, de
 `tabindex="-1"`-gyel: fókuszt csak a nyilaktól kapnak (roving tabindex). Ha

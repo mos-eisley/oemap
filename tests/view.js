@@ -3,7 +3,7 @@
    haszna egyszerre, ezért figyeljük, hogy váltáskor tényleg visszajön. */
 const { run, open, DESKTOP } = require("./lib");
 
-run("nézetek és szintváltás", async ({ t, ctx, base }) => {
+run("nézetek és szintváltás", async ({ t, ctx, browser, base }) => {
   const p = await open(ctx, base, { settle: 1600 });
 
   const r = await p.evaluate(async () => {
@@ -237,5 +237,49 @@ run("nézetek és szintváltás", async ({ t, ctx, base }) => {
   t("alaprajzon nincs kiemelés, a lapos gyorsútvonal megmarad",
     !r.falak.alaprajzon && r.falak.lapos, JSON.stringify(r.falak));
   t("alaprajzon is lehet termet választani", r.kivalasztas);
-  t("nincs JS hiba", p.jsErrors.length === 0, p.jsErrors.join(" | "));
+
+  /* Valódi egérrel és érintéssel, nem szintetikus click eseménnyel. A gesztus
+     korábban már a lenyomáskor átvette a mutatót, és egérrel így a kattintás
+     a színpadra ment, nem a teremre: asztalon egyetlen termet sem lehetett
+     kiválasztani. A szintetikus click ezt nem látta, mert egyenesen a
+     teremnek szól. */
+  const kozep = (q, c) => q.evaluate(c => { const b = document.querySelector(`.floor.on [data-code="${c}"]`).getBoundingClientRect();
+    return { x:b.x + b.width / 2, y:b.y + b.height / 2 }; }, c);
+  const lefut = q => q.evaluate(async () => {
+    await Promise.all(document.getAnimations().filter(a => a.effect && a.effect.getComputedTiming().endTime !== Infinity)
+      .map(a => a.finished.catch(() => {})));
+    await new Promise(r => setTimeout(r, 300)); });
+  await p.evaluate(() => { S.sel = null; renderPanel(); setMode(2); dive(0); }); await lefut(p);
+  let c = await kozep(p, "OA00F11");
+  await p.mouse.click(c.x, c.y); await p.waitForTimeout(300);
+  const eger = await p.evaluate(() => ({ sel:S.sel, kartya:!!document.querySelector(".rcard") }));
+  const v0 = await p.evaluate(() => ({ x:S.view.x, y:S.view.y }));
+  await p.mouse.move(c.x, c.y); await p.mouse.down();
+  await p.mouse.move(c.x + 60, c.y + 30, { steps:6 }); await p.mouse.up(); await p.waitForTimeout(300);
+  const huzas = await p.evaluate(v0 => ({ sel:S.sel, tolt:+Math.hypot(S.view.x - v0.x, S.view.y - v0.y).toFixed(1) }), v0);
+  /* Épület nézetben az aktív szint termére kattintva is az adatai jönnek elő,
+     és a kép 3D-ben marad. A fölötte lévő, halvány szintek átengedik a
+     kattintást: korábban egy II. emeleti fal kapta el a földszinti terem
+     elől. */
+  await p.evaluate(() => { S.sel = null; renderPanel(); setMode(3); }); await lefut(p);
+  c = await kozep(p, "OA00F11");
+  await p.mouse.click(c.x, c.y); await p.waitForTimeout(300);
+  const eger3d = await p.evaluate(() => ({ sel:S.sel, mode:S.mode }));
+  t("asztalon egérrel kattintva kiválasztja a termet, és előjön az adatlapja",
+    eger.sel === "OA00F11" && eger.kartya, JSON.stringify(eger));
+  t("egérrel húzva tol, és közben nem választ és nem töröl", huzas.sel === "OA00F11" && huzas.tolt > 30,
+    JSON.stringify(huzas));
+  t("Épület nézetben az aktív szint termére kattintva is kiválaszt, és 3D-ben marad",
+    eger3d.sel === "OA00F11" && eger3d.mode === 3, JSON.stringify(eger3d));
+
+  // álló e-totem méretben, érintéssel
+  const kctx = await browser.newContext({ viewport:{ width:1080, height:1920 }, hasTouch:true });
+  const k = await open(kctx, base, { settle: 1500 });
+  await k.evaluate(() => setMode(3)); await lefut(k);
+  const kc = await kozep(k, "OA00F11");
+  await k.touchscreen.tap(kc.x, kc.y); await k.waitForTimeout(400);
+  const koppint = await k.evaluate(() => ({ sel:S.sel, mode:S.mode, kartya:!!document.querySelector(".rcard") }));
+  t("álló e-totemen érintéssel is kiválaszt Épület nézetben", koppint.sel === "OA00F11" && koppint.mode === 3 && koppint.kartya,
+    JSON.stringify(koppint));
+  t("nincs JS hiba", p.jsErrors.length === 0 && k.jsErrors.length === 0, p.jsErrors.concat(k.jsErrors).join(" | "));
 }, DESKTOP);
