@@ -30,7 +30,8 @@ belül van. Így az oldal külső szolgáltató nélkül, offline is működik.
 
 Az app **Alaprajzzal indul** — telefonon ez a nézet 76 fps az Épület 13-ával
 szemben, és nagyításkor éles marad, mert nincs 3D kontextus. Az Épület nézet
-gombbal érhető el.
+gombbal érhető el. Asztalon Épület nézetben is éles marad a nagyított kép: amikor
+a nagyítás megáll, az aktív szint a nagyításhoz illő felbontással rajzolódik újra.
 
 Épület nézetben az **aktív szint alaprajza mindig olvasható marad**: a falai
 alatt, a néző felé világos oldallap van, amitől kicsit kiemelkedőnek látszanak,
@@ -277,7 +278,7 @@ python3 -m http.server 8000
 
 ```
 npm install     # playwright
-npm test        # mind a 12 tesztfájl
+npm test        # mind a 13 tesztfájl
 ```
 
 A tesztek maguk indítanak szervert és böngészőt szabad porton, így nem kell

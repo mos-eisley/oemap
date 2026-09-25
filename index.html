@@ -278,7 +278,7 @@ button{cursor:pointer;background:none;border:0}
   transition:transform 1s var(--ease),opacity .55s var(--ease),filter .55s var(--ease)}
 .rooms{transition:opacity .5s var(--ease)}
 .walls{transition:opacity .5s var(--ease)}
-.floor svg{display:block;overflow:visible}
+.floor svg{display:block;overflow:visible;transform-origin:0 0}
 .slab{fill:var(--slab);stroke:var(--slab);stroke-width:.55;stroke-linejoin:round}
 /* Épület nézetben az aktív szint falai kiemelkedőnek látszanak: alattuk, a
    néző felé (alapállásban lefelé) világos oldallap (.wband, lásd bandOf()).
@@ -765,7 +765,9 @@ const STAFF=new Set(["IRODÁK","ÜZEMELTETÉS","RAKTÁROZÁS/TÁROLÁS","DOLGOZ�
    telefonon soha, és nagy pixelarányú kijelzőn sem, mert ott a böngésző már
    magától sűrűbben raszterizál. Minden méret a PXM-ből származik (PW/PH, BB,
    OFFX/OFFY, és a fit() is abból számol), így a megjelenés önmagát korrigálja —
-   csak a szintek távolságát kell vele együtt skálázni. */
+   csak a szintek távolságát kell vele együtt skálázni. Az aktív szint
+   nagyított élességét már a syncDens() adja (a nagyításhoz igazított
+   sűrűséggel); az SS az alapnagyítást és a többi szintet szolgálja. */
 const SS = MOB() ? 1 : Math.min(2, Math.max(1, Math.ceil(2/(devicePixelRatio||1))));
 const PXM=10*SS, GAP=(MOB()?84:118)*SS;
 const LV=D.levels.map(l=>l.level), LVI=Object.fromEntries(LV.map((l,i)=>[l,i]));
@@ -1288,6 +1290,7 @@ function updateView(){
   }
   syncFloors();
   syncLabels();
+  syncDens();
 }
 
 /* ---------- a kamera leképezése ---------- */
@@ -1317,8 +1320,64 @@ function screenOf(K,p,a){
 // A térkép mérete nem csak ablakméret-váltáskor változhat, ezért figyeljük.
 // Méretváltáskor a világ horgonya (a térkép közepe) áttűnés nélkül mozdul,
 // a teremszámok vele mennek.
-new ResizeObserver(()=>{ camKc=null; if(!labWait && LABS.length) placeTlabels(); })
+new ResizeObserver(()=>{ camKc=null; if(!labWait && LABS.length) placeTlabels(); syncDens(); })
   .observe($("mapwrap"));
+
+/* ---------- az aktív szint rajzának sűrűsége ---------- */
+/* Épület nézetben a böngésző a megdöntött szintet nem a nagyításhoz
+   raszterezi: perspektívánál a réteg minden képpontjára egy eszközpixelnyi
+   textúrát ad (Chromium, GetIdealContentsScale), és a nagyítás ezt nyújtja
+   fel. Asztalon az alapnézet több mint húszszorosáig lehet nagyítani, ott a
+   falak lépcsős, elmosott sávok lettek: a legélesebb élek meredeksége a
+   nagyítással arányosan esett, k=8,6-nál a hatodára. Az SS=2 ezen csak
+   kétszeres tartalékkal segített.
+   Ezért az aktív szint SVG-je d-szeres CSS-méretet kap (a viewBox marad, a
+   rajz vele nő), a saját scale(1/d)-je pedig visszakicsinyíti: a kép
+   ugyanaz, a textúra d-szer sűrűbb. A d a sík legnagyobb nagyítását követi a
+   képen — a perspektíva a néző felőli szélen nagyít a legjobban —, √2-es
+   lépcsőkben, hogy ne minden görgetésnyi nagyítás rajzoljon újra.
+   - Csak nyugvó képen vált, a mozdulat vagy az áttűnés végét megvárja: a
+     váltás a látható szintet újraraszterezi, mozgás közben ez akadás lenne.
+   - Csak az aktív szintnél: a többi halványított környezet, és hétszer annyi
+     raszter lenne.
+   - Alaprajzon is a nagyítást követi. Ott a böngésző amúgy is a nagyításhoz
+     raszterez, a d se a képen, se a költségen nem változtat — viszont 3D-be
+     emelve már a helyén van, nem kell a felemelés után még egyszer rajzolni.
+   - Telefonon nem: ott a legszűkebb a raszterkeret, és ott nem is jelezték.
+   - Csak Chromiumban (Chrome, Edge): ott mértük, és ott ismert a szabály. A
+     többi motor másképp raszterezi a 3D-t, ott a haszna és az ára is ismeretlen. */
+const DENS_MAX=16;
+const CHROMIUM=!!(navigator.userAgentData&&navigator.userAgentData.brands.some(b=>b.brand==="Chromium"));
+function planeZoom(){
+  const v=S.view, K=S.mode===3 && camK();
+  if(!K) return v.k;
+  // A kép alsó szélén látszó síkbeli pont van a legközelebb a nézőhöz, de
+  // legfeljebb az épület széle: azon túl nincs mit élesen rajzolni.
+  const a=S.rot.x*RAD, sa=Math.sin(a), e=K.h/2-K.oy, R=Math.hypot(BB.w,BB.h)/2;
+  let y1=K.P*(e-(v.y-K.oy))/(v.k*K.P*Math.cos(a)+e*sa);
+  if(!(y1<R)) y1=R;
+  return v.k*K.P/(K.P-Math.min(y1*sa,K.P*.75));
+}
+const densFor=need=>Math.min(DENS_MAX,Math.max(1,2**(Math.ceil(2*Math.log2(need)-.01)/2)));
+function setDens(lv,d){
+  const F=FLOOR[lv]; if((F.dens||1)===d) return;
+  F.dens=d;
+  F.svg.setAttribute("width",PW*d); F.svg.setAttribute("height",PH*d);
+  F.svg.style.transform=d===1?"":`scale(${1/d})`;
+}
+let densT=0;
+function syncDens(){
+  clearTimeout(densT);
+  if(MOB() || !CHROMIUM){ for(const lv of LV) setDens(lv,1); return; }
+  densT=setTimeout(function tick(){
+    // a pulzáló gyűrű végtelen animációja nem mozgás
+    const moving=world.classList.contains("now") || world.getAnimations({subtree:true})
+      .some(a=>a.playState==="running" && a.effect && a.effect.getTiming().iterations!==Infinity);
+    if(moving){ densT=setTimeout(tick,150); return; }
+    const d=densFor(planeZoom());
+    for(const lv of LV) setDens(lv, lv===S.level ? d : 1);
+  },250);
+}
 
 /* ---------- teremszámok Épület nézetben ---------- */
 /* A síkban fekvő feliratok 3D-ben olvashatatlanok: perspektívánál a böngésző
@@ -1621,7 +1680,7 @@ function dive(lv){
                     world.style.transform=worldTransform();
                     // a szintek átlátszósága a dőléstől függ, döntés közben is
                     if(needTags){ needTags=false; orientTags(); syncFloors(); }
-                    syncLabels(); };
+                    syncLabels(); syncDens(); };
   const schedule=()=>{ if(!raf) raf=requestAnimationFrame(paint); };
   const scheduleRot=()=>{ needTags=true; schedule(); };
 

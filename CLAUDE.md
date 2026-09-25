@@ -42,7 +42,7 @@ honnan/hova, útvonal, forgatás, panelállás). Aki ezt megérti, érti az appo
 
 ```
 npm install          # playwright (a böngésző a képen már megvan)
-npm test             # mind a 12 tesztfájl
+npm test             # mind a 13 tesztfájl
 node tests/run.js url share     # csak egy-kettő
 ```
 
@@ -65,6 +65,7 @@ hagytak egy hibás kódot.
 | `tests/pwa.js` | manifest, service worker, **offline indulás**, a teremadat frissessége |
 | `tests/a11y.js` | billentyűzetes bejárás, felolvasónak szóló jelölés |
 | `tests/perf.js` | Épület nézet: képkockánként hány renderpass, a telefon (GPU-s) kódútján — **élesben bejelentett akadozás** |
+| `tests/sharp.js` | Épület nézet asztalon, nagyítva: éles-e a kép, nem mozdul-e a sűrűségtől, nem vált-e mozgás közben, csak az aktív szintnél, telefonon és más motorban nem — **élesben bejelentett „irgalmatlan életlen" asztali 3D** |
 
 ## Amit érdemes tudni, mielőtt hozzányúlsz
 
@@ -170,8 +171,41 @@ megbízható.
 
 Asztalon még marad raszterezés a mozgás első felében: ott `SS=2`, szintenként
 1314×1600 px, és az újonnan láthatóvá váló szinteket a böngésző nem tudja egy
-képkockában megrajzolni. Ennek teljes megoldása az `SS` csökkentése lenne, ami élességbe
-kerül — lásd `docs/NYITOTT-KERDESEK.md`.
+képkockában megrajzolni. Ennek teljes megoldása az `SS` csökkentése lenne. A
+nagyított élességet már nem az `SS` adja (lásd a következő pontot), így ez
+olcsóbb döntés lett — lásd `docs/NYITOTT-KERDESEK.md`.
+
+**Nagyítva az aktív szint rajza sűrűsödik (asztalon, Chromiumban).**
+Perspektívánál a Chromium a megdöntött szintet nem a nagyításhoz raszterezi:
+a perspektivikus ágon (`GetIdealContentsScale`) egy méretkorlát (5×5 csempe a
+réteg hosszabbik oldalán) a mi nagy rétegünknél 1 alá vinné a skálát, így az
+alsó határ marad, a réteg minden képpontjára egy eszközpixel. A nagyítás ezt
+a bitmapet nyújtja fel: asztalon az alapnézet több mint húszszorosáig lehet
+nagyítani, és élesben „irgalmatlan életlen" lett a 3D (mérve: az élek
+meredeksége a nagyítással arányosan esett, k=8,6-nál a hatodára). A
+`syncDens()` ezért nyugvó képen az aktív szint SVG-jének CSS-méretét
+d-szeresre veszi (a viewBox marad), a saját `scale(1/d)`-je pedig
+visszakicsinyíti: a kép ugyanaz, a textúra d-szer sűrűbb. Amit tudni kell:
+- A d a sík legnagyobb nagyítása a képen (`planeZoom()`: a nagyítás és a
+  perspektíva nagyítása a kép alsó szélén, ahol a sík a legközelebb van),
+  √2-es lépcsőkben. A pixelarány kiesik: HiDPI kijelzőn a textúra eleve
+  annyiszor sűrűbb.
+- **A Playwright `deviceScaleFactor`-emulációja itt félrevezet:** emulált
+  DPR 2-n a textúra CSS-pixelenként egy, valódi DSF-fel
+  (`--force-device-scale-factor=2`, `viewport:null`) kettő. HiDPI
+  3D-rasztert a kapcsolóval mérj.
+- Csak nyugvó képen vált: a mozdulat (`.now`) és a véges animációk végét
+  megvárja, mert a váltás a látható szintet újraraszterezi. Csak az aktív
+  szintnél, telefonon soha, és csak Chromiumban (`navigator.userAgentData`),
+  mert a többi motor másképp raszterezi a 3D-t.
+- Alaprajzon is a nagyítást követi: ott a böngésző amúgy is a nagyításhoz
+  raszterez, a d se a képen, se a költségen nem változtat, 3D-be emelve viszont
+  már a helyén van.
+- Költség (GPU-s út, SwiftShader, asztal, körbejárás): nagyítva annyi, mint
+  alapnagyításon, ~160 ms/lépés. A régi, felnyújtott textúra nagyítva olcsóbb
+  volt (77 ms) — kevés texelt kellett mintázni —, és pont ettől volt életlen.
+- A sűrűségtől a kép nem mozdulhat: a `tests/sharp.js` a terem helyét is
+  méri, nem csak az éleket.
 
 **A mérőkörnyezet szoftveres.** A tesztböngésző SwiftShaderrel fut, GPU
 nélkül. Teljesítménymérésnél az abszolút számok jóval rosszabbak egy valódi

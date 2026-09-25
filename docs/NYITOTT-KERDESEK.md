@@ -147,11 +147,15 @@ raszter mérete: asztalon `SS=2`, szintenként 1314×1600 px, és a böngésző 
 tudja egy képkockában megrajzolni az újonnan láthatóvá váló szinteket. A
 negyedére csökkentett raszter a leghosszabb képkockát is negyedére vitte.
 
-**A döntés, ami ezen múlik:** az `SS=2` azért van, hogy az Épület nézet
-nagyításkor éles maradjon. Csökkentése megoldaná az asztali akadást, de
-elmosná a nagyított 3D-t. Egyszer már élesség felé döntöttünk; ha a
-simaság fontosabb, ez egysoros változtatás (`const SS = ...` az
-`index.html` adat-szakaszában).
+**A döntés, ami ezen múlik:** az `SS=2` eredetileg azért került be, hogy az
+Épület nézet nagyításkor éles maradjon. Ezt most már a `syncDens()` adja:
+nyugvó képen az aktív szint a nagyításhoz illő sűrűséggel rajzolódik újra
+(lásd CLAUDE.md). A csökkentés így olcsóbb döntés lett, a nagyított aktív
+szint éles marad tőle. Ami ára maradt: a halványított szintek textúrája
+alapnagyításon a felére ritkul (ezt valódi eszközön még nem néztük), és a
+nagyítás határai (k: 0,15–10) a PXM-hez mérve értendők — `SS=1`-nél asztalon
+a legnagyobb nagyítás méterben a felére esne, azt vele együtt emelni kell.
+Maga a változtatás a `const SS = ...` sor az `index.html` adat-szakaszában.
 
 A számok szoftveres renderelőből (SwiftShader) jönnek — valódi GPU-n
 mindkét érték jobb, és a kettő aránya is eltolódhat. Mielőtt a fenti
