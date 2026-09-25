@@ -1367,8 +1367,14 @@ new ResizeObserver(()=>{ camKc=null; if(!labWait && LABS.length) placeTlabels();
    a falai ki is maradnak, nagyítva pedig egyetlen elmosódott folt (k=8-nál
    az élek meredeksége 0,03). Saját transzformmal — akár csak scale(1)-gyel —
    a Chromiuméhoz hasonlóan viselkedik, de ugyanahhoz az élességhez kétszer
-   akkora sűrűség kell (k=4-nél d=8: 0,61, k=8-nál d=16: 0,72). Ezért ott az
-   aktív szint SVG-je mindig kap transzformot, és a d kétszeres szorzót. */
+   akkora sűrűség kell (k=4-nél d=8: 0,61, k=8-nál d=16: 0,72). Ezért ott
+   3D-ben minden szint SVG-je kap transzformot, és a d kétszeres szorzót.
+   Minden szint, nem csak az aktív: különben szintváltáskor az új aktív a
+   mozgás végétől a nyugvó képig kockás volt — élesben így jelentették:
+   „váltásnál először éles, utána kicsit homályos, utána megint éles".
+   A többi szint transzformja a mérési zajon belül van. A lapos alaprajzon
+   viszont nem kap (lásd setDens()): ott nincs rá szükség, és a kattintást
+   elvitte a teremtől. */
 const DENS_MAX=16;
 const CHROMIUM=!!(navigator.userAgentData&&navigator.userAgentData.brands.some(b=>b.brand==="Chromium"));
 const GECKO="mozInnerScreenX" in window, DENS_GAIN=GECKO?2:1;
@@ -1383,12 +1389,20 @@ function planeZoom(){
   return v.k*K.P/(K.P-Math.min(y1*sa,K.P*.75));
 }
 const densFor=need=>Math.min(DENS_MAX,Math.max(1,2**(Math.ceil(2*Math.log2(need)-.28)/2)));
-// own: d=1-nél is saját transzform (Firefox, lásd fent)
+/* own: d=1-nél is saját transzform (Firefox, lásd fent). Csak 3D-ben kell,
+   ott viszont minden szintnek, és már a mozgás elejétől (syncOwn(), a
+   syncFlat() hívja): a lapos alaprajzon a Firefox az induláskor így kapott
+   SVG-be nem talált bele — a kattintás a szintdobozé lett, a teremé nem. */
 function setDens(lv,d,own=false){
   const F=FLOOR[lv]; if((F.dens||1)===d && !!F.own===own) return;
   F.dens=d; F.own=own;
   F.svg.setAttribute("width",PW*d); F.svg.setAttribute("height",PH*d);
-  F.svg.style.transform=d===1&&!own?"":`scale(${1/d})`;
+  F.svg.style.transform=d!==1?`scale(${1/d})`:own?"translateZ(0)":"";
+}
+const geckoOwn=()=>GECKO && !app.classList.contains("flat2d");
+function syncOwn(){
+  if(!GECKO || MOB()) return;
+  for(const lv of LV) setDens(lv, FLOOR[lv].dens||1, geckoOwn());
 }
 let densT=0;
 function syncDens(){
@@ -1400,7 +1414,7 @@ function syncDens(){
       .some(a=>a.playState==="running" && a.effect && a.effect.getTiming().iterations!==Infinity);
     if(moving){ densT=setTimeout(tick,150); return; }
     const d=densFor(planeZoom()*DENS_GAIN);
-    for(const lv of LV) setDens(lv, lv===S.level ? d : 1, GECKO && lv===S.level);
+    for(const lv of LV) setDens(lv, lv===S.level ? d : 1, geckoOwn());
   },250);
 }
 
@@ -1596,11 +1610,11 @@ function fit(){
 let flatT=0;
 function syncFlat(){
   clearTimeout(flatT);
-  if(S.mode===3){ app.classList.remove("flat2d"); return; }
+  if(S.mode===3){ app.classList.remove("flat2d"); syncOwn(); return; }
   // Az átmenet lefutása után lapul le az alaprajz: a kép nem változik, csak a
   // 3D-s kameraforma cserélődik a lapos 2D-sre, és a gyors útvonal visszajön.
   flatT=setTimeout(()=>{ if(S.mode!==2) return;
-    flat=true; setWorldInstant(); app.classList.add("flat2d"); },1050);
+    flat=true; setWorldInstant(); app.classList.add("flat2d"); syncOwn(); },1050);
 }
 /* Az átmenet idejére az SVG-belső áttűnések kikapcsolnak — lásd a .switching
    szabályt. Kicsivel az 1s-os mozgás után vesszük le, és minden váltás

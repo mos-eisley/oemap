@@ -65,7 +65,7 @@ hagytak egy hibás kódot.
 | `tests/pwa.js` | manifest, service worker, **offline indulás**, a teremadat frissessége |
 | `tests/a11y.js` | billentyűzetes bejárás, felolvasónak szóló jelölés |
 | `tests/perf.js` | Épület nézet: képkockánként hány renderpass, a telefon (GPU-s) kódútján — **élesben bejelentett akadozás** |
-| `tests/sharp.js` | Épület nézet asztalon, nagyítva: éles-e a kép, nem mozdul-e a sűrűségtől, nem vált-e mozgás közben, csak az aktív szintnél, telefonon és más motorban nem, Firefoxban a saját kódútján — **élesben bejelentett „irgalmatlan életlen" asztali 3D, Chrome-ban és Firefoxban** |
+| `tests/sharp.js` | Épület nézet asztalon, nagyítva: éles-e a kép, nem mozdul-e a sűrűségtől, nem vált-e mozgás közben, csak az aktív szintnél, telefonon és más motorban nem, Firefoxban a saját kódútján (3D-ben minden szint saját transzformmal, a lapos alaprajzon egyik sem) — **élesben bejelentett „irgalmatlan életlen" asztali 3D, Chrome-ban és Firefoxban, és a Firefoxos „éles, homályos, megint éles" váltás** |
 
 ## Amit érdemes tudni, mielőtt hozzányúlsz
 
@@ -203,8 +203,20 @@ visszakicsinyíti: a kép ugyanaz, a textúra d-szer sűrűbb. Amit tudni kell:
   maradnak, nagyítva pedig egyetlen elmosódott folt (k=8-nál az élek
   meredeksége 0,03). Saját transzformmal (akár csak `scale(1)`) a
   Chromiuméhoz hasonlóan viselkedik, de ugyanahhoz az élességhez kétszer
-  akkora d kell (`DENS_GAIN`). Ára szoftveres WebRenderen: alapnézetben
-  +7–12% körbejárási idő, nagyítva annyi, mint alapnézetben.
+  akkora d kell (`DENS_GAIN`). 3D-ben a transzformot minden szint kapja, nem
+  csak az aktív: különben szintváltáskor az új aktív a mozgás végétől a nyugvó
+  képig kockás volt (élesben: „váltásnál először éles, utána kicsit homályos,
+  utána megint éles"). Ára szoftveres WebRenderen: alapnézetben +7–12%
+  körbejárási idő, nagyítva annyi, mint alapnézetben; hogy a többi szint is
+  kapja, az a mérési zajon belül van.
+- **Firefoxban a lapos alaprajz SVG-je nem kaphat saját transzformot.** Ha
+  induláskor kapott (`scale(1)` vagy `translateZ(0)`), a lapos alaprajzon
+  (`.flat2d`) a Firefox nem talált bele: a kattintás a szintdobozé lett, a
+  teremé nem. Ezért a `syncOwn()` csak a lapos formán kívül adja (a
+  `syncFlat()` hívja, a lelapuláskor leveszi, a 3D-be lépéskor visszateszi),
+  d=1-nél `translateZ(0)`-val. Nagyított alaprajzon a `scale(1/d)` nem zavar.
+  A Chromiumos tesztek ezt nem látják; valódi Firefoxban mérve (lásd
+  lejjebb) alaprajzon, nagyított alaprajzon és 3D-ben is a terem kapja.
 - **Firefoxot valódi ablakban mérj.** A headless képernyőkép (Puppeteer,
   WebDriver BiDi) a 3D-t nem úgy rajzolja, ahogy a képernyőn látszik: egy
   másik szintet mutatott az aktív helyett. Xvfb alatti ablak kell, a képet
