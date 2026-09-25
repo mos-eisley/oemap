@@ -1886,11 +1886,17 @@ $("stage").addEventListener("click",()=>{if(window.__moved)return;
    térképre. */
 let TM=null, tmLoading=null, tmDone=false;
 /* Más formátumú (régi) adatból inkább semmi, mint hibás állapot: egy
-   gyorsítótárban ragadt régi fájl így „nincs adat"-ot ad, nem kivételt. */
-const tmLoad=()=>tmLoading||(tmLoading=fetch("data/termek.json")
-  .then(r=>r.ok?r.json():null)
-  .then(d=>{ TM=d&&d.het1&&d.rooms&&d.targyak?d:null; tmDone=true; return TM; })
-  .catch(()=>{ tmDone=true; return null; }));
+   gyorsítótárban ragadt régi fájl így „nincs adat"-ot ad, nem kivételt.
+   Egy deploy utáni első megnyitáskor viszont még a RÉGI service worker
+   válaszol, és az a régi fájlt adja a saját gyorsítótárából — az új csak
+   akkor veszi át, amikor már települt. Ezért ilyenkor egyszer újrakérjük,
+   egyedi paraméterrel a cím végén: azt a régi gyorsítótár nem ismeri, így a
+   hálózatról jön. */
+const tmOk=d=>d&&d.het1&&d.rooms&&d.targyak?d:null;
+const tmGet=(u,o)=>fetch(u,o).then(r=>r.ok?r.json():null).catch(()=>null);
+const tmLoad=()=>tmLoading||(tmLoading=tmGet("data/termek.json")
+  .then(d=>tmOk(d)||tmGet("data/termek.json?v="+Date.now(),{cache:"no-store"}))
+  .then(d=>{ TM=tmOk(d); tmDone=true; return TM; }));
 
 const hhmm=m=>String((m/60)|0).padStart(2,"0")+":"+String(m%60).padStart(2,"0");
 const isoDay=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;

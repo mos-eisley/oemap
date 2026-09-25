@@ -123,5 +123,17 @@ run("foglalható termek", async ({ t, ctx, base }) => {
       k.sorok.every(x => x.jel === "none" && /nincs adat/i.test(x.al)),
       iso + ": " + [...new Set(k.sorok.map(x => x.jel + ":" + x.al))].join(" | "));
   }
-  t("nincs JS hiba", p.jsErrors.length === 0, p.jsErrors.join(" | "));
+  /* Egy deploy utáni első megnyitáskor még a régi service worker válaszol, és
+     a régi formátumú fájlt adja a gyorsítótárából. Útvonal-elfogással
+     játsszuk le: a sima címre a régi (kéthetes táblás) formátum jön, minden
+     másra a valódi fájl. Az appnak a frisset kell mutatnia, nem „nincs
+     adat"-ot. */
+  await ctx.route(/\/data\/termek\.json$/, r => r.fulfill({ json: { generated:"2026-09-10",
+    from:"2026-08-31", to:"2026-09-11", periods:{ 1:"8.00 - 8.45" }, rooms:[{ nev:"AM", cim:"Audmax", fero:330, felsz:[] }] } }));
+  const p2 = await open(ctx, base, { settle: 900 });
+  const regi = await p2.evaluate(async () => { quick("@ROOMS"); await new Promise(r => setTimeout(r, 900));
+    return { het1:TM && TM.het1, termek:document.querySelectorAll(".tmrow").length }; });
+  t("a gyorsítótárban ragadt régi fájl helyett a frisset tölti be", regi.het1 === adat.het1 && regi.termek === adat.db,
+    JSON.stringify(regi));
+  t("nincs JS hiba", !p.jsErrors.length && !p2.jsErrors.length, p.jsErrors.concat(p2.jsErrors).join(" | "));
 });
