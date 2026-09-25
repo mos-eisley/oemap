@@ -368,6 +368,14 @@ button{cursor:pointer;background:none;border:0}
 .m3 .floor{cursor:pointer}
 .m2 .rooms{pointer-events:auto}
 .m3 .rooms{pointer-events:none}
+/* Épület nézetben az aktív szint termére koppintva az adatai jönnek elő (egy
+   e-totemen ez az első mozdulat). A fölötte lévő szintek elöl vannak (+Z a
+   néző felé) és halványak: ha kattinthatók, az aktív szint termei elől
+   kapják el a koppintást — mérve egy II. emeleti fal kapta a földszinti F11
+   helyett. Ezért azok átengedik; az alsó szintekre kattintva továbbra is
+   belemerül, a fölsőkre a szintválasztó visz. */
+.m3:not(.navving) .floor.on .rooms{pointer-events:auto}
+.m3 .floor.above .hit{pointer-events:none}
 .m2 .hit{pointer-events:none}
 .m3 .hit{pointer-events:fill}
 .room.pick{cursor:pointer}
@@ -1273,7 +1281,9 @@ function updateView(){
     // a helyet és az átlátszóságot a syncFloors() írja, a ciklus után
     F.rooms.style.opacity = S.mode===3 ? (on?1:0) : 1;
     F.walls.style.opacity = S.mode===3 ? (on?1:.32) : 1;
-    F.box.style.pointerEvents = S.mode===3 ? "auto" : (on?"auto":"none");
+    const above = S.mode===3 && F.idx>LVI[S.level];
+    F.box.classList.toggle("above",above);
+    F.box.style.pointerEvents = S.mode===3 ? (above?"none":"auto") : (on?"auto":"none");
     // Alaprajz nézetben a rejtett szintek opacity:0-val is rétegben maradnak.
     // A .55s-os áttűnés után visibility:hidden kiveszi őket a festésből és a
     // hit-tesztből; a késleltetés miatt a szintváltás áttűnése megmarad.
@@ -1708,9 +1718,22 @@ function dive(lv){
   addEventListener("orientationchange",dropRect);
   addEventListener("scroll",dropRect,{passive:true});
 
+  /* Egy sima kattintás a teremé. A mutatót (pointer capture) és a navigáló
+     állapotot (.navving: a szintek nem kapnak kattintást) csak akkor vesszük
+     át, amikor a mozdulat tényleg húzássá válik. Korábban már a lenyomáskor
+     átvettük, és egérrel így a felengedés és a kattintás is a színpadra
+     ment, nem a teremre: asztalon egyetlen termet sem lehetett kiválasztani,
+     a színpadra kattintás pedig még a kijelölést is törölte. Érintésnél ez
+     nem látszott, ott a koppintás a koppintott elemet kapja. */
+  const CLICK_SLOP=6;
+  let taken=false;
+  const take=()=>{ if(taken) return; taken=true;
+    for(const id of pts.keys()) try{ stage.setPointerCapture(id); }catch(_){}
+    nowOn(); };
   stage.addEventListener("pointerdown",e=>{
     pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    stage.setPointerCapture(e.pointerId); dropRect(); nowOn();
+    dropRect();
+    if(pts.size===1) taken=false; else take();
     if(pts.size===1){
       // Épület nézetben egy ujj forgat, Alaprajzon tol. Shift vagy a középső/jobb
       // gomb egérrel forgatás helyett tolás, hogy asztali gépen is legyen pan.
@@ -1818,6 +1841,7 @@ function dive(lv){
     if(!drag)return;
     const dx=e.clientX-drag.x, dy=e.clientY-drag.y;
     moved=Math.max(moved,Math.abs(dx)+Math.abs(dy));
+    if(!taken){ if(moved<=CLICK_SLOP) return; take(); }
     if(drag.pan){
       S.view.x=drag.vx+dx; S.view.y=drag.vy+dy;
       S.dirty=true; schedule();
@@ -1843,7 +1867,7 @@ function dive(lv){
     // visszakapcsoló 1s-os transition ráugrana a függőben lévő képkockára.
     if(raf){cancelAnimationFrame(raf); paint();}
     if(pts.size===0){
-      window.__moved=moved>6;drag=null;
+      window.__moved=moved>CLICK_SLOP;drag=null;taken=false;
       /* A döntés oda-vissza jár. Az Épület nézet 15° (TILT_MIN) alatt nem
          nyugszik meg: elengedve oda úszik, amelyiknek a kép épp mutatja
          magát. Ha nincs 3D-s megjelenésben (.deep — a határa kétirányú, lásd
