@@ -212,11 +212,17 @@ ugyanígy feldolgozható.
 (`1.10`…`2.20`) az egyetem hivatalos teremnevei (a Neptunban `BA.F.01`,
 `BA.1.13`); a tervlap más (üzemeltetési) számozást használ, és a kettő
 összerendelése még nincs meg. Például a hivatalos `F01` 268 fős, míg a tervlap
-`OA00F01`-e 95,7 m². Ezért a foglalható termek még nem jelennek meg a térképen.
-Az app kész rá: amint egy pár bekerül a `tools/build-termek.py` `PLAN`
-táblájába, és újraépül az adat, a térképen arra a teremre kattintva az
-adatlapján is ott a foglaltság, a Neptun-névvel és a mai órákkal együtt.
-Részletek és a teendők: [docs/NYITOTT-KERDESEK.md](docs/NYITOTT-KERDESEK.md).
+`OA00F01`-e 95,7 m². A kettőt az app `NEPTUN` táblája köti össze, és csak
+megerősített pár kerülhet bele. Ahol van pár, a térkép felirata, a kereső és az
+adatlap a Neptun-nevet mutatja, és a teremre kattintva az adatlapján ott a
+foglaltság is.
+
+**Párosító mód.** A párokat az épületet ismerő ember adja meg, az appban:
+`https://mayydayy99.github.io/oemap/?parosit`. Kattints egy teremre, válaszd
+ki a Neptun-nevét; a panel alján a **Lista másolása** a párokat
+`F01 = OA00F11` alakban adja, ezt kell a `NEPTUN` táblába írni. Addig a
+helyben megadott párok csak ebben a módban, azon az eszközön látszanak.
+Részletek: [docs/NYITOTT-KERDESEK.md](docs/NYITOTT-KERDESEK.md).
 
 ## Arculat
 
@@ -281,7 +287,7 @@ python3 -m http.server 8000
 
 ```
 npm install     # playwright
-npm test        # mind a 13 tesztfájl
+npm test        # mind a 14 tesztfájl
 ```
 
 A tesztek maguk indítanak szervert és böngészőt szabad porton, így nem kell

@@ -39,17 +39,21 @@ labor áll 8 tervlapival szemben. Találgatni nem szabad: egy rossz pár egy
 foglalt termet mutatna szabadnak.
 
 **Kitől kell.** A megrendelőtől ígéret van rá: „Neptun/órarend szerinti
-teremszám: nemsokára megadom".
+teremszám: nemsokára megadom". Azóta azt is kérte, hogy a térkép alapból a
+Neptun-szerinti számot írja ki, és a teremre kattintva jöjjön elő a
+foglaltság — mindkettő ezen múlik. A megadást a párosító mód könnyíti meg
+(`?parosit`, lásd lent).
 
-**Mit kell csinálni, ha megjön.**
-1. A megfeleltetést (Neptun-kód → tervlapi kód) írd a
-   `tools/build-termek.py` `PLAN` táblájába, és építsd újra a
-   `data/termek.json`-t: a párosított termek sorába bekerül a `code` mező.
-   Ennyi elég ahhoz, hogy a térképen kiválasztott terem adatlapján
-   megjelenjen a foglaltság — az app oldala (`tmCard()`) kész, a
-   `tests/termek.js` próbakötéssel őrzi.
-2. A keresésbe kerüljön be a hivatalos név aliasként, hogy az `„audmax"`
-   találjon.
+**Mit kell csinálni, ha megjön.** Az app oldala kész: a feliratok, a
+kereső (az `„audmax"` is) és az adatlap a Neptun-nevet mutatja, az adatlapon
+ott a foglaltság — a `tests/neptun.js` és a `tests/termek.js` próbakötéssel
+őrzi. A párokat a párosító mód adja: `?parosit` a címben, teremre kattintás,
+a Neptun-név kiválasztása, végül **Lista másolása** (`F01 = OA00F11` sorok).
+1. A kimásolt listát írd az `index.html` `NEPTUN` táblájába
+   (`"OA00F11":"F01"` alakban).
+2. Az osztható F03-F04-F07 és a 4.01 külön kérdés lehet: a tábla egy
+   tervlapi teremhez egy Neptun-nevet rendel. Ha a valóság más (egy tervlapi
+   terem három Neptun-névvel), azt a párosítónak kell jeleznie.
 3. A foglalható termek panelján a sor legyen kattintható → ugorjon a térképre.
 4. A `tests/termek.js`-be jöjjön egy eset a valódi megfeleltetésből: a
    hivatalos névre keresve a megfelelő tervlapi kód jön vissza, és annak az
