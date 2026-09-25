@@ -61,7 +61,7 @@ hagytak egy hibás kódot.
 | `tests/lift.js` | lépcső vs. lift alternatíva |
 | `tests/sheet.js` | az alsó panel aljának elérhetősége |
 | `tests/staff.js` | hallgatói/minden szűrő |
-| `tests/termek.js` | foglalható termek: heti órák, páros/páratlan hét, ünnepnap, a félév előtti és utáni nap, a más karral közös termek, és a deploy után a régi service workerben ragadt fájl |
+| `tests/termek.js` | foglalható termek: heti órák, páros/páratlan hét, ünnepnap, a félév előtti és utáni nap, a más karral közös termek, a térképen kiválasztott terem adatlapja, és a deploy után a régi service workerben ragadt fájl |
 | `tests/pwa.js` | manifest, service worker, **offline indulás**, a teremadat frissessége |
 | `tests/a11y.js` | billentyűzetes bejárás, felolvasónak szóló jelölés |
 | `tests/perf.js` | Épület nézet: képkockánként hány renderpass, a telefon (GPU-s) kódútján — **élesben bejelentett akadozás** |
@@ -431,6 +431,12 @@ sem látszik rajta első ránézésre:
   épület. Ezek a nyilvántartás `F05`, `LABOR 1.13`, `Audmax` termei — de nem
   az alaprajz kódjai (lásd `docs/NYITOTT-KERDESEK.md`, 1.). Az óra fajtája a
   kurzuskódból jön (`_EA` előadás, `_GY` gyakorlat, `_LA` labor).
+- **A tervlapi kódot a `build-termek.py` `PLAN` táblája adja**, és csak
+  megerősített párt tartalmazhat — a név és a méret félrevezet (lásd ott).
+  Ahol van pár, a `termek.json` sorában ott a `code`, és a térképen arra a
+  teremre kattintva az adatlapján is megjelenik a foglaltság (`tmCard()`,
+  ugyanazzal a sorral és napi órákkal, mint a listában: `tmRow()`,
+  `tmDetail()`).
 
 Az órák heti ismétlődésként kerülnek a `termek.json`-ba (`[nap, tól, ig,
 hetek bitmaszkja, fajta, tárgy sorszáma]`), nem napokra kibontva: egy félév

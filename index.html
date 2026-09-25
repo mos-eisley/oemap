@@ -237,6 +237,9 @@ button{cursor:pointer;background:none;border:0}
 .tmr.empty2{color:var(--muted)}
 .tmf{margin-top:8px;display:flex;flex-wrap:wrap;gap:5px}
 .tmf .tag{font-size:10.5px;padding:2px 7px}
+/* ugyanez a terem adatlapján: ott nem nyitható, csak mutatja */
+.rtm{border-top:1px solid var(--line)}
+.rtm .tmrow,.rtm .tmrow:hover{background:var(--panel);cursor:default}
 
 .sum{display:flex;gap:2px;margin:13px 0 4px;border:1px solid var(--line);border-radius:var(--r);
   overflow:hidden;background:var(--line)}
@@ -1952,41 +1955,66 @@ function tmNow(room,now){
   return {state:room.kozos?"maybe":"free",next:day.find(b=>b.from>min)};
 }
 
-function renderTermek(){
-  const t=T(), box=$("scroll");
-  if(!TM){ box.innerHTML=`<div class="empty" style="padding:18px 16px">${tmDone?t.tmNoData:"…"}</div>`; return; }
-  const now=new Date(), iso=isoDay(now), bent=!!tmWeek(iso), unnep=TM.szunnap.includes(iso);
-  const KIND={eloadas:"kEloadas",gyakorlat:"kGyakorlat",labor:"kLabor"};
-  const kn=k=>t[KIND[k]||"kEgyeb"];
-  const kar=TM.kar.join(", ")||"NIK";
-
-  const rows=TM.rooms.map(r=>{
-    const st=tmNow(r,now), open=S.tmOpen===r.nev;
-    let badge,sub;
-    if(st.state==="nodata"){ badge=`<span class="tmb none">–</span>`; sub=t.tmNoData; }
-    else if(st.state==="holiday"){ badge=`<span class="tmb none">–</span>`; sub=t.tmHoliday; }
-    else if(st.state==="busy"){ badge=`<span class="tmb busy">${t.tmBusy}</span>`;
-      sub=`${esc(st.b.subj)} · ${kn(st.b.kind)} · ${t.tmUntil.replace("%s",hhmm(st.until))}`; }
-    else {
-      const nx=st.next?t.tmFrom.replace("%s",hhmm(st.next.from)):t.tmNoMore;
-      badge=st.state==="maybe"?`<span class="tmb maybe">${t.tmMaybe}</span>`
-                              :`<span class="tmb free">${t.tmFree}</span>`;
-      sub=st.state==="maybe"?`${t.tmMaybeSub.replace("%s",esc(kar))} · ${nx}`:nx;
-    }
-
-    const day=tmDay(r,iso);
-    const detail=open?`<div class="tmd">
+/* Egy terem sora (név, Neptun-kód, állapot, férőhely) és a kinyitott része
+   (a mai órák, a felszereltség). A foglalható termek listája és a térképen
+   kiválasztott terem adatlapja ugyanezt mutatja, csak az utóbbin nem
+   kattintható a sor. */
+const TMKIND={eloadas:"kEloadas",gyakorlat:"kGyakorlat",labor:"kLabor"};
+function tmRow(r,now,t,tag,attr){
+  const st=tmNow(r,now), kn=k=>t[TMKIND[k]||"kEgyeb"];
+  let badge,sub;
+  if(st.state==="nodata"){ badge=`<span class="tmb none">–</span>`; sub=t.tmNoData; }
+  else if(st.state==="holiday"){ badge=`<span class="tmb none">–</span>`; sub=t.tmHoliday; }
+  else if(st.state==="busy"){ badge=`<span class="tmb busy">${t.tmBusy}</span>`;
+    sub=`${esc(st.b.subj)} · ${kn(st.b.kind)} · ${t.tmUntil.replace("%s",hhmm(st.until))}`; }
+  else {
+    const nx=st.next?t.tmFrom.replace("%s",hhmm(st.next.from)):t.tmNoMore;
+    badge=st.state==="maybe"?`<span class="tmb maybe">${t.tmMaybe}</span>`
+                            :`<span class="tmb free">${t.tmFree}</span>`;
+    sub=st.state==="maybe"?`${t.tmMaybeSub.replace("%s",esc(TM.kar.join(", ")||"NIK"))} · ${nx}`:nx;
+  }
+  return `<${tag} class="${attr.cls}"${attr.data||""}>
+      <span class="tmn"><b>${esc(r.nev)}</b><i>${esc(r.neptun)}</i></span>
+      <span class="tms">${sub}</span>
+      <span class="tmc mono">${r.fero?r.fero+" fő":""}</span>${badge}</${tag}>`;
+}
+function tmDetail(r,now,t){
+  const iso=isoDay(now), day=tmDay(r,iso), kn=k=>t[TMKIND[k]||"kEgyeb"];
+  return `<div class="tmd">
       <div class="tmdh">${t.tmToday} · ${iso}</div>
       ${day.length?day.map(b=>`<div class="tmr"><span class="mono">${hhmm(b.from)}–${hhmm(b.to)}</span>
         <span>${esc(b.subj)} · ${kn(b.kind)}</span></div>`).join("")
-       :`<div class="tmr empty2">${!bent?t.tmNoData:unnep?t.tmHoliday:t.tmNothing}</div>`}
+       :`<div class="tmr empty2">${!tmWeek(iso)?t.tmNoData:TM.szunnap.includes(iso)?t.tmHoliday:t.tmNothing}</div>`}
       ${r.felsz.length?`<div class="tmf">${r.felsz.map(f=>`<span class="tag">${esc(f)}</span>`).join("")}</div>`:""}
-    </div>`:"";
+    </div>`;
+}
+/* A térképen kiválasztott terem foglaltsága, ha tudjuk, melyik Neptun-terem
+   (a megfeleltetés a tools/build-termek.py PLAN táblájából jön, és csak
+   megerősített párokat tartalmaz). A hallgató a Neptun-órarendjében a
+   hivatalos nevet látja, ezért az is ott áll. Az adatot az első
+   kiválasztáskor töltjük be; ha közben megjött, csak ez a rész kerül be az
+   adatlapba — az egész panel újrarajzolása elvinné a billentyűzetes
+   fókuszt a gombjairól. */
+function tmCard(code,t){
+  if(!tmDone){ tmLoad().then(()=>{
+      const top=document.querySelector("#scroll .rcard .top");
+      if(S.sel===code && !S.termek && top && !top.parentNode.querySelector(".rtm"))
+        top.insertAdjacentHTML("afterend",tmCard(code,T())); });
+    return ""; }
+  const r=TM&&TM.rooms.find(x=>x.code===code); if(!r) return "";
+  const now=new Date();
+  return `<div class="rtm">${tmRow(r,now,t,"div",{cls:"tmrow"})}${tmDetail(r,now,t)}</div>`;
+}
 
-    return `<button class="tmrow${open?" open":""}" data-tm="${esc(r.nev)}">
-        <span class="tmn"><b>${esc(r.nev)}</b><i>${esc(r.neptun)}</i></span>
-        <span class="tms">${sub}</span>
-        <span class="tmc mono">${r.fero?r.fero+" fő":""}</span>${badge}</button>${detail}`;
+function renderTermek(){
+  const t=T(), box=$("scroll");
+  if(!TM){ box.innerHTML=`<div class="empty" style="padding:18px 16px">${tmDone?t.tmNoData:"…"}</div>`; return; }
+  const now=new Date();
+
+  const rows=TM.rooms.map(r=>{
+    const open=S.tmOpen===r.nev;
+    return tmRow(r,now,t,"button",{cls:"tmrow"+(open?" open":""),data:` data-tm="${esc(r.nev)}"`})
+      +(open?tmDetail(r,now,t):"");
   }).join("");
 
   const shared=TM.rooms.some(r=>r.kozos)?`<br>${t.tmShared}`:"";
@@ -2041,6 +2069,7 @@ function renderPanel(){
         <div class="meta"><span class="tag">${esc(lvName(r.level))}</span>
           <span class="tag">${esc(r.cat.toLowerCase())}</span>
           <span class="tag mono">${r.area} m²</span></div></div>
+      ${tmCard(r.code,t)}
       <div class="btn-row"><button class="btn" id="bF">${t.setFrom}</button>
         <button class="btn primary" id="bT">${t.setTo}</button></div></div></div>`;
   }
