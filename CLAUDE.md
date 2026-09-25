@@ -61,7 +61,7 @@ hagytak egy hibás kódot.
 | `tests/lift.js` | lépcső vs. lift alternatíva |
 | `tests/sheet.js` | az alsó panel aljának elérhetősége |
 | `tests/staff.js` | hallgatói/minden szűrő |
-| `tests/termek.js` | foglalható termek: heti órák, páros/páratlan hét, ünnepnap, a félév előtti és utáni nap, a más karral közös termek |
+| `tests/termek.js` | foglalható termek: heti órák, páros/páratlan hét, ünnepnap, a félév előtti és utáni nap, a más karral közös termek, és a deploy után a régi service workerben ragadt fájl |
 | `tests/pwa.js` | manifest, service worker, **offline indulás**, a teremadat frissessége |
 | `tests/a11y.js` | billentyűzetes bejárás, felolvasónak szóló jelölés |
 | `tests/perf.js` | Épület nézet: képkockánként hány renderpass, a telefon (GPU-s) kódútján — **élesben bejelentett akadozás** |
@@ -427,7 +427,10 @@ dokumentum; a betűk és ikonok gyorsítótár-először. A `termek.json` neve
 félévről félévre ugyanaz, gyorsítótár-először egy telepített app sosem kapná
 meg az újat. Ha a formátuma változik, a `CACHE` nevét is emeld: az dobja el a
 régi példányt. Az app a nem várt formátumú adatot „nincs adat"-nak veszi
-(`tmLoad()`), nem omlik el tőle.
+(`tmLoad()`), nem omlik el tőle. **Egy deploy utáni első megnyitáskor még a
+régi service worker válaszol**, a régi gyorsítótárából: ha az régi formátumú
+fájlt ad, a `tmLoad()` egyszer újrakéri, egyedi paraméterrel a cím végén —
+azt a régi gyorsítótár nem ismeri, így a hálózatról jön.
 
 ## Deploy
 
