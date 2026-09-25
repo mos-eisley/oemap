@@ -40,9 +40,9 @@ run("élesség nagyítva", async ({ t, ctx, browser, base }) => {
   const p = await open(ctx, base, { settle: 1600 });
   await p.evaluate(() => {
     // minden sűrűségváltás idejét és pillanatnyi állapotát feljegyezzük
-    window.__valt = []; window.__mozdult = 0;
+    window.__valt = []; window.__gorgo = [];
     const stage = document.getElementById("stage");
-    stage.addEventListener("wheel", () => { __mozdult = performance.now(); }, { capture:true });
+    stage.addEventListener("wheel", () => { __gorgo.push(performance.now()); }, { capture:true });
     new MutationObserver(ms => { for (const m of ms) __valt.push({ t:performance.now(), lv:+m.target.closest(".floor").dataset.lv,
       now:world.classList.contains("now"),
       anim:world.getAnimations({ subtree:true }).filter(a => a.playState === "running" &&
@@ -73,7 +73,6 @@ run("élesség nagyítva", async ({ t, ctx, browser, base }) => {
   let n = 0;
   while (await p.evaluate(() => S.view.k) < 4 && n++ < 40) {
     await p.mouse.move(f.cx, f.cy); await p.mouse.wheel(0, -100); await p.waitForTimeout(40); }
-  const utolso = await p.evaluate(() => __mozdult);
   await nyugszik();
   const nagy = await p.evaluate(() => ({ k:+S.view.k.toFixed(2), d:FLOOR[S.level].dens || 1,
     tobbi:LV.filter(lv => lv !== S.level).map(lv => +FLOOR[lv].svg.getAttribute("width") === PW) }));
@@ -100,8 +99,15 @@ run("élesség nagyítva", async ({ t, ctx, browser, base }) => {
 
   const valt = await p.evaluate(() => __valt);
   const mozgasKozben = valt.filter(v => v.now || v.anim > 0);
-  t("görgetés közben nem vált sűrűséget, csak utána", valt.length > 0 && valt[0].t > utolso + 200,
-    `utolsó görgetés után ${valt.length ? (valt[0].t - utolso).toFixed(0) : "–"} ms`);
+  /* Mindegyik váltás a közvetlenül előtte lévő görgetéshez mérve: nyugalom
+     az, ha 250 ms-ig nem mozdult a kép. Egy terhelt gépen két görgetés közt
+     ennyi is eltelhet, az jogos váltás; a görgetés sűrűjében viszont nem
+     jöhet. */
+  const gorgo = await p.evaluate(() => __gorgo);
+  const utana = valt.filter(v => v.t < gorgo[gorgo.length - 1] + 1000)
+    .map(v => v.t - Math.max(...gorgo.filter(g => g <= v.t)));
+  t("görgetés közben nem vált sűrűséget, csak megállás után", valt.length > 0 && utana.every(d => d >= 200),
+    `a váltások az előző görgetés után: ${utana.map(d => d.toFixed(0)).join(", ") || "–"} ms`);
   t("mozdulat és áttűnés közben soha nem vált", mozgasKozben.length === 0 && gomb !== dElotte,
     JSON.stringify({ mozgasKozben, gomb, dElotte }));
 
@@ -149,9 +155,15 @@ run("élesség nagyítva", async ({ t, ctx, browser, base }) => {
     return LV.map(lv => FLOOR[lv].dens || 1); });
   t("más böngészőmotorban a szintek sűrűsége nem változik", masD.every(d => d === 1), JSON.stringify(masD));
 
-  /* Firefoxban más a szabály (lásd syncDens()): az aktív szint SVG-je
+  /* Firefoxban más a szabály (lásd syncDens()): a szintek SVG-je
      alapnézetben is saját transzformot kap — nélküle kockás, és a falai
      kimaradnak —, és ugyanahhoz az élességhez kétszer akkora sűrűség kell.
+     Mindegyik szinté, nem csak az aktívé: szintváltáskor különben az új
+     aktív a mozgás végéig kockás volt („váltásnál először éles, utána kicsit
+     homályos, utána megint éles").
+     A lapos alaprajzon viszont egyik sem kaphat: ott a Firefox az induláskor
+     transzformot kapott SVG-be nem talált bele, a kattintás a szintdobozé
+     lett, a teremé nem.
      A Firefox rajzát itt nem látjuk, a tesztböngésző Chromium: azt valódi
      Firefoxban mértük (lásd CLAUDE.md). Ez a kódútját őrzi, a motort jelző
      mozInnerScreenX-szel. */
@@ -163,14 +175,22 @@ run("élesség nagyítva", async ({ t, ctx, browser, base }) => {
     const nyugszik = async () => { await Promise.all(document.getAnimations()
       .filter(a => a.effect && a.effect.getComputedTiming().endTime !== Infinity).map(a => a.finished.catch(() => {})));
       await new Promise(r => setTimeout(r, 700)); };
+    const lapos = () => new Promise(r => { const f = () => app.classList.contains("flat2d") ? r() : setTimeout(f, 50); f(); });
+    const transz = () => LV.map(lv => FLOOR[lv].svg.style.transform);
+    await lapos(); const indul = transz();
     setMode(3); await nyugszik();
     const alap = { d:FLOOR[S.level].dens || 1, sajat:FLOOR[S.level].svg.style.transform,
                    tobbi:LV.filter(lv => lv !== S.level).map(lv => FLOOR[lv].svg.style.transform) };
+    setMode(2); await nyugszik(); await lapos(); const vissza = transz();
+    setMode(3); await nyugszik();
     S.view.k *= 5; updateView(); await nyugszik();
-    return { alap, d:FLOOR[S.level].dens || 1, chromium:densFor(planeZoom()) };
+    return { indul, vissza, alap, d:FLOOR[S.level].dens || 1, chromium:densFor(planeZoom()) };
   });
-  t("Firefoxban az aktív szint alapnézetben is saját transzformot kap, a többi nem",
-    gkR.alap.d === 1 && /^scale\(1\)$/.test(gkR.alap.sajat) && gkR.alap.tobbi.every(x => !x), JSON.stringify(gkR.alap));
+  t("Firefoxban a lapos alaprajzon egyik szint SVG-je sem kap saját transzformot, induláskor és visszatérve sem",
+    gkR.indul.every(x => x === "") && gkR.vissza.every(x => x === ""), JSON.stringify([gkR.indul, gkR.vissza]));
+  t("Firefoxban alapnézetben is minden szint saját transzformot kap",
+    gkR.alap.d === 1 && /^translateZ\(0(px)?\)$/.test(gkR.alap.sajat) && gkR.alap.tobbi.every(x => /^translateZ\(0(px)?\)$/.test(x)),
+    JSON.stringify(gkR.alap));
   t("Firefoxban nagyítva kétszer olyan sűrűn rajzol, mint Chromiumban",
     gkR.chromium > 1 && gkR.d === Math.min(16, 2 * gkR.chromium), JSON.stringify(gkR));
   t("a Firefox-ágon sincs JS hiba", gk.jsErrors.length === 0, gk.jsErrors.join(" | "));
