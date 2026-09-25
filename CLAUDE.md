@@ -42,7 +42,7 @@ honnan/hova, útvonal, forgatás, panelállás). Aki ezt megérti, érti az appo
 
 ```
 npm install          # playwright (a böngésző a képen már megvan)
-npm test             # mind a 13 tesztfájl
+npm test             # mind a 14 tesztfájl
 node tests/run.js url share     # csak egy-kettő
 ```
 
@@ -65,6 +65,7 @@ hagytak egy hibás kódot.
 | `tests/pwa.js` | manifest, service worker, **offline indulás**, a teremadat frissessége |
 | `tests/a11y.js` | billentyűzetes bejárás, felolvasónak szóló jelölés |
 | `tests/perf.js` | Épület nézet: képkockánként hány renderpass, a telefon (GPU-s) kódútján — **élesben bejelentett akadozás** |
+| `tests/neptun.js` | Neptun-nevek a térképen, a keresőben és az adatlapon; a tervlapi névrokon nem ütközhet velük; a párosító mód (`?parosit`) |
 | `tests/sharp.js` | Épület nézet asztalon, nagyítva: éles-e a kép, nem mozdul-e a sűrűségtől, nem vált-e mozgás közben, csak az aktív szintnél, telefonon és más motorban nem, Firefoxban a saját kódútján (3D-ben minden szint saját transzformmal, a lapos alaprajzon egyik sem) — **élesben bejelentett „irgalmatlan életlen" asztali 3D, Chrome-ban és Firefoxban, és a Firefoxos „éles, homályos, megint éles" váltás** |
 
 ## Amit érdemes tudni, mielőtt hozzányúlsz
@@ -458,12 +459,19 @@ sem látszik rajta első ránézésre:
   épület. Ezek a nyilvántartás `F05`, `LABOR 1.13`, `Audmax` termei — de nem
   az alaprajz kódjai (lásd `docs/NYITOTT-KERDESEK.md`, 1.). Az óra fajtája a
   kurzuskódból jön (`_EA` előadás, `_GY` gyakorlat, `_LA` labor).
-- **A tervlapi kódot a `build-termek.py` `PLAN` táblája adja**, és csak
-  megerősített párt tartalmazhat — a név és a méret félrevezet (lásd ott).
-  Ahol van pár, a `termek.json` sorában ott a `code`, és a térképen arra a
-  teremre kattintva az adatlapján is megjelenik a foglaltság (`tmCard()`,
-  ugyanazzal a sorral és napi órákkal, mint a listában: `tmRow()`,
-  `tmDetail()`).
+- **A tervlapi kód és a Neptun-név megfeleltetése az app `NEPTUN` táblája**
+  (`index.html`, a `ROOM` mellett), nem a teremadaté: a feliratok már
+  induláskor abból dolgoznak. Csak megerősített pár kerülhet bele — a név és
+  a méret félrevezet. Ahol van pár, a térkép felirata, a kereső és az adatlap
+  címe a Neptun-név, az adatlapon ott a foglaltság (`tmCard()`, ugyanazzal a
+  sorral és napi órákkal, mint a listában: `tmRow()`, `tmDetail()`). A
+  tervlapi rövid kód (F01…F14) ütközhet egy másik terem Neptun-nevével
+  (F01…F09): ilyenkor a teljes tervlapi kód a felirat (`roomLabel()`), hogy ne
+  álljon két „F01" a térképen.
+- **A párokat a párosító mód állítja elő** (`?parosit` a címben): teremre
+  kattintás, a Neptun-név kiválasztása (elöl az azonos emeletiek, férőhellyel),
+  a lista kimásolása. A helyben megadott párok (`localStorage`) csak ebben a
+  módban élnek; a kimásolt listát kell a `NEPTUN` táblába írni.
 
 Az órák heti ismétlődésként kerülnek a `termek.json`-ba (`[nap, tól, ig,
 hetek bitmaszkja, fajta, tárgy sorszáma]`), nem napokra kibontva: egy félév

@@ -124,45 +124,47 @@ run("foglalható termek", async ({ t, ctx, browser, base }) => {
       iso + ": " + [...new Set(k.sorok.map(x => x.jel + ":" + x.al))].join(" | "));
   }
   /* A térképen kiválasztott terem adatlapja is mutatja a foglaltságot, ha
-     tudjuk, melyik Neptun-terem (tools/build-termek.py, PLAN). A valódi
-     megfeleltetés még nem érkezett meg (docs/NYITOTT-KERDESEK.md, 1.), ezért
-     a teszt maga köt be egyet: a foglalt órás termet egy tervlapi kódhoz. */
+     tudjuk, melyik Neptun-terem (NEPTUN tábla). A valódi megfeleltetés még
+     nem érkezett meg (docs/NYITOTT-KERDESEK.md, 1.), ezért a teszt maga köt be
+     egyet: a foglalt órás termet egy tervlapi kódhoz. */
   const lap = await p.evaluate(async ([js, nev]) => {
     eval(js);
     const w = ms => new Promise(r => setTimeout(r, ms));
-    const r = TM.rooms.find(x => x.nev === nev), volt = r.code; r.code = "OA00F11";
+    const r = TM.rooms.find(x => x.nev === nev); NEPTUN.OA00F11 = nev;
     select("OA00F11"); await w(300);
     const k = document.querySelector(".rcard .rtm");
-    const res = { neptun:r.neptun, van:!!k, jel:k && k.querySelector(".tmb").className.replace("tmb", "").trim(),
+    const res = { neptun:r.neptun, cim:document.querySelector(".rcard .name").textContent,
+      van:!!k, jel:k && k.querySelector(".tmb").className.replace("tmb", "").trim(),
       szoveg:k && k.textContent.replace(/\s+/g, " ").trim(), orak:k ? k.querySelectorAll(".tmr:not(.empty2)").length : 0 };
     select("OA00F10"); await w(300);
     res.masik = !!document.querySelector(".rcard .rtm");
-    r.code = volt; S.sel = null; renderPanel();
+    delete NEPTUN.OA00F11; S.sel = null; renderPanel();
     return res;
   }, [freeze(eset.foglalt.ido), eset.foglalt.nev]);
   t("a térképen kiválasztott terem adatlapján is ott a foglaltság, a Neptun-névvel",
     lap.van && lap.jel === "busy" && lap.szoveg.includes(eset.foglalt.targy) && lap.szoveg.includes(lap.neptun) && lap.orak > 0,
     JSON.stringify(lap).slice(0, 300));
+  t("párosított teremnél az adatlap címe a Neptun-név", lap.cim === eset.foglalt.nev, lap.cim);
   t("ahol nem ismert a megfeleltetés, ott az adatlapon nincs foglaltság", lap.van && !lap.masik);
 
   /* Ha a teremadat csak a kiválasztás után érkezik meg, a foglaltság utólag
      kerül be az adatlapba, és a billentyűzetes fókusz közben nem veszhet el
-     a gombjairól. A próbakötés itt az adatfájlban van, ahogy élesben lesz. */
+     a gombjairól. Az adatfájlt késleltetjük, hogy biztosan a kiválasztás
+     után érkezzen. */
   const c3 = await browser.newContext(PHONE);
   await c3.route(/\/data\/termek\.json/, async r => {
-    const res = await r.fetch(), d = await res.json();
-    d.rooms.find(x => x.nev === eset.foglalt.nev).code = "OA00F11";
+    const res = await r.fetch();
     await new Promise(z => setTimeout(z, 600));
-    await r.fulfill({ response:res, json:d });
+    await r.fulfill({ response:res });
   });
   const p3 = await open(c3, base, { settle: 900 });
-  const kesve = await p3.evaluate(async () => {
-    select("OA00F11");
+  const kesve = await p3.evaluate(async nev => {
+    NEPTUN.OA00F11 = nev; select("OA00F11");
     const elotte = !!document.querySelector(".rcard .rtm");
     document.getElementById("bF").focus();
     await new Promise(r => setTimeout(r, 1800));
     return { elotte, utana:!!document.querySelector(".rcard .rtm"), fokusz:document.activeElement && document.activeElement.id };
-  });
+  }, eset.foglalt.nev);
   t("ha az adat a kiválasztás után jön meg, utólag bekerül, és a fókusz a helyén marad",
     !kesve.elotte && kesve.utana && kesve.fokusz === "bF", JSON.stringify(kesve));
   await c3.close();

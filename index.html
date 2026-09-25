@@ -239,6 +239,11 @@ button{cursor:pointer;background:none;border:0}
 .tmf .tag{font-size:10.5px;padding:2px 7px}
 /* ugyanez a terem adatlapján: ott nem nyitható, csak mutatja */
 .rtm{border-top:1px solid var(--line)}
+/* párosító mód */
+.pairbar textarea{display:block;width:100%;margin:8px 0;padding:8px 10px;border:1px solid var(--line);
+  border-radius:var(--r);background:var(--sunk);color:var(--ink);resize:vertical;
+  font:12px/1.45 "IBM Plex Mono",ui-monospace,monospace}
+.pairbar .btn-row{border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
 .rtm .tmrow,.rtm .tmrow:hover{background:var(--panel);cursor:default}
 
 .sum{display:flex;gap:2px;margin:13px 0 4px;border:1px solid var(--line);border-radius:var(--r);
@@ -695,7 +700,10 @@ const I18N={hu:{
   tmToday:"Ma", tmNothing:"Ma nincs óra", tmNoMore:"Ma már nincs óra",
   tmHoliday:"Ünnepnap, nincs óra", tmMaybe:"Szabad?", tmMaybeSub:"Csak a %s órái ismertek",
   tmShared:"A „Szabad?” termekben más karok is tartanak órát, és azok nincsenek benne az adatban.",
-  tmNote:"Az egyetem hivatalos, foglalható teremnevei. Ezek nem az alaprajz kódjai, és a két rendszer összerendelése még nincs meg — ezért nem jelöljük őket a térképen.",
+  tmNote:"Az egyetem hivatalos, foglalható teremnevei (Neptun). A térképen azoknál a termeknél látszanak, amelyeknek már megvan a tervlapi párja.",
+  pairTitle:"Párosítás", pairCopy:"Lista másolása", pairCopied:"Kimásolva", pairExit:"Kilépés",
+  pairHint:"Kattints egy teremre a térképen, és válaszd ki a Neptun-nevét. Ha kész, másold ki a listát és küldd el — onnantól mindenkinél így látszik.",
+  pairFor:"Neptun-név ehhez: %s", pairNone:"Nincs Neptun-neve", pairTaken:"most: %s",
   tmRange:"%s. félév, Neptun: %s – %s.",
   kEloadas:"előadás", kGyakorlat:"gyakorlat", kLabor:"labor", kEgyeb:"egyéb",
   qsub:"innen: %s", qsub0:"a földszinti előtértől", legend2:"Funkció szerinti színek",
@@ -734,7 +742,10 @@ const I18N={hu:{
   tmToday:"Today", tmNothing:"No classes today", tmNoMore:"No more classes today",
   tmHoliday:"Public holiday, no classes", tmMaybe:"Free?", tmMaybeSub:"Only %s classes are known",
   tmShared:"Rooms marked “Free?” are also used by other faculties, whose classes are not in the data.",
-  tmNote:"The university's official bookable room names. These are not the floor-plan codes, and the two systems are not yet matched up — so they are not marked on the map.",
+  tmNote:"The university's official bookable room names (Neptun). They show on the map for the rooms already paired with the floor plan.",
+  pairTitle:"Pairing", pairCopy:"Copy list", pairCopied:"Copied", pairExit:"Exit",
+  pairHint:"Click a room on the map and choose its Neptun name. When done, copy the list and send it — from then on everyone sees it this way.",
+  pairFor:"Neptun name for %s", pairNone:"No Neptun name", pairTaken:"now: %s",
   tmRange:"Semester %s, from Neptun: %s to %s.",
   kEloadas:"lecture", kGyakorlat:"practice", kLabor:"lab", kEgyeb:"other",
   qsub:"from %s", qsub0:"from the ground-floor lobby", legend2:"Function colours",
@@ -790,6 +801,30 @@ const BB=(()=>{let a=1e9,b=1e9,c=-1e9,d=-1e9;
   return {x0:a,y0:b,x1:c,y1:d,cx:(a+c)/2,cy:(b+d)/2,w:(c-a)*PXM,h:(d-b)*PXM};})();
 const OFFX=PW/2-BB.cx*PXM, OFFY=PH/2-BB.cy*PXM;
 const ROOM=Object.fromEntries(D.rooms.filter(r=>r.code).map(r=>[r.code,r]));
+/* A tervlapi kód és a Neptun-teremnév megfeleltetése. A hallgató az
+   órarendjében a Neptun-nevet látja (F01, 1.13, Audmax), a tervlap viszont a
+   saját üzemeltetési kódját (OA00F11), és a két számozás független: a
+   hivatalos F01 268 férőhelyes, a tervlapi OA00F01 95,7 m². Ezért csak
+   megerősített pár kerülhet ide (docs/NYITOTT-KERDESEK.md, 1.). Ahol van pár,
+   ott a térkép, a kereső és az adatlap a Neptun-nevet mutatja, az adatlapon
+   pedig a foglaltság is ott van. A párokat a párosító mód állítja elő. */
+const NEPTUN={};
+/* Párosító mód (?parosit a címben): a teremre kattintva ki lehet választani a
+   Neptun-nevét, és a lista kimásolható a NEPTUN táblába. A helyben megadott
+   párok csak ebben a módban élnek, más látogatónál nem jelennek meg. */
+const PAIRING=new URLSearchParams(location.search).has("parosit"), PAIR_KEY="oemap-parok";
+let localPairs={};
+if(PAIRING) try{ localPairs=JSON.parse(localStorage.getItem(PAIR_KEY)||"{}")||{}; }catch(_){ localPairs={}; }
+const neptunOf=code=>(PAIRING && Object.prototype.hasOwnProperty.call(localPairs,code)
+  ? localPairs[code] : NEPTUN[code]) || null;
+/* A térkép felirata. A tervlapi rövid kód (F01…F14) ütközhet egy másik terem
+   Neptun-nevével (F01…F09): ha az OA00F11 „F01"-ként áll, a tervlapi OA00F01
+   nem maradhat szintén „F01" — ott a teljes tervlapi kód jelenik meg. */
+function roomLabel(r){
+  const n=neptunOf(r.code); if(n) return n;
+  const sc=r.code.slice(4);
+  return Object.keys({...NEPTUN,...(PAIRING?localPairs:{})}).some(c=>neptunOf(c)===sc) ? r.code : sc;
+}
 const lvOf=lv=>D.levels.find(l=>l.level===lv)||{};
 const lvName=lv=>lvOf(lv).name||String(lv);
 
@@ -1079,7 +1114,7 @@ function buildLabels(lv){
   for(const r of F.rs){
     if(!r.code) continue;
     if(!S.staff && STAFF.has(r.cat)) continue;   // halványítva nem feliratozzuk
-    const sc=r.code.slice(4);
+    const sc=roomLabel(r);
     const fs=Math.max(.5,Math.min(1.2,(r.lw-1.4)/(sc.length*.66),r.lh/3.4));
     if(fs<.55) continue;
     const tr=`rotate(${r.ang} ${r.cx} ${r.cy})`;
@@ -1436,7 +1471,7 @@ function labelSet(){
     // ugyanaz a szabály, mint az alaprajzi feliratoknál
     if(!r.code || (!S.staff && STAFF.has(r.cat))) continue;
     const e=document.createElement("span");
-    e.className="tlabel off"; e.textContent=r.code.slice(4); tlab.appendChild(e);
+    e.className="tlabel off"; e.textContent=roomLabel(r); tlab.appendChild(e);
     // a felirat helye a világ síkjában, és a terem feliratnak szánt
     // dobozának két oldala (a világ pixelében)
     LABS.push({e,r, X:(r.cx-BB.cx)*PXM, Y:(r.cy-BB.cy)*PXM,
@@ -1935,8 +1970,8 @@ $("stage").addEventListener("click",()=>{if(window.__moved)return;
 /* --------------------------------------------------- foglalható termek */
 /* Az egyetem hivatalos teremnevei (ingatlan-nyilvántartás) és a Neptun
    órarendje (tools/build-termek.py). A kettő a teremnéven találkozik. Az
-   alaprajz viszont más kódrendszert használ, ezért ezeket nem tesszük ki a
-   térképre. */
+   alaprajz más kódrendszert használ; a térképpel a NEPTUN tábla köti össze,
+   ott, ahol már van megerősített pár. */
 let TM=null, tmLoading=null, tmDone=false;
 /* Más formátumú (régi) adatból inkább semmi, mint hibás állapot: egy
    gyorsítótárban ragadt régi fájl így „nincs adat"-ot ad, nem kivételt.
@@ -2027,9 +2062,8 @@ function tmDetail(r,now,t){
     </div>`;
 }
 /* A térképen kiválasztott terem foglaltsága, ha tudjuk, melyik Neptun-terem
-   (a megfeleltetés a tools/build-termek.py PLAN táblájából jön, és csak
-   megerősített párokat tartalmaz). A hallgató a Neptun-órarendjében a
-   hivatalos nevet látja, ezért az is ott áll. Az adatot az első
+   (NEPTUN tábla, csak megerősített párok). A hallgató a Neptun-órarendjében
+   a hivatalos nevet látja, ezért az is ott áll. Az adatot az első
    kiválasztáskor töltjük be; ha közben megjött, csak ez a rész kerül be az
    adatlapba — az egész panel újrarajzolása elvinné a billentyűzetes
    fókuszt a gombjairól. */
@@ -2039,9 +2073,53 @@ function tmCard(code,t){
       if(S.sel===code && !S.termek && top && !top.parentNode.querySelector(".rtm"))
         top.insertAdjacentHTML("afterend",tmCard(code,T())); });
     return ""; }
-  const r=TM&&TM.rooms.find(x=>x.code===code); if(!r) return "";
+  const nev=neptunOf(code), r=nev&&TM&&TM.rooms.find(x=>x.nev===nev); if(!r) return "";
   const now=new Date();
   return `<div class="rtm">${tmRow(r,now,t,"div",{cls:"tmrow"})}${tmDetail(r,now,t)}</div>`;
+}
+
+/* ---------- párosító mód (?parosit) ---------- */
+const pairAll=()=>Object.entries({...NEPTUN,...localPairs}).filter(([,v])=>v)
+  .sort((a,b)=>a[1].localeCompare(b[1],"hu",{numeric:true}));
+const pairText=()=>pairAll().map(([c,n])=>`${n} = ${c}`).join("\n");
+// a Neptun-kód emelete (BA.F.05, BA.1.13, BA.4.01) az app szintszámozásában
+const nepLevel=x=>({F:0,"1":2,"2":3,"3":4,"4":5})[x.neptun.split(".")[1]];
+function pairBar(t){
+  if(!tmDone) tmLoad().then(()=>{ if(!S.termek) renderPanel(); });
+  return `<div class="sec pairbar"><div class="eyebrow row">${t.pairTitle}
+      <span class="mono">${pairAll().length} / ${TM?TM.rooms.length:"…"}</span></div>
+    <p class="note">${t.pairHint}</p>
+    <textarea id="pText" readonly rows="4" aria-label="${t.pairTitle}">${esc(pairText())}</textarea>
+    <div class="btn-row"><button class="btn" id="pCopy">${t.pairCopy}</button>
+      <button class="btn" id="pExit">${t.pairExit}</button></div></div>`;
+}
+/* A kiválasztott teremhez a Neptun-termek listája: elöl az azonos emeletiek,
+   férőhellyel — a terem mérete mellett ez segít dönteni —, és ha egy név már
+   máshol áll, azt is mutatja. */
+function pairPick(r,t){
+  if(!TM) return "";
+  const cur=neptunOf(r.code), all=Object.entries({...NEPTUN,...localPairs});
+  const owner=nev=>(all.find(([c,v])=>v===nev&&c!==r.code)||[])[0];
+  const rooms=[...TM.rooms].sort((a,b)=>(nepLevel(a)!==r.level)-(nepLevel(b)!==r.level));
+  return `<div class="sec"><div class="eyebrow">${t.pairFor.replace("%s",esc(r.code))} · ${r.area} m²</div>
+    <div class="tmlist">${rooms.map(x=>{ const o=owner(x.nev), lv=nepLevel(x);
+      return `<button class="tmrow${cur===x.nev?" open":""}" data-pair="${esc(x.nev)}">
+        <span class="tmn"><b>${esc(x.nev)}</b><i>${esc(x.neptun)}</i></span>
+        <span class="tms">${o?t.pairTaken.replace("%s",esc(o)):lv!=null?esc(lvName(lv)):""}</span>
+        <span class="tmc mono">${x.fero?x.fero+" fő":""}</span></button>`; }).join("")}
+      <button class="tmrow${cur?"":" open"}" data-pair=""><span class="tmn"><b>${t.pairNone}</b></span></button></div></div>`;
+}
+function setPair(code,nev){
+  // egy Neptun-terem egy tervlapi teremhez tartozik: a korábbi párja elengedi
+  if(nev) for(const [c,v] of Object.entries({...NEPTUN,...localPairs})) if(v===nev&&c!==code) localPairs[c]="";
+  localPairs[code]=nev;
+  try{ localStorage.setItem(PAIR_KEY,JSON.stringify(localPairs)); }catch(_){}
+  relabel(); renderPanel();
+}
+// a feliratok lustán épülnek: új név után újra kell kérni őket, 2D-ben és 3D-ben is
+function relabel(){
+  for(const lv of LV){ const F=FLOOR[lv]; F.built=false; F.labels.textContent=""; }
+  labFor=null; buildLabels(S.level); updateView();
 }
 
 function renderTermek(){
@@ -2069,8 +2147,10 @@ const norm=s=>s.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu,"");
 function search(q){
   q=norm(q.trim()); if(!q)return[];
   return D.rooms.filter(r=>r.code).map(r=>{
-    const c=norm(r.code),n=norm(r.name||""),k=norm(r.cat);let s=-1;
-    if(c===q||c.slice(4)===q)s=0; else if(c.startsWith(q)||c.slice(4).startsWith(q))s=1;
+    const c=norm(r.code),n=norm(r.name||""),k=norm(r.cat),np=norm(neptunOf(r.code)||"");let s=-1;
+    // aki „F01"-et keres, az órarendje szerintit keresi: a Neptun-név előbb jön
+    if(np&&np===q)s=0; else if(c===q||c.slice(4)===q)s=.5;
+    else if(np&&np.startsWith(q))s=1; else if(c.startsWith(q)||c.slice(4).startsWith(q))s=1.5;
     else if(n.startsWith(q))s=2; else if(n.includes(q))s=3;
     else if(k.includes(q))s=4; else if(c.includes(q))s=5;
     return s<0?null:{r,s};
@@ -2084,7 +2164,7 @@ function renderPanel(){
     box.innerHTML=list.length?list.map(r=>`
       <button class="res-item" data-code="${esc(r.code)}" aria-current="${S.sel===r.code}">
         <span class="dotc" style="background:${cc(r.cat)};color:${cc(r.cat)}"></span>
-        <span class="res-main"><span class="res-code mono">${esc(r.code)}</span>
+        <span class="res-main"><span class="res-code mono">${neptunOf(r.code)?esc(neptunOf(r.code))+" · ":""}${esc(r.code)}</span>
         <span class="res-name">${esc(r.name||r.cat)}</span></span>
         <span class="res-meta">${esc(lvOf(r.level).short)}</span></button>`).join("")
       :`<div class="empty">${t.nores}</div>`;
@@ -2098,18 +2178,23 @@ function renderPanel(){
       viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
       <circle cx="12" cy="3.5" r="2"/><circle cx="4" cy="8" r="2"/><circle cx="12" cy="12.5" r="2"/>
       <path d="M5.8 7 10.2 4.5M5.8 9l4.4 2.5"/></svg></button>`;
+  // párosításkor a koppintás után a választó legyen elöl (telefonon a panel
+  // csak félig nyílik), az összesítő utána
+  if(PAIRING && !S.sel) h+=pairBar(t);
   if(S.sel){
-    const r=ROOM[S.sel];
+    const r=ROOM[S.sel], nep=neptunOf(r.code);
+    // párosított teremnél a Neptun-név a cím: a hallgató az órarendjében ezt látja
     h+=`<div class="sec"><div class="eyebrow row">${t.room}${S.from||S.to?"":shrBtn}</div>
       <div class="rcard"><div class="top" style="--cat:${cc(r.cat)}">
-        <div class="code mono">${esc(r.code)}</div>
-        <div class="name">${esc(r.name||r.cat)}</div>
+        <div class="code mono">${esc(r.code)}${nep?" · "+esc(r.name||r.cat):""}</div>
+        <div class="name">${esc(nep||r.name||r.cat)}</div>
         <div class="meta"><span class="tag">${esc(lvName(r.level))}</span>
           <span class="tag">${esc(r.cat.toLowerCase())}</span>
           <span class="tag mono">${r.area} m²</span></div></div>
       ${tmCard(r.code,t)}
       <div class="btn-row"><button class="btn" id="bF">${t.setFrom}</button>
         <button class="btn primary" id="bT">${t.setTo}</button></div></div></div>`;
+    if(PAIRING) h+=pairPick(r,t)+pairBar(t);
   }
   if(S.from||S.to){
     h+=`<div class="sec"><div class="eyebrow row">${t.route}${shrBtn}</div><div class="ends">
@@ -2142,7 +2227,7 @@ function renderPanel(){
   }
   if(!S.sel&&!S.from&&!S.to){
     const sub=S.from?t.qsub.replace("%s",ROOM[S.from].name||ROOM[S.from].code):t.qsub0;
-    h=`<div class="empty" style="padding:18px 16px 4px">${t.hint}</div>
+    h+=`<div class="empty" style="padding:18px 16px 4px">${t.hint}</div>
       <div class="qgrid">
         <button class="qbtn" data-q="WC"><svg width="19" height="19" viewBox="0 0 20 20" fill="none"
           stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="4" r="1.7"/><path d="M4.4 17V11H3.4l1.4-4.2h3.4L9.6 11H8.6v6z"/>
@@ -2178,6 +2263,12 @@ function renderPanel(){
   box.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{
     const x=window.__steps[+b.dataset.s];
     setLevel(x.lv);});
+  box.querySelectorAll("[data-pair]").forEach(b=>b.onclick=()=>setPair(S.sel,b.dataset.pair));
+  const pc=$("pCopy"), px=$("pExit");
+  if(pc) pc.onclick=async()=>{ const ta=$("pText");
+    try{ await navigator.clipboard.writeText(ta.value); pc.textContent=t.pairCopied; }
+    catch(_){ ta.focus(); ta.select(); } };
+  if(px) px.onclick=()=>{ location.href=location.pathname+location.hash; };
 }
 function quick(key){
   if(key==="@ROOMS"){ S.view0=S.tmOpen=null; S.termek=true;

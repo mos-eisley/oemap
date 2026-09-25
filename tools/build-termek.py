@@ -28,15 +28,9 @@ import json, re, sys, argparse, datetime, collections
 # kar órája nincs bennük — az app ott „Szabad?"-ot ír, nem „Szabad"-ot.
 SHARED = re.compile(r"^BA\.(F\.\d+|1\.32\.Audmax)$")
 
-# Neptun-teremkód -> tervlapi kód (az alaprajz helyisége). A két számozás
-# független: a hivatalos F01 268 férőhelyes, a tervlapi OA00F01 95,7 m², az
-# F05, F06, F08 tervlapi névrokona pedig raktár, mosdó, takarítókamra. Ezért
-# NEM a névből számoljuk: csak az kerül ide, amit valaki, aki ismeri az
-# épületet, megerősített (docs/NYITOTT-KERDESEK.md, 1.). Amelyik terem itt
-# szerepel, annál az app a térképen kiválasztott terem adatlapján is mutatja
-# a foglaltságot.
-PLAN = {
-}
+# A tervlapi kóddal (OA00F11) való megfeleltetés nem itt van, hanem az app
+# NEPTUN táblájában (index.html): a térkép feliratai már induláskor abból
+# dolgoznak, a teremadat betöltése előtt.
 
 
 def names(code):
@@ -99,11 +93,9 @@ def main():
         short, regname = names(code)
         rr = info.get(regname.upper()) or {}
         slots = sorted([d, f, t, m, k, tsz(s)] for (d, f, t, k, s), m in by[code].items())
-        room = {"nev": short, "neptun": code, "cim": rr.get("nev", short),
-                "fero": rr.get("ferohely"), "felsz": rr.get("felszereltseg", []),
-                "url": rr.get("url"), "kozos": bool(SHARED.match(code)), "slots": slots}
-        if code in PLAN: room["code"] = PLAN[code]
-        rooms.append(room)
+        rooms.append({"nev": short, "neptun": code, "cim": rr.get("nev", short),
+                      "fero": rr.get("ferohely"), "felsz": rr.get("felszereltseg", []),
+                      "url": rr.get("url"), "kozos": bool(SHARED.match(code)), "slots": slots})
 
     fv = nep["felev"]
     out = {"generated": datetime.date.today().isoformat(), "source": nep["source"],
