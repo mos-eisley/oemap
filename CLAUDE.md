@@ -65,7 +65,7 @@ hagytak egy hibás kódot.
 | `tests/pwa.js` | manifest, service worker, **offline indulás**, a teremadat frissessége |
 | `tests/a11y.js` | billentyűzetes bejárás, felolvasónak szóló jelölés |
 | `tests/perf.js` | Épület nézet: képkockánként hány renderpass, a telefon (GPU-s) kódútján — **élesben bejelentett akadozás** |
-| `tests/sharp.js` | Épület nézet asztalon, nagyítva: éles-e a kép, nem mozdul-e a sűrűségtől, nem vált-e mozgás közben, csak az aktív szintnél, telefonon és más motorban nem — **élesben bejelentett „irgalmatlan életlen" asztali 3D** |
+| `tests/sharp.js` | Épület nézet asztalon, nagyítva: éles-e a kép, nem mozdul-e a sűrűségtől, nem vált-e mozgás közben, csak az aktív szintnél, telefonon és más motorban nem, Firefoxban a saját kódútján — **élesben bejelentett „irgalmatlan életlen" asztali 3D, Chrome-ban és Firefoxban** |
 
 ## Amit érdemes tudni, mielőtt hozzányúlsz
 
@@ -175,7 +175,7 @@ képkockában megrajzolni. Ennek teljes megoldása az `SS` csökkentése lenne. 
 nagyított élességet már nem az `SS` adja (lásd a következő pontot), így ez
 olcsóbb döntés lett — lásd `docs/NYITOTT-KERDESEK.md`.
 
-**Nagyítva az aktív szint rajza sűrűsödik (asztalon, Chromiumban).**
+**Nagyítva az aktív szint rajza sűrűsödik (asztalon, Chromiumban és Firefoxban).**
 Perspektívánál a Chromium a megdöntött szintet nem a nagyításhoz raszterezi:
 a perspektivikus ágon (`GetIdealContentsScale`) egy méretkorlát (5×5 csempe a
 réteg hosszabbik oldalán) a mi nagy rétegünknél 1 alá vinné a skálát, így az
@@ -188,16 +188,32 @@ d-szeresre veszi (a viewBox marad), a saját `scale(1/d)`-je pedig
 visszakicsinyíti: a kép ugyanaz, a textúra d-szer sűrűbb. Amit tudni kell:
 - A d a sík legnagyobb nagyítása a képen (`planeZoom()`: a nagyítás és a
   perspektíva nagyítása a kép alsó szélén, ahol a sík a legközelebb van),
-  √2-es lépcsőkben. A pixelarány kiesik: HiDPI kijelzőn a textúra eleve
-  annyiszor sűrűbb.
+  √2-es lépcsőkben, 10% tűréssel. A pixelarány kiesik: HiDPI kijelzőn a
+  textúra eleve annyiszor sűrűbb.
 - **A Playwright `deviceScaleFactor`-emulációja itt félrevezet:** emulált
   DPR 2-n a textúra CSS-pixelenként egy, valódi DSF-fel
   (`--force-device-scale-factor=2`, `viewport:null`) kettő. HiDPI
   3D-rasztert a kapcsolóval mérj.
 - Csak nyugvó képen vált: a mozdulat (`.now`) és a véges animációk végét
   megvárja, mert a váltás a látható szintet újraraszterezi. Csak az aktív
-  szintnél, telefonon soha, és csak Chromiumban (`navigator.userAgentData`),
-  mert a többi motor másképp raszterezi a 3D-t.
+  szintnél, telefonon soha, és csak Chromiumban (`navigator.userAgentData`)
+  meg Firefoxban (`mozInnerScreenX`) — a Safarit nem mértük.
+- **Firefoxban más a szabály.** Ha az SVG-nek nincs saját transzformja, az
+  aktív szintet már alapnézetben is kockásra raszterezi, a falai ki is
+  maradnak, nagyítva pedig egyetlen elmosódott folt (k=8-nál az élek
+  meredeksége 0,03). Saját transzformmal (akár csak `scale(1)`) a
+  Chromiuméhoz hasonlóan viselkedik, de ugyanahhoz az élességhez kétszer
+  akkora d kell (`DENS_GAIN`). Ára szoftveres WebRenderen: alapnézetben
+  +7–12% körbejárási idő, nagyítva annyi, mint alapnézetben.
+- **Firefoxot valódi ablakban mérj.** A headless képernyőkép (Puppeteer,
+  WebDriver BiDi) a 3D-t nem úgy rajzolja, ahogy a képernyőn látszik: egy
+  másik szintet mutatott az aktív helyett. Xvfb alatti ablak kell, a képet
+  `xwd`-vel fotózva, a tartalom helye `mozInnerScreenX/Y`. A Firefox a
+  `http://ppa.launchpad.net/mozillateam` tükréről tölthető le (a Mozilla
+  szerverei a proxyn nem érhetők el), mellé újabb `libnss3` és `libnspr4`
+  kell az `archive.ubuntu.com` poolból (`LD_LIBRARY_PATH`), vezérlésre a
+  `puppeteer-core` (`browser: "firefox"`). A `tests/sharp.js` a Firefox
+  kódútját Chromiumban, álcázott motorral őrzi; a rajzát csak így látod.
 - Alaprajzon is a nagyítást követi: ott a böngésző amúgy is a nagyításhoz
   raszterez, a d se a képen, se a költségen nem változtat, 3D-be emelve viszont
   már a helyén van.
