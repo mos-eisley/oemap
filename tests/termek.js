@@ -8,7 +8,7 @@
    Az adat a Neptun heti órarendje (hetek bitmaszkjával). Az időpontokat az
    adatból választjuk, nem beégetve — így a teszt a következő félév
    exportjával is működik. */
-const { run, open } = require("./lib");
+const { run, open, PHONE } = require("./lib");
 
 // Az órát a kívánt időpontra állítjuk; a panel minden rajzoláskor new Date()-et kér.
 const freeze = iso => `
@@ -16,7 +16,7 @@ const freeze = iso => `
   Date = class extends Real { constructor(...a){ super(...(a.length?a:[fixed])); }
                               static now(){ return fixed.getTime(); } };`;
 
-run("foglalható termek", async ({ t, ctx, base }) => {
+run("foglalható termek", async ({ t, ctx, browser, base }) => {
   const p = await open(ctx, base, { settle: 1400 });
   p.on("requestfailed", r => { if (/termek\.json/.test(r.url())) p.jsErrors.push("nem tölt: " + r.url()); });
 
@@ -123,6 +123,50 @@ run("foglalható termek", async ({ t, ctx, base }) => {
       k.sorok.every(x => x.jel === "none" && /nincs adat/i.test(x.al)),
       iso + ": " + [...new Set(k.sorok.map(x => x.jel + ":" + x.al))].join(" | "));
   }
+  /* A térképen kiválasztott terem adatlapja is mutatja a foglaltságot, ha
+     tudjuk, melyik Neptun-terem (tools/build-termek.py, PLAN). A valódi
+     megfeleltetés még nem érkezett meg (docs/NYITOTT-KERDESEK.md, 1.), ezért
+     a teszt maga köt be egyet: a foglalt órás termet egy tervlapi kódhoz. */
+  const lap = await p.evaluate(async ([js, nev]) => {
+    eval(js);
+    const w = ms => new Promise(r => setTimeout(r, ms));
+    const r = TM.rooms.find(x => x.nev === nev), volt = r.code; r.code = "OA00F11";
+    select("OA00F11"); await w(300);
+    const k = document.querySelector(".rcard .rtm");
+    const res = { neptun:r.neptun, van:!!k, jel:k && k.querySelector(".tmb").className.replace("tmb", "").trim(),
+      szoveg:k && k.textContent.replace(/\s+/g, " ").trim(), orak:k ? k.querySelectorAll(".tmr:not(.empty2)").length : 0 };
+    select("OA00F10"); await w(300);
+    res.masik = !!document.querySelector(".rcard .rtm");
+    r.code = volt; S.sel = null; renderPanel();
+    return res;
+  }, [freeze(eset.foglalt.ido), eset.foglalt.nev]);
+  t("a térképen kiválasztott terem adatlapján is ott a foglaltság, a Neptun-névvel",
+    lap.van && lap.jel === "busy" && lap.szoveg.includes(eset.foglalt.targy) && lap.szoveg.includes(lap.neptun) && lap.orak > 0,
+    JSON.stringify(lap).slice(0, 300));
+  t("ahol nem ismert a megfeleltetés, ott az adatlapon nincs foglaltság", lap.van && !lap.masik);
+
+  /* Ha a teremadat csak a kiválasztás után érkezik meg, a foglaltság utólag
+     kerül be az adatlapba, és a billentyűzetes fókusz közben nem veszhet el
+     a gombjairól. A próbakötés itt az adatfájlban van, ahogy élesben lesz. */
+  const c3 = await browser.newContext(PHONE);
+  await c3.route(/\/data\/termek\.json/, async r => {
+    const res = await r.fetch(), d = await res.json();
+    d.rooms.find(x => x.nev === eset.foglalt.nev).code = "OA00F11";
+    await new Promise(z => setTimeout(z, 600));
+    await r.fulfill({ response:res, json:d });
+  });
+  const p3 = await open(c3, base, { settle: 900 });
+  const kesve = await p3.evaluate(async () => {
+    select("OA00F11");
+    const elotte = !!document.querySelector(".rcard .rtm");
+    document.getElementById("bF").focus();
+    await new Promise(r => setTimeout(r, 1800));
+    return { elotte, utana:!!document.querySelector(".rcard .rtm"), fokusz:document.activeElement && document.activeElement.id };
+  });
+  t("ha az adat a kiválasztás után jön meg, utólag bekerül, és a fókusz a helyén marad",
+    !kesve.elotte && kesve.utana && kesve.fokusz === "bF", JSON.stringify(kesve));
+  await c3.close();
+
   /* Egy deploy utáni első megnyitáskor még a régi service worker válaszol, és
      a régi formátumú fájlt adja a gyorsítótárából. Útvonal-elfogással
      játsszuk le: a sima címre a régi (kéthetes táblás) formátum jön, minden
@@ -135,5 +179,6 @@ run("foglalható termek", async ({ t, ctx, base }) => {
     return { het1:TM && TM.het1, termek:document.querySelectorAll(".tmrow").length }; });
   t("a gyorsítótárban ragadt régi fájl helyett a frisset tölti be", regi.het1 === adat.het1 && regi.termek === adat.db,
     JSON.stringify(regi));
-  t("nincs JS hiba", !p.jsErrors.length && !p2.jsErrors.length, p.jsErrors.concat(p2.jsErrors).join(" | "));
+  t("nincs JS hiba", !p.jsErrors.length && !p2.jsErrors.length && !p3.jsErrors.length,
+    p.jsErrors.concat(p2.jsErrors, p3.jsErrors).join(" | "));
 });

@@ -25,20 +25,35 @@ tervlap **OA00F01-e 95,7 m²** — nem ugyanaz a helyiség. Az `F05`, `F06` és
 
 **Következmény.** A foglalható termek panelje működik, de a termek **nem
 jelölhetők a térképen**, és útvonalat sem lehet hozzájuk tervezni. Az
-`„audmax"` keresés **0 találatot** ad (ahogy az `„AM"` is).
+`„audmax"` keresés **0 találatot** ad (ahogy az `„AM"` is). A térképen egy
+teremre kattintva az adatlapja sem tudja megmutatni a foglaltságot — ezt a
+felhasználó kifejezetten kérte (2026. szept.).
+
+**Méret alapján sejthető, de nem biztos.** Emeletenként a darabszám
+stimmel (földszinten 7 hivatalos terem, ha az osztható F03-F04-F07 egynek
+számít, és 7 tervlapi előadó; az I. emeleten 6 labor és az Audmax, a tervlapon
+6 labor és egy 304,6 m²-es nagyelőadó), és néhány pár a méretből adódna
+(F01 268 fő ↔ OA00F11 255,8 m²; Audmax 330 fő ↔ OA10E18). A többinél
+(F02, F08, F09, a laborok) a méret nem dönt, és a II. emeleten 7 hivatalos
+labor áll 8 tervlapival szemben. Találgatni nem szabad: egy rossz pár egy
+foglalt termet mutatna szabadnak.
 
 **Kitől kell.** A megrendelőtől ígéret van rá: „Neptun/órarend szerinti
 teremszám: nemsokára megadom".
 
 **Mit kell csinálni, ha megjön.**
-1. A megfeleltetést (Neptun-kód → tervlapi kód) tedd a
-   `tools/build-termek.py`-ba, a `names()` mellé.
-2. Vedd fel a `code` mezőt a `data/termek.json` soraiba.
-3. A keresésbe kerüljön be a hivatalos név aliasként, hogy az `„audmax"`
+1. A megfeleltetést (Neptun-kód → tervlapi kód) írd a
+   `tools/build-termek.py` `PLAN` táblájába, és építsd újra a
+   `data/termek.json`-t: a párosított termek sorába bekerül a `code` mező.
+   Ennyi elég ahhoz, hogy a térképen kiválasztott terem adatlapján
+   megjelenjen a foglaltság — az app oldala (`tmCard()`) kész, a
+   `tests/termek.js` próbakötéssel őrzi.
+2. A keresésbe kerüljön be a hivatalos név aliasként, hogy az `„audmax"`
    találjon.
-4. A foglalható termek panelján a sor legyen kattintható → ugorjon a térképre.
-5. A `tests/termek.js`-be jöjjön egy eset: a hivatalos névre keresve a
-   megfelelő tervlapi kód jön vissza.
+3. A foglalható termek panelján a sor legyen kattintható → ugorjon a térképre.
+4. A `tests/termek.js`-be jöjjön egy eset a valódi megfeleltetésből: a
+   hivatalos névre keresve a megfelelő tervlapi kód jön vissza, és annak az
+   adatlapján a foglaltság.
 
 ---
 
