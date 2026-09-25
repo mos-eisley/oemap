@@ -1335,7 +1335,10 @@ new ResizeObserver(()=>{ camKc=null; if(!labWait && LABS.length) placeTlabels();
    rajz vele nő), a saját scale(1/d)-je pedig visszakicsinyíti: a kép
    ugyanaz, a textúra d-szer sűrűbb. A d a sík legnagyobb nagyítását követi a
    képen — a perspektíva a néző felőli szélen nagyít a legjobban —, √2-es
-   lépcsőkben, hogy ne minden görgetésnyi nagyítás rajzoljon újra.
+   lépcsőkben, hogy ne minden görgetésnyi nagyítás rajzoljon újra, és 10%
+   tűréssel: ennyi nyújtás nem látszik, alapnézetben pedig Firefoxban egy
+   fölösleges lépcsőt spórol (ott d=1,41 +7% körbejárási időbe került, és
+   ugyanúgy nézett ki, mint d=1).
    - Csak nyugvó képen vált, a mozdulat vagy az áttűnés végét megvárja: a
      váltás a látható szintet újraraszterezi, mozgás közben ez akadás lenne.
    - Csak az aktív szintnél: a többi halványított környezet, és hétszer annyi
@@ -1344,10 +1347,18 @@ new ResizeObserver(()=>{ camKc=null; if(!labWait && LABS.length) placeTlabels();
      raszterez, a d se a képen, se a költségen nem változtat — viszont 3D-be
      emelve már a helyén van, nem kell a felemelés után még egyszer rajzolni.
    - Telefonon nem: ott a legszűkebb a raszterkeret, és ott nem is jelezték.
-   - Csak Chromiumban (Chrome, Edge): ott mértük, és ott ismert a szabály. A
-     többi motor másképp raszterezi a 3D-t, ott a haszna és az ára is ismeretlen. */
+   - Chromiumban (Chrome, Edge) és Firefoxban: ezekben mértük. A többi motor
+     (Safari) másképp raszterezheti a 3D-t, ott a haszna és az ára ismeretlen.
+   Firefoxban más a szabály, és rosszabb: ha az SVG-nek nincs saját
+   transzformja, az aktív szintet már alapnézetben is kockásra raszterezi,
+   a falai ki is maradnak, nagyítva pedig egyetlen elmosódott folt (k=8-nál
+   az élek meredeksége 0,03). Saját transzformmal — akár csak scale(1)-gyel —
+   a Chromiuméhoz hasonlóan viselkedik, de ugyanahhoz az élességhez kétszer
+   akkora sűrűség kell (k=4-nél d=8: 0,61, k=8-nál d=16: 0,72). Ezért ott az
+   aktív szint SVG-je mindig kap transzformot, és a d kétszeres szorzót. */
 const DENS_MAX=16;
 const CHROMIUM=!!(navigator.userAgentData&&navigator.userAgentData.brands.some(b=>b.brand==="Chromium"));
+const GECKO="mozInnerScreenX" in window, DENS_GAIN=GECKO?2:1;
 function planeZoom(){
   const v=S.view, K=S.mode===3 && camK();
   if(!K) return v.k;
@@ -1358,24 +1369,25 @@ function planeZoom(){
   if(!(y1<R)) y1=R;
   return v.k*K.P/(K.P-Math.min(y1*sa,K.P*.75));
 }
-const densFor=need=>Math.min(DENS_MAX,Math.max(1,2**(Math.ceil(2*Math.log2(need)-.01)/2)));
-function setDens(lv,d){
-  const F=FLOOR[lv]; if((F.dens||1)===d) return;
-  F.dens=d;
+const densFor=need=>Math.min(DENS_MAX,Math.max(1,2**(Math.ceil(2*Math.log2(need)-.28)/2)));
+// own: d=1-nél is saját transzform (Firefox, lásd fent)
+function setDens(lv,d,own=false){
+  const F=FLOOR[lv]; if((F.dens||1)===d && !!F.own===own) return;
+  F.dens=d; F.own=own;
   F.svg.setAttribute("width",PW*d); F.svg.setAttribute("height",PH*d);
-  F.svg.style.transform=d===1?"":`scale(${1/d})`;
+  F.svg.style.transform=d===1&&!own?"":`scale(${1/d})`;
 }
 let densT=0;
 function syncDens(){
   clearTimeout(densT);
-  if(MOB() || !CHROMIUM){ for(const lv of LV) setDens(lv,1); return; }
+  if(MOB() || !(CHROMIUM||GECKO)){ for(const lv of LV) setDens(lv,1); return; }
   densT=setTimeout(function tick(){
     // a pulzáló gyűrű végtelen animációja nem mozgás
     const moving=world.classList.contains("now") || world.getAnimations({subtree:true})
       .some(a=>a.playState==="running" && a.effect && a.effect.getTiming().iterations!==Infinity);
     if(moving){ densT=setTimeout(tick,150); return; }
-    const d=densFor(planeZoom());
-    for(const lv of LV) setDens(lv, lv===S.level ? d : 1);
+    const d=densFor(planeZoom()*DENS_GAIN);
+    for(const lv of LV) setDens(lv, lv===S.level ? d : 1, GECKO && lv===S.level);
   },250);
 }
 

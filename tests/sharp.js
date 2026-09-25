@@ -136,9 +136,11 @@ run("élesség nagyítva", async ({ t, ctx, browser, base }) => {
   t("telefonon a szintek sűrűsége nem változik", telD.every(d => d === 1), JSON.stringify(telD));
   t("telefonon sincs JS hiba", tel.jsErrors.length === 0, tel.jsErrors.join(" | "));
 
-  /* A szabályt Chromiumban mértük; a többi motor másképp raszterezi a 3D-t,
-     ott a trükk haszna és ára is ismeretlen, ezért ott nem kapcsol be. A
-     motort a navigator.userAgentData-ból ismeri fel, azt vesszük el. */
+  /* A szabályt Chromiumban és Firefoxban mértük; a többi motor (Safari)
+     másképp raszterezheti a 3D-t, ott a trükk haszna és ára is ismeretlen,
+     ezért ott nem kapcsol be. A motort a navigator.userAgentData-ból
+     (Chromium) és a mozInnerScreenX-ből (Firefox) ismeri fel; itt egyik
+     sincs. */
   const mctx = await browser.newContext(DESKTOP);
   await mctx.addInitScript(() => Object.defineProperty(Navigator.prototype, "userAgentData", { get:() => undefined }));
   const mas = await open(mctx, base, { settle: 1200 });
@@ -146,4 +148,30 @@ run("élesség nagyítva", async ({ t, ctx, browser, base }) => {
     S.view.k *= 5; updateView(); await new Promise(r => setTimeout(r, 1800));
     return LV.map(lv => FLOOR[lv].dens || 1); });
   t("más böngészőmotorban a szintek sűrűsége nem változik", masD.every(d => d === 1), JSON.stringify(masD));
+
+  /* Firefoxban más a szabály (lásd syncDens()): az aktív szint SVG-je
+     alapnézetben is saját transzformot kap — nélküle kockás, és a falai
+     kimaradnak —, és ugyanahhoz az élességhez kétszer akkora sűrűség kell.
+     A Firefox rajzát itt nem látjuk, a tesztböngésző Chromium: azt valódi
+     Firefoxban mértük (lásd CLAUDE.md). Ez a kódútját őrzi, a motort jelző
+     mozInnerScreenX-szel. */
+  const gctx = await browser.newContext(DESKTOP);
+  await gctx.addInitScript(() => { Object.defineProperty(Navigator.prototype, "userAgentData", { get:() => undefined });
+    window.mozInnerScreenX = 0; });
+  const gk = await open(gctx, base, { settle: 1200 });
+  const gkR = await gk.evaluate(async () => {
+    const nyugszik = async () => { await Promise.all(document.getAnimations()
+      .filter(a => a.effect && a.effect.getComputedTiming().endTime !== Infinity).map(a => a.finished.catch(() => {})));
+      await new Promise(r => setTimeout(r, 700)); };
+    setMode(3); await nyugszik();
+    const alap = { d:FLOOR[S.level].dens || 1, sajat:FLOOR[S.level].svg.style.transform,
+                   tobbi:LV.filter(lv => lv !== S.level).map(lv => FLOOR[lv].svg.style.transform) };
+    S.view.k *= 5; updateView(); await nyugszik();
+    return { alap, d:FLOOR[S.level].dens || 1, chromium:densFor(planeZoom()) };
+  });
+  t("Firefoxban az aktív szint alapnézetben is saját transzformot kap, a többi nem",
+    gkR.alap.d === 1 && /^scale\(1\)$/.test(gkR.alap.sajat) && gkR.alap.tobbi.every(x => !x), JSON.stringify(gkR.alap));
+  t("Firefoxban nagyítva kétszer olyan sűrűn rajzol, mint Chromiumban",
+    gkR.chromium > 1 && gkR.d === Math.min(16, 2 * gkR.chromium), JSON.stringify(gkR));
+  t("a Firefox-ágon sincs JS hiba", gk.jsErrors.length === 0, gk.jsErrors.join(" | "));
 }, DESKTOP);
