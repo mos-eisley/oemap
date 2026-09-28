@@ -9,7 +9,7 @@ végén megtalálod, hogyan futtathatod újra őket.
 
 ---
 
-## 1. A Neptun-teremszámok hiánya — a foglalható termek nincsenek a térképen
+## 1. A Neptun-teremszámok hiánya — a foglalható termek többsége nincs a térképen
 
 **Mi a baj.** Két, egymástól független teremszámozás van, és nincs köztük
 megfeleltetés:
@@ -23,26 +23,52 @@ A névazonosság csapda, nem segítség: a hivatalos **F01 268 férőhelyes**, m
 tervlap **OA00F01-e 95,7 m²** — nem ugyanaz a helyiség. Az `F05`, `F06` és
 `F08` tervlapi névrokona pedig raktár, mosdó és takarítószeres kamra.
 
-**Következmény.** A foglalható termek panelje működik, de a termek **nem
-jelölhetők a térképen**, és útvonalat sem lehet hozzájuk tervezni. Az
-`„audmax"` keresés **0 találatot** ad (ahogy az `„AM"` is). A térképen egy
-teremre kattintva az adatlapja sem tudja megmutatni a foglaltságot — ezt a
-felhasználó kifejezetten kérte (2026. szept.).
+**Következmény.** Ahol nincs pár, ott a terem **nem jelölhető a térképen**,
+útvonalat sem lehet hozzá tervezni, és a teremre kattintva az adatlapja nem
+mutatja a foglaltságot — ezt a felhasználó kifejezetten kérte (2026. szept.),
+és azt is, hogy a térkép alapból a Neptun-számot írja ki.
 
-**Méret alapján sejthető, de nem biztos.** Emeletenként a darabszám
-stimmel (földszinten 7 hivatalos terem, ha az osztható F03-F04-F07 egynek
-számít, és 7 tervlapi előadó; az I. emeleten 6 labor és az Audmax, a tervlapon
-6 labor és egy 304,6 m²-es nagyelőadó), és néhány pár a méretből adódna
-(F01 268 fő ↔ OA00F11 255,8 m²; Audmax 330 fő ↔ OA10E18). A többinél
-(F02, F08, F09, a laborok) a méret nem dönt, és a II. emeleten 7 hivatalos
-labor áll 8 tervlapival szemben. Találgatni nem szabad: egy rossz pár egy
-foglalt termet mutatna szabadnak.
+**Ami megvan (2026. szept. 28.).** Három pár, amelyet a méret kényszerít ki,
+és a megrendelő jóváhagyott: **F01 = OA00F11** (268 fő; a földszinten csak ez a
+255,8 m²-es terem elég nagy, a következő 146 m²), **F06 = OA00F03** (144 fő;
+utána csak ez marad) és **Audmax = OA10E18** (330 fő; az I. emelet kerek,
+304,6 m²-es nagyelőadója). Ezeknél a térkép, a kereső és az adatlap a
+Neptun-nevet mutatja, az adatlapon a foglaltsággal.
 
-**Kitől kell.** A megrendelőtől ígéret van rá: „Neptun/órarend szerinti
-teremszám: nemsokára megadom". Azóta azt is kérte, hogy a térkép alapból a
-Neptun-szerinti számot írja ki, és a teremre kattintva jöjjön elő a
-foglaltság — mindkettő ezen múlik. A megadást a párosító mód könnyíti meg
-(`?parosit`, lásd lent).
+**Amit a minta még ad, de nem dönt el.** Egymás mellé téve a méretet, a
+férőhelyet, a felszereltséget és azt, melyik terem melyiknek a fölött áll:
+- Az F03-F04-F07 az egyetemi listán egyetlen lap; a tervlapon a felső
+  földszinti szárny három egyforma terme (OA00F12/F13/F14, 54–57,5 m²) áll
+  így egymás mellett. A sorrendjük semmiből nem jön ki.
+- Az F05 (105 fő) és az F08 (84 fő) csak két helyiségbe fér: az OA00F01-be
+  (95,7 m²) és a kerek végű OA00F04-be (93,1 m²), amit a tervlap **büfének**
+  ír. Ha az tényleg büfé, az F08 nincs rajta a tervlapon.
+- Az F02 (40 fő) valószínűleg az OA00F02 (62 m²) — de ha az F03-F04-F07 nem
+  egy osztható terem, csak egyforma termek közös lapja, az F02 a felső szárny
+  54 m²-es termében is lehet.
+- Az I. emelet két kis labora (1.12: 12 fő, 1.16: 13 fő) méretre a két
+  32 m²-es PC LABOR (OA10E32, OA10E43); ebben a félévben nincs bennük óra.
+- A 25 fős laborok mérete és felszereltsége egyforma. Három labor az I. és a
+  II. emeleten pontosan egymás fölött áll (OA10E31/OA20E35, OA10E45/OA20E49,
+  OA10E43/OA20E47); ha az ajtószámok emeletenként ismétlődnek, egyik emelet
+  párjaiból a másiké kijön.
+- A II. emeleten a tervlap és a lista nem fedi egymást: a tervlapon két kis
+  (32 m²-es) PC LABOR van, a listán egy kis labor sincs, és az OA20E03
+  (108,6 m²) valószínűleg két labor egyben.
+
+Találgatni nem szabad: egy rossz pár egy foglalt termet mutatna szabadnak.
+
+**A tervlapi kód megtévesztő.** A tervlap a földszinten ugyanúgy F01…F14-nek
+számozza a helyiségeit, mint a Neptun a termeit, de mást jelöl vele (a büfé
+F04, a női mosdó F07). Ezért ahol nincs pár, ott a térkép a teljes tervlapi
+kódot írja ki (OA00F04), nem a rövidet.
+
+**Kitől kell.** Attól, aki az ajtókat látja: a megrendelőtől ígéret van rá
+(„Neptun/órarend szerinti teremszám: nemsokára megadom"). A megadást a
+párosító mód könnyíti meg (`?parosit`, lásd lent). Az egyetemi teremlap
+(`ingatlan.uni-obuda.hu/terem/...`) talán mutatja a terem helyét; a
+fejlesztői környezet hálózati szabálya ezt a címet most letiltja, a
+környezet beállításaiban engedélyezhető.
 
 **Mit kell csinálni, ha megjön.** Az app oldala kész: a feliratok, a
 kereső (az `„audmax"` is) és az adatlap a Neptun-nevet mutatja, az adatlapon
