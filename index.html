@@ -807,8 +807,12 @@ const ROOM=Object.fromEntries(D.rooms.filter(r=>r.code).map(r=>[r.code,r]));
    hivatalos F01 268 férőhelyes, a tervlapi OA00F01 95,7 m². Ezért csak
    megerősített pár kerülhet ide (docs/NYITOTT-KERDESEK.md, 1.). Ahol van pár,
    ott a térkép, a kereső és az adatlap a Neptun-nevet mutatja, az adatlapon
-   pedig a foglaltság is ott van. A párokat a párosító mód állítja elő. */
-const NEPTUN={};
+   pedig a foglaltság is ott van. A párokat a párosító mód állítja elő.
+   Az első hármat a méret kényszeríti ki, és a megrendelő jóváhagyta (2026.
+   szept. 28.): a 268 fős F01 a földszinten csak a 255,8 m²-es terembe fér
+   bele (a következő 146 m²); a 144 fős F06 így csak a 146 m²-esbe; a 330
+   fős Audmax az I. emelet kerek, 304,6 m²-es nagyelőadója. */
+const NEPTUN={OA00F11:"F01", OA00F03:"F06", OA10E18:"Audmax"};
 /* Párosító mód (?parosit a címben): a teremre kattintva ki lehet választani a
    Neptun-nevét, és a lista kimásolható a NEPTUN táblába. A helyben megadott
    párok csak ebben a módban élnek, más látogatónál nem jelennek meg. */
@@ -817,13 +821,21 @@ let localPairs={};
 if(PAIRING) try{ localPairs=JSON.parse(localStorage.getItem(PAIR_KEY)||"{}")||{}; }catch(_){ localPairs={}; }
 const neptunOf=code=>(PAIRING && Object.prototype.hasOwnProperty.call(localPairs,code)
   ? localPairs[code] : NEPTUN[code]) || null;
-/* A térkép felirata. A tervlapi rövid kód (F01…F14) ütközhet egy másik terem
-   Neptun-nevével (F01…F09): ha az OA00F11 „F01"-ként áll, a tervlapi OA00F01
-   nem maradhat szintén „F01" — ott a teljes tervlapi kód jelenik meg. */
+/* A térkép felirata. A tervlapi rövid kód (F01…F14) alakra egyezik a Neptun
+   földszinti neveivel (F01…F09, BA.F.01–09), de más helyiséget jelöl: a
+   tervlapi F04 a büfé, az F07 a női mosdó. Amíg minden felirat tervlapi kód
+   volt, ez csak zavaró volt; amióta valódi Neptun-nevek is állnak mellettük,
+   megtévesztő — a hallgató a büfében keresné az F04-et. Ezért egy Neptun-
+   névnek látszó tervlapi kód helyett a teljes tervlapi kód áll, amíg a
+   teremnek nincs megerősített párja. Ha a Neptunban F09 utáni földszinti
+   terem is megjelenik, a mintát bővíteni kell. A párosító módban kiosztott
+   nevekkel ugyanígy. */
+const NEPTUN_ALAK=/^F0[1-9]$/;
 function roomLabel(r){
   const n=neptunOf(r.code); if(n) return n;
   const sc=r.code.slice(4);
-  return Object.keys({...NEPTUN,...(PAIRING?localPairs:{})}).some(c=>neptunOf(c)===sc) ? r.code : sc;
+  return NEPTUN_ALAK.test(sc) || Object.keys({...NEPTUN,...(PAIRING?localPairs:{})}).some(c=>neptunOf(c)===sc)
+    ? r.code : sc;
 }
 const lvOf=lv=>D.levels.find(l=>l.level===lv)||{};
 const lvName=lv=>lvOf(lv).name||String(lv);

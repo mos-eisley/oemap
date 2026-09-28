@@ -65,7 +65,7 @@ hagytak egy hibás kódot.
 | `tests/pwa.js` | manifest, service worker, **offline indulás**, a teremadat frissessége |
 | `tests/a11y.js` | billentyűzetes bejárás, felolvasónak szóló jelölés |
 | `tests/perf.js` | Épület nézet: képkockánként hány renderpass, a telefon (GPU-s) kódútján — **élesben bejelentett akadozás** |
-| `tests/neptun.js` | Neptun-nevek a térképen, a keresőben és az adatlapon; a tervlapi névrokon nem ütközhet velük; a párosító mód (`?parosit`) |
+| `tests/neptun.js` | Neptun-nevek a térképen, a keresőben és az adatlapon (a beépített F01, F06, Audmax); a földszinten Neptun-névnek látszó tervlapi kód (a büfé „F04”-e) nem állhat feliratként; a párosító mód (`?parosit`) |
 | `tests/sharp.js` | Épület nézet asztalon, nagyítva: éles-e a kép, nem mozdul-e a sűrűségtől, nem vált-e mozgás közben, csak az aktív szintnél, telefonon és más motorban nem, Firefoxban a saját kódútján (3D-ben minden szint saját transzformmal, a lapos alaprajzon egyik sem) — **élesben bejelentett „irgalmatlan életlen" asztali 3D, Chrome-ban és Firefoxban, és a Firefoxos „éles, homályos, megint éles" váltás** |
 
 ## Amit érdemes tudni, mielőtt hozzányúlsz
@@ -461,13 +461,22 @@ sem látszik rajta első ránézésre:
   kurzuskódból jön (`_EA` előadás, `_GY` gyakorlat, `_LA` labor).
 - **A tervlapi kód és a Neptun-név megfeleltetése az app `NEPTUN` táblája**
   (`index.html`, a `ROOM` mellett), nem a teremadaté: a feliratok már
-  induláskor abból dolgoznak. Csak megerősített pár kerülhet bele — a név és
-  a méret félrevezet. Ahol van pár, a térkép felirata, a kereső és az adatlap
-  címe a Neptun-név, az adatlapon ott a foglaltság (`tmCard()`, ugyanazzal a
-  sorral és napi órákkal, mint a listában: `tmRow()`, `tmDetail()`). A
-  tervlapi rövid kód (F01…F14) ütközhet egy másik terem Neptun-nevével
-  (F01…F09): ilyenkor a teljes tervlapi kód a felirat (`roomLabel()`), hogy ne
-  álljon két „F01" a térképen.
+  induláskor abból dolgoznak. Csak megerősített pár kerülhet bele — a név
+  félrevezet, a méret csak ott dönt, ahol kényszerít. Most három pár van
+  benne, mindhárom a méretből kényszerítve, és a megrendelő jóváhagyásával
+  (2026. szept. 28.): F01 = OA00F11 (268 fő a földszint egyetlen elég nagy,
+  255,8 m²-es termébe), F06 = OA00F03 (144 fő; utána csak ez a 146 m²-es
+  marad), Audmax = OA10E18 (330 fő, a kerek, 304,6 m²-es nagyelőadó). Ahol
+  van pár, a térkép felirata, a kereső és az adatlap címe a Neptun-név, az
+  adatlapon ott a foglaltság (`tmCard()`, ugyanazzal a sorral és napi
+  órákkal, mint a listában: `tmRow()`, `tmDetail()`).
+- **A földszinten a tervlapi rövid kód Neptun-névnek látszik.** A tervlap is
+  F01…F14-nek számozza a helyiségeit, de a tervlapi F04 a büfé, az F07 a női
+  mosdó — a Neptun F04-e és F07-e tanterem. Amíg minden felirat tervlapi kód
+  volt, ez csak zavart; a valódi Neptun-nevek mellett megtéveszt. Ezért a
+  `roomLabel()` az F01…F09 alakú tervlapi kód helyett a teljes kódot írja ki
+  (OA00F04), amíg a teremnek nincs párja; ugyanígy, ha egy rövid kód egy
+  másik terem kiosztott Neptun-nevével ütközne.
 - **A párokat a párosító mód állítja elő** (`?parosit` a címben): teremre
   kattintás, a Neptun-név kiválasztása (elöl az azonos emeletiek, férőhellyel),
   a lista kimásolása. A helyben megadott párok (`localStorage`) csak ebben a

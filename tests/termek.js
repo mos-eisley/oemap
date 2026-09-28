@@ -124,12 +124,14 @@ run("foglalható termek", async ({ t, ctx, browser, base }) => {
       iso + ": " + [...new Set(k.sorok.map(x => x.jel + ":" + x.al))].join(" | "));
   }
   /* A térképen kiválasztott terem adatlapja is mutatja a foglaltságot, ha
-     tudjuk, melyik Neptun-terem (NEPTUN tábla). A valódi megfeleltetés még
-     nem érkezett meg (docs/NYITOTT-KERDESEK.md, 1.), ezért a teszt maga köt be
-     egyet: a foglalt órás termet egy tervlapi kódhoz. */
+     tudjuk, melyik Neptun-terem (NEPTUN tábla). A teszt a kiválasztott
+     időpontban foglalt Neptun-termet köti egy tervlapi kódhoz — a beépített
+     párok közül nem mindegyiknek van órája épp akkor —, utána a beépített
+     párt visszaállítja. */
   const lap = await p.evaluate(async ([js, nev]) => {
     eval(js);
     const w = ms => new Promise(r => setTimeout(r, ms));
+    const regi = NEPTUN.OA00F11;
     const r = TM.rooms.find(x => x.nev === nev); NEPTUN.OA00F11 = nev;
     select("OA00F11"); await w(300);
     const k = document.querySelector(".rcard .rtm");
@@ -138,7 +140,7 @@ run("foglalható termek", async ({ t, ctx, browser, base }) => {
       szoveg:k && k.textContent.replace(/\s+/g, " ").trim(), orak:k ? k.querySelectorAll(".tmr:not(.empty2)").length : 0 };
     select("OA00F10"); await w(300);
     res.masik = !!document.querySelector(".rcard .rtm");
-    delete NEPTUN.OA00F11; S.sel = null; renderPanel();
+    NEPTUN.OA00F11 = regi; S.sel = null; renderPanel();
     return res;
   }, [freeze(eset.foglalt.ido), eset.foglalt.nev]);
   t("a térképen kiválasztott terem adatlapján is ott a foglaltság, a Neptun-névvel",
