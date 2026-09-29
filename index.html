@@ -811,8 +811,14 @@ const ROOM=Object.fromEntries(D.rooms.filter(r=>r.code).map(r=>[r.code,r]));
    Az első hármat a méret kényszeríti ki, és a megrendelő jóváhagyta (2026.
    szept. 28.): a 268 fős F01 a földszinten csak a 255,8 m²-es terembe fér
    bele (a következő 146 m²); a 144 fős F06 így csak a 146 m²-esbe; a 330
-   fős Audmax az I. emelet kerek, 304,6 m²-es nagyelőadója. */
-const NEPTUN={OA00F11:"F01", OA00F03:"F06", OA10E18:"Audmax"};
+   fős Audmax az I. emelet kerek, 304,6 m²-es nagyelőadója.
+   Az F02-t az egyetemi teremlap (ingatlan.uni-obuda.hu/terem/f02) fotói
+   jelölik ki, a megrendelő jóváhagyta (szept. 29.): a hátsó ablakból egy
+   kiálló födém alja látszik — az I. emeleti szélfogó (OA10EK5), amely csak
+   ebből a teremből látható —, a jobb oldalfal 6°-kal ferde, mint a tervlapon
+   csak ennek a teremnek, az ajtó a táblafal bal végén van, és az 5 × 8 ülés a
+   legkeskenyebb terembe illik. Három független ellenőrzés sem cáfolta. */
+const NEPTUN={OA00F11:"F01", OA00F03:"F06", OA00F12:"F02", OA10E18:"Audmax"};
 /* Párosító mód (?parosit a címben): a teremre kattintva ki lehet választani a
    Neptun-nevét, és a lista kimásolható a NEPTUN táblába. A helyben megadott
    párok csak ebben a módban élnek, más látogatónál nem jelennek meg. */

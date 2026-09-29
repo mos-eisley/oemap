@@ -28,33 +28,48 @@ tervlap **OA00F01-e 95,7 m²** — nem ugyanaz a helyiség. Az `F05`, `F06` és
 mutatja a foglaltságot — ezt a felhasználó kifejezetten kérte (2026. szept.),
 és azt is, hogy a térkép alapból a Neptun-számot írja ki.
 
-**Ami megvan (2026. szept. 28.).** Három pár, amelyet a méret kényszerít ki,
-és a megrendelő jóváhagyott: **F01 = OA00F11** (268 fő; a földszinten csak ez a
-255,8 m²-es terem elég nagy, a következő 146 m²), **F06 = OA00F03** (144 fő;
+**Ami megvan (2026. szept. 29.).** Négy pár, a megrendelő jóváhagyásával.
+Hármat a méret kényszerít ki: **F01 = OA00F11** (268 fő; a földszinten csak ez
+a 255,8 m²-es terem elég nagy, a következő 146 m²), **F06 = OA00F03** (144 fő;
 utána csak ez marad) és **Audmax = OA10E18** (330 fő; az I. emelet kerek,
-304,6 m²-es nagyelőadója). Ezeknél a térkép, a kereső és az adatlap a
+304,6 m²-es nagyelőadója). A negyediket az egyetemi teremlap fotói jelölik ki:
+**F02 = OA00F12** (lásd lent). Ezeknél a térkép, a kereső és az adatlap a
 Neptun-nevet mutatja, az adatlapon a foglaltsággal.
 
-**Amit a minta még ad, de nem dönt el.** Egymás mellé téve a méretet, a
-férőhelyet, a felszereltséget és azt, melyik terem melyiknek a fölött áll:
-- Az F03-F04-F07 az egyetemi listán egyetlen lap; a tervlapon a felső
-  földszinti szárny három egyforma terme (OA00F12/F13/F14, 54–57,5 m²) áll
-  így egymás mellett. A sorrendjük semmiből nem jön ki.
-- Az F05 (105 fő) és az F08 (84 fő) csak két helyiségbe fér: az OA00F01-be
-  (95,7 m²) és a kerek végű OA00F04-be (93,1 m²), amit a tervlap **büfének**
-  ír. Ha az tényleg büfé, az F08 nincs rajta a tervlapon.
-- Az F02 (40 fő) valószínűleg az OA00F02 (62 m²) — de ha az F03-F04-F07 nem
-  egy osztható terem, csak egyforma termek közös lapja, az F02 a felső szárny
-  54 m²-es termében is lehet.
-- Az I. emelet két kis labora (1.12: 12 fő, 1.16: 13 fő) méretre a két
-  32 m²-es PC LABOR (OA10E32, OA10E43); ebben a félévben nincs bennük óra.
-- A 25 fős laborok mérete és felszereltsége egyforma. Három labor az I. és a
-  II. emeleten pontosan egymás fölött áll (OA10E31/OA20E35, OA10E45/OA20E49,
-  OA10E43/OA20E47); ha az ajtószámok emeletenként ismétlődnek, egyik emelet
-  párjaiból a másiké kijön.
-- A II. emeleten a tervlap és a lista nem fedi egymást: a tervlapon két kis
-  (32 m²-es) PC LABOR van, a listán egy kis labor sincs, és az OA20E03
-  (108,6 m²) valószínűleg két labor egyben.
+**Amit az egyetemi teremlapok fotói mutatnak (2026. szept. 28.).** A 21 OA-s
+teremlapot (`ingatlan.uni-obuda.hu/terem/...`) letöltöttük, és a fotóikat
+egyenként összevetettük a tervlappal: méret és arány, melyik fal ablakos, mi
+látszik az ablakból, oszlopok, ajtók. Minden javasolt párt három független
+ellenőrzés próbált megcáfolni.
+- **F02 = OA00F12, bizonyított.** A hátsó ablakból egy kiálló födém alja
+  látszik: az I. emeleti szélfogó (OA10EK5), amely csak ebből a teremből
+  látható. A jobb oldalfal 6°-kal ferde, mint a tervlapon csak ennek a
+  teremnek; az ajtó a táblafal bal végén van; az 5 × 8 ülés a legkeskenyebb
+  terembe illik. Egyik ellenőrzés sem cáfolta.
+- **F01 és Audmax:** a fotók is megerősítik. **F06:** a fotók nem cáfolják,
+  de önmagukban nem is igazolják — a tervlap ablakrajza ennél a teremnél
+  pontatlan; a pár a méreten áll.
+- **F08 = OA00F01, valószínű, nem bizonyított.** Az ablak a bal fal elülső
+  végén, az ajtó a K1 folyosóra, a hátsó fal 5°-os ferdesége egyezik, de az
+  ellenőrzések kétharmada nem fogadta el, mert a tervlap nem teljes (lásd
+  F05), így kizárással nem dönthető el. Egy pillantás az ajtótáblára eldönti.
+- **F03, F04, F07:** a közös lapon két, egymás tükörképeként berendezett
+  DEKRA-terem látszik, az egyik az OA00F02. Az F02 párja után a három név az
+  OA00F02, OA00F13 és OA00F14 között oszlik meg, de hogy melyik melyik, az a
+  lapból nem derül ki.
+- **F05 nincs rajta a tervlapon.** 7 × 15 ülés, csak a hátsó falán van ablak,
+  és onnan ugyanaz a borostyános rézsű és kerek oszlop látszik, mint az
+  F06-éból. Egyik tervlapi terem sem fogadja be, tehát a tervlap ott hiányos.
+- **A laborok a fotókból nem azonosíthatók.** A teremlapok ugyanazokat a
+  képeket használják több labornál (bájtra azonos fájlok: például az 1.14,
+  1.15, 1.19, 2.12 és 2.14 lapján ugyanaz az egy terem látszik). Saját képe
+  csak az 1.10, 1.16, 2.13, 2.18 és 2.20 lapnak van, és azokból sem jött ki
+  biztos pár. Méretre az I. emelet két kis labora (1.12: 12 fő, 1.16: 13 fő)
+  a két 32 m²-es PC LABOR (OA10E32, OA10E43).
+- **A tervlapból hiányzik egy folyosó.** Az I. és II. emeleti északkeleti
+  szárny két sora közti 2,5 m-es sáv belső folyosó (a járásrács ott
+  járhatónak tudja, a laborok ajtói nyílnak rá), csak nincs rá sokszög. Ezért
+  az ottani laboroknak egy-egy hosszú oldalukon van ablakuk, nem kettőn.
 
 Találgatni nem szabad: egy rossz pár egy foglalt termet mutatna szabadnak.
 
@@ -65,10 +80,12 @@ kódot írja ki (OA00F04), nem a rövidet.
 
 **Kitől kell.** Attól, aki az ajtókat látja: a megrendelőtől ígéret van rá
 („Neptun/órarend szerinti teremszám: nemsokára megadom"). A megadást a
-párosító mód könnyíti meg (`?parosit`, lásd lent). Az egyetemi teremlap
-(`ingatlan.uni-obuda.hu/terem/...`) talán mutatja a terem helyét; a
-fejlesztői környezet hálózati szabálya ezt a címet most letiltja, a
-környezet beállításaiban engedélyezhető.
+párosító mód könnyíti meg (`?parosit`, lásd lent). Az egyetemi teremlapokból
+több nem jön ki (lásd fent); a maradékhoz — F03, F04, F05, F07, F08, F09 és a
+laborok — az ajtótáblák kellenek. A teremlapok a fejlesztői környezetből csak
+akkor érhetők el, ha a környezet hálózati beállításában az
+`ingatlan.uni-obuda.hu` engedélyezett; a beállítás csak az utána indított
+munkamenetekre hat.
 
 **Mit kell csinálni, ha megjön.** Az app oldala kész: a feliratok, a
 kereső (az `„audmax"` is) és az adatlap a Neptun-nevet mutatja, az adatlapon

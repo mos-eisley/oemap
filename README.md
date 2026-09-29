@@ -215,9 +215,11 @@ ugyanígy feldolgozható.
 `OA00F01`-e 95,7 m². A kettőt az app `NEPTUN` táblája köti össze, és csak
 megerősített pár kerülhet bele. Ahol van pár, a térkép felirata, a kereső és az
 adatlap a Neptun-nevet mutatja, és a teremre kattintva az adatlapján ott a
-foglaltság is. Most három pár van benne, amelyet a méret egyértelműen kijelöl:
-az **F01** (a földszint 255,8 m²-es nagyelőadója), az **F06** (a 146 m²-es
-terem) és az **Audmax** (az I. emelet kerek nagyelőadója). A földszinten a
+foglaltság is. Most négy pár van benne: három, amelyet a méret egyértelműen
+kijelöl — az **F01** (a földszint 255,8 m²-es nagyelőadója), az **F06** (a
+146 m²-es terem) és az **Audmax** (az I. emelet kerek nagyelőadója) —, és az
+**F02** (a földszint felső szárnyának szélső terme), amelyet az egyetemi
+teremlap fotói jelölnek ki. A földszinten a
 tervlap is F01…F14-nek számozza a helyiségeit (a büfé ott F04), ezért ahol még
 nincs pár, a térképen a teljes tervlapi kód áll (`OA00F04`), nem egy
 Neptun-névnek látszó rövid kód.
