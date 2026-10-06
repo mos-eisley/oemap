@@ -332,6 +332,13 @@ button{cursor:pointer;background:none;border:0}
   font-family:"IBM Plex Mono",ui-monospace,monospace;font-weight:600;font-size:11px;line-height:1;
   letter-spacing:-.02em;color:var(--ink);transition:opacity .15s}
 .tlabel.off{opacity:0}
+/* Mosdó, lépcső, lift: piktogram a teremszám helyén, alaprajzon a szint
+   rajzában, Épület nézetben az álló feliratok közt. Teli jelvény, hogy a
+   színes alaprajzon is elsőre kiugorjon — ezeket keresik a legtöbben. */
+.icob{fill:var(--accent)}
+.ico use{color:var(--accent-ink)}
+.tico{display:flex;gap:1px;padding:3px 4px;border-radius:99px;background:var(--accent);color:var(--accent-ink)}
+.tico svg{width:15px;height:15px;display:block}
 
 /* Navigálás közben minden per-frame költséget kikapcsolunk: a backdrop-blur
    újraszámolná a mozgó térképet minden képkockán, a ping animáció folyamatosan
@@ -640,6 +647,22 @@ button{cursor:pointer;background:none;border:0}
     <!-- Épület nézetben a teremszámok itt állnak, a 3D-s jeleneten kívül —
          lásd syncLabels(). A helyiségeknek saját nevük van, ez csak látvány. -->
     <div class="tlabels off" id="tlabels" aria-hidden="true"></div>
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+      <symbol id="i-wcw" viewBox="0 0 24 24"><circle cx="12" cy="4.4" r="2.5" fill="currentColor"/>
+        <path fill="currentColor" d="M12 8.2c-2.1 0-3.4 1-3.9 2.9L6.6 16.5h3.2V22h1.6v-5.5h1.2V22h1.6v-5.5h3.2l-1.5-5.4C15.4 9.2 14.1 8.2 12 8.2z"/></symbol>
+      <symbol id="i-wcm" viewBox="0 0 24 24"><circle cx="12" cy="4.4" r="2.5" fill="currentColor"/>
+        <path fill="currentColor" d="M9.3 8.4h5.4c1 0 1.8.8 1.8 1.8v5.9h-1.9V22h-2.1v-5.3h-1V22H9.4v-5.9H7.5v-5.9c0-1 .8-1.8 1.8-1.8z"/></symbol>
+      <symbol id="i-wc" viewBox="0 0 24 24"><text x="12" y="16.6" text-anchor="middle" fill="currentColor"
+        font-family="Metropolis,'Open Sans',system-ui,sans-serif" font-weight="700" font-size="11.5">WC</text></symbol>
+      <symbol id="i-acc" viewBox="0 0 24 24"><circle cx="9.6" cy="3.8" r="2.3" fill="currentColor"/>
+        <path fill="currentColor" d="M8.3 7.4h2.5v4.4h4.9V14h-5.6c-1 0-1.8-.8-1.8-1.8z"/>
+        <path fill="currentColor" d="M7.2 10.6l.6 2.1a4.2 4.2 0 1 0 6 4.6l2 .7a6.3 6.3 0 1 1-8.6-7.4z"/>
+        <path fill="currentColor" d="M15.2 14h2.1l2.4 5.6-2 .8-1.8-4.3h-.7z"/></symbol>
+      <symbol id="i-stair" viewBox="0 0 24 24"><path fill="currentColor" d="M3 21v-4.5h4.5V12H12V7.5h4.5V3H21v18z"/></symbol>
+      <symbol id="i-lift" viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd"
+        d="M5 2h14a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm.4 2.4v15.2h13.2V4.4z"/>
+        <path fill="currentColor" d="M12 5.8l3.6 4.4H8.4zM12 18.2l-3.6-4.4h7.2z"/></symbol>
+    </defs></svg>
     <p id="mapHint" class="sr-only"></p>
     <!-- A kiválasztás, az útvonal és a szintváltás vizuális visszajelzés; élő
          régió nélkül a képernyőolvasó egyikről sem tudna. -->
@@ -1154,12 +1177,39 @@ function buildFloors(){
   });
 }
 
+/* Mosdók, lépcsők, lift: ezeket keresik a legtöbben, és az építészek kérték,
+   hogy könnyebb legyen odatalálni. Ezeken a teremszám helyett piktogram áll —
+   a tervlapi kódjuk (E38, FL2) a hallgatónak semmit nem mond; a kód a
+   kiválasztáskor és a felolvasónak továbbra is ott van. A lift a tervlapon
+   nem külön helyiség: a LIFTS lépcsőmagjában jár, ott a lépcső mellé kerül. */
+const LIFT_ROOMS=new Set(LIFTS.flatMap(l=>l.pts.map(p=>p[3])));
+// Épület nézetben magonként egy jelvény: ennyi méteren belül egy mag, ebben a sorrendben
+const MAG_M=10, ICO_SOR=["stair","lift","wcw","wcm","acc","wc"];
+function iconsOf(r){
+  const n=(r.name||"").toUpperCase();
+  if(/LÉPCSŐ/.test(n)) return LIFT_ROOMS.has(r.code)?["stair","lift"]:["stair"];
+  if(r.cat!=="VIZES HELYISÉGEK") return null;
+  if(/AK\.?\s*MENT/.test(n)) return ["acc"];
+  if(/N[ŐÖ]I/.test(n)) return ["wcw"];
+  if(/FFI/.test(n)) return ["wcm"];
+  return /WC|MOSDÓ/.test(n)?["wc"]:null;
+}
+// a jelvény a terem feliratpontján, a tervlaphoz kötve (a teremmel nem fordul)
+function iconBadge(r,ic){
+  const R=Math.max(.7,Math.min(1.1,Math.min(r.lw,r.lh)*.4)), gap=R*.15, w=ic.length*R*1.7+gap*(ic.length-1)+R*.3;
+  const g=el("g",{class:"ico","data-ico":r.code,transform:`translate(${r.cx} ${r.cy})`});
+  g.appendChild(el("rect",{x:-w/2,y:-R,width:w,height:2*R,rx:R,class:"icob"}));
+  ic.forEach((k,i)=>g.appendChild(el("use",{href:"#i-"+k,x:-w/2+R*.15+i*(R*1.7+gap),y:-R*.85,width:R*1.7,height:R*1.7})));
+  return g;
+}
 function buildLabels(lv){
   const F=FLOOR[lv]; if(F.built) return; F.built=true;
   const gl=F.labels;
   for(const r of F.rs){
     if(!r.code) continue;
     if(!S.staff && STAFF.has(r.cat)) continue;   // halványítva nem feliratozzuk
+    const ic=iconsOf(r);
+    if(ic){ gl.appendChild(iconBadge(r,ic)); continue; }
     const sc=roomLabel(r);
     const fs=Math.max(.5,Math.min(1.2,(r.lw-1.4)/(sc.length*.66),r.lh/3.4));
     if(fs<.55) continue;
@@ -1513,16 +1563,42 @@ function labelSet(){
   const F=FLOOR[S.level];
   if(labFor===F.rs && labStaff===S.staff) return;
   labFor=F.rs; labStaff=S.staff; LABS=[]; tlab.textContent="";
+  const add=(r,e,ic)=>{ tlab.appendChild(e);
+    // a felirat helye a világ síkjában, és a terem feliratnak szánt
+    // dobozának két oldala (a világ pixelében). A piktogram a terem
+    // méretétől függetlenül kint van, és elsőbbséget kap: egy kis mosdó
+    // ugyanúgy kell, mint egy nagy.
+    LABS.push({e,r, X:(r.cx-BB.cx)*PXM, Y:(r.cy-BB.cy)*PXM,
+      lo:ic?Infinity:Math.min(r.lw,r.lh)*PXM, hi:ic?Infinity:Math.max(r.lw,r.lh)*PXM,
+      area:ic?Infinity:r.lw*r.lh, w:0,h:0,on:false}); };
+  const ikonos=[];
   for(const r of F.rs){
     // ugyanaz a szabály, mint az alaprajzi feliratoknál
     if(!r.code || (!S.staff && STAFF.has(r.cat))) continue;
+    if(iconsOf(r)){ ikonos.push(r); continue; }
     const e=document.createElement("span");
-    e.className="tlabel off"; e.textContent=roomLabel(r); tlab.appendChild(e);
-    // a felirat helye a világ síkjában, és a terem feliratnak szánt
-    // dobozának két oldala (a világ pixelében)
-    LABS.push({e,r, X:(r.cx-BB.cx)*PXM, Y:(r.cy-BB.cy)*PXM,
-      lo:Math.min(r.lw,r.lh)*PXM, hi:Math.max(r.lw,r.lh)*PXM, area:r.lw*r.lh,
-      w:0,h:0,on:false});
+    e.className="tlabel off"; e.textContent=roomLabel(r); add(r,e,false);
+  }
+  /* A piktogramok magonként egy jelvényben. Egy mag (lépcső, mellette a
+     férfi, a női és az akadálymentes mosdó) pár méteren belül van, és
+     Épület nézetben a képernyőn egymásra esnének: egyenként a fele sem
+     látszott (telefonon a II. emeleten 10-ből 3), és épp a lépcső maradt ki.
+     Alaprajzon a szint rajzában helyiségenként áll, ott elfér. */
+  const magok=[];
+  for(const r of ikonos){
+    const kozel=magok.filter(m=>m.some(q=>Math.hypot(q.cx-r.cx,q.cy-r.cy)<MAG_M));
+    const m=kozel.flat().concat(r);
+    for(const k of kozel) magok.splice(magok.indexOf(k),1);
+    magok.push(m);
+  }
+  for(const m of magok){
+    const ic=[...new Set(m.flatMap(iconsOf))].sort((a,b)=>ICO_SOR.indexOf(a)-ICO_SOR.indexOf(b));
+    const e=document.createElement("span");
+    e.className="tlabel off tico"; e.dataset.ico=m.map(r=>r.code).join(" ");
+    e.innerHTML=ic.map(k=>`<svg viewBox="0 0 24 24"><use href="#i-${k}"/></svg>`).join("");
+    // a jelvény a mag közepén; a „terme" a mag, a teremszámok szabályai rá is állnak
+    const cx=m.reduce((a,r)=>a+r.cx,0)/m.length, cy=m.reduce((a,r)=>a+r.cy,0)/m.length;
+    add({code:null,level:F.rs[0].level,cat:m[0].cat,cx,cy,lw:0,lh:0,mag:m},e,true);
   }
   for(const L of LABS){ L.w=L.e.offsetWidth; L.h=L.e.offsetHeight; }
 }
@@ -1562,10 +1638,17 @@ function placeTlabels(){
   const foglalt=[];
   // sorrend: ami már látszik; aztán akinek a közepe a képben van (egy
   // nagyrészt kilógó ne szorítson ki egy egészen látszót); aztán a nagyobb terem
+  /* A mosdó- és lépcsőjelvény körül meredek szögben nagyobb a szabad hely,
+     amíg egy szám előjönne: a jelvény széles, és 80°-nál a mellette álló
+     szám egy remegésnyi dőlésre 13 px-t is ugrik (a sík rövidülése
+     változik, a jelvény a mag közepén alig mozdul) — 6 px-nél ki-be
+     kapcsolt. Laposabb szögben az ugrás kicsi, ott a nagyobb szabad hely
+     csak számokat vinne el (telefonon a földszinten 12-ből 6-ot). */
+  const pIco=6+12*Math.max(0,Math.min(1,(S.rot.x-65)/20));
   for(const L of LABS.filter(L=>L.ok).sort((A,B)=>(B.on-A.on)||(B.kozep-A.kozep)||(B.area-A.area))){
-    const p=L.on?0:6, x0=L.cx-L.w/2, y0=L.cy-L.h/2, x1=x0+L.w, y1=y0+L.h;
-    if(foglalt.some(q=>x0-p<q[2]&&q[0]<x1+p&&y0-p<q[3]&&q[1]<y1+p)){ L.ok=false; continue; }
-    foglalt.push([x0,y0,x1,y1]);
+    const x0=L.cx-L.w/2, y0=L.cy-L.h/2, x1=x0+L.w, y1=y0+L.h;
+    if(foglalt.some(q=>{ const p=L.on?0:q[4]?pIco:6; return x0-p<q[2]&&q[0]<x1+p&&y0-p<q[3]&&q[1]<y1+p; })){ L.ok=false; continue; }
+    foglalt.push([x0,y0,x1,y1,L.area===Infinity]);
   }
   for(const L of LABS){
     // A rejtett is a helyére megy: úgy tűnik elő, ahol a terme van, és a
