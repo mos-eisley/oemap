@@ -77,15 +77,28 @@ run("élesség nagyítva", async ({ t, ctx, browser, base }) => {
   const nagy = await p.evaluate(() => ({ k:+S.view.k.toFixed(2), d:FLOOR[S.level].dens || 1,
     tobbi:LV.filter(lv => lv !== S.level).map(lv => +FLOOR[lv].svg.getAttribute("width") === PW) }));
   const zoom = await elesseg(p, kivag);
-  t("nagyítva is éles a 3D, nem felnyújtott textúra", zoom.el >= .8 * alap.el,
-    `alapnagyításon ${alap.el.toFixed(2)}, ${nagy.k}×-esen ${zoom.el.toFixed(2)} (sűrűség ${nagy.d})`);
+  const most = await F10();
+  // ugyanez a kép a régi, felnyújtott textúrával (sűrűség 1)
+  const ritka = await p.evaluate(async () => { setDens(S.level, 1); await new Promise(r => setTimeout(r, 1500));
+    const r = document.querySelector('.floor.on [data-code="OA00F10"]').getBoundingClientRect();
+    return { x:r.x, y:r.y, w:r.width, h:r.height }; });
+  const nyujtott = await elesseg(p, kivag);
+  /* A mérce a felnyújtott textúra, ugyanezen a képen: azt javította a
+     sűrűség, és ehhez mérve a jelenet tartalma kiesik. Az alapnagyításhoz
+     mérve nem esik ki: a kivágásba nagyítva más rajz kerül, és a nagyítással
+     egyező sűrűségnél az élek meredeksége a képpont alatti illeszkedéstől is
+     függ — ugyanazon a lapon, ugyanazzal a sűrűséggel 0,61 és 0,68 közt
+     mértük, kivágástól függően. A felső szárny felvétele után (nagyobb keret,
+     más illesztés) így esett 0,86-ról 0,78-ra az alapnagyításhoz mért arány,
+     miközben a képernyőn azonos méretű teremnél a kép előtte és utána
+     ugyanolyan éles volt. A felnyújtott textúra a hibánál 1,0×, sűrűséggel
+     2,0–2,3×. */
+  t("nagyítva is éles a 3D, nem felnyújtott textúra", zoom.el >= 1.7 * nyujtott.el && zoom.el >= .7 * alap.el,
+    `alapnagyításon ${alap.el.toFixed(2)}, ${nagy.k}×-esen ${zoom.el.toFixed(2)} (sűrűség ${nagy.d}), ` +
+    `felnyújtva ${nyujtott.el.toFixed(2)}`);
   t("csak az aktív szint rajzolódik sűrűbben", nagy.d > 1 && nagy.tobbi.every(Boolean), JSON.stringify(nagy));
 
   // ugyanaz a kép sűrűbben: a terem ugyanott marad
-  const most = await F10();
-  const ritka = await p.evaluate(async () => { setDens(S.level, 1); await new Promise(r => setTimeout(r, 300));
-    const r = document.querySelector('.floor.on [data-code="OA00F10"]').getBoundingClientRect();
-    return { x:r.x, y:r.y, w:r.width, h:r.height }; });
   const elter = Math.max(...["x", "y", "w", "h"].map(k => Math.abs(most[k] - ritka[k])));
   t("a sűrűség nem mozdítja el a képet", elter < .5, `${elter.toFixed(2)} px eltérés`);
   await p.evaluate(() => syncDens()); await nyugszik();
