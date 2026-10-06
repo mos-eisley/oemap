@@ -58,8 +58,8 @@ alapnagyításon is mind kint vannak.
 
 A fejlécben a **Hallgatói / Minden** kapcsoló dönti el, mely helyiségek
 látszanak. Hallgatói nézetben az irodák, üzemeltetési terek, raktárak és
-dolgozói területek halványan, felirat nélkül jelennek meg — ez a 183
-helyiségből 87. Nem tűnnek el: a födém sziluettje az összes poligonból áll
+dolgozói területek halványan, felirat nélkül jelennek meg — ez a 223
+helyiségből 109. Nem tűnnek el: a födém sziluettje az összes poligonból áll
 össze, kivéve őket lyukas lenne az alaprajz. Keresésből és kiválasztásból sem
 esnek ki, csak nem versenyeznek a figyelemért.
 
@@ -117,7 +117,7 @@ lép a következő állásra.
 
 ### Billentyűzettel
 
-A térkép **egy** tab-állomás — nem 182 —, és onnan a nyilak viszik tovább:
+A térkép **egy** tab-állomás — nem 222 —, és onnan a nyilak viszik tovább:
 
 | billentyű | mit csinál |
 | --- | --- |
@@ -234,13 +234,14 @@ ugyanígy feldolgozható.
 `BA.1.13`); a tervlap más (üzemeltetési) számozást használ. Például az `F01`
 a tervlap `OA00F11`-e, a tervlapi `OA00F01` pedig az `F08`. A kettőt az app
 `NEPTUN` táblája köti össze, az Egyetemi Tervtár épületadataiból (a kari
-nyilvántartás oszlopa; `tools/tervtar-ajtoszam.py`): most 79 helyiség,
-köztük az órarendi termek közül 14. A térkép felirata, a kereső (pont
+nyilvántartás oszlopa; `tools/tervtar-ajtoszam.py`): most 112 helyiség,
+köztük mind a 24 órarendi terem. A térkép felirata, a kereső (pont
 nélkül is: `110`) és az adatlap az ajtószámot mutatja, és a teremre
 kattintva az adatlapján ott a foglaltság is; a foglalható termek listájából
-pedig a **Megmutatom a térképen** gomb visz a teremhez. A másik 10 órarendi
-terem (`F05`, `F06`, `1.13`, `1.14`, `1.17`, `1.19`, `2.13`, `2.14`, `2.18`,
-`2.20`) a felső szárny északkeleti végén van, ami a térképről még hiányzik.
+pedig a **Megmutatom a térképen** gomb visz a teremhez. A felső szárny
+északkeleti vége (`F05`, `F06`, `1.13`…`1.19`, `2.13`…`2.20` és a szárny
+irodái) korábban hiányzott a térképről; a tervtári alaprajz PDF-jéből
+pótoltuk (`tools/tervlap-szarny.py`).
 A földszinten a tervlap is F01…F14-nek számozza a helyiségeit (a büfé ott
 F04), ezért ahol nincs ajtószám, a térképen a teljes tervlapi kód áll
 (`OA00F04`), nem egy teremszámnak látszó rövid kód.

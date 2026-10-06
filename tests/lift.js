@@ -1,6 +1,8 @@
 /* Lépcső vs. lift. Az épületben a hallgatók csak az FL3 magban lévő liftet
    használhatják, ezért az alapértelmezés a lépcső, és a lift csak alternatíva.
-   Ahol a lift gyalog nem érhető el (földszint), ott nem szabad felkínálni. */
+   Ahol a lift nem érhető el (az alagsorba nem megy le), ott nem szabad
+   felkínálni. A földszinten a lifthez vezető folyosó (OA00FK7) a felső
+   szárnnyal együtt hiányzott, azóta onnan is van liftes út. */
 const { run, open } = require("./lib");
 
 run("lift mint alternatíva", async ({ t, ctx, base }) => {
@@ -31,10 +33,14 @@ run("lift mint alternatíva", async ({ t, ctx, base }) => {
     await set("OA10E18", D.rooms.find(r => r.code && r.level === 4).code);
     out.D = S.via;
 
-    // földszintről a hallgatói lift gyalog nem érhető el
-    await set("OA00FK1", IV);
+    // az alagsorba (a portához) a hallgatói lift nem megy le
+    await set(START, IV);
     out.E = { hasLift:S.hasLift, valaszto:!!document.querySelector(".viasw"),
               jegyzet:(document.querySelector(".note")||{}).textContent || "" };
+
+    // a földszintről viszont igen: az FL3 lift az OA00FK7 folyosóról nyílik
+    await set("OA00FK1", IV);
+    out.G = { hasLift:S.hasLift, lift:S.mms.lift && S.mms.lift.segs.map(s => s.lv).join(">") };
 
     // azonos szinten nincs mit választani
     await set("OA00F01", "OA00F03");
@@ -50,8 +56,9 @@ run("lift mint alternatíva", async ({ t, ctx, base }) => {
   t("a lépések a liftet említik", r.B.lepesek.some(x => /lift/i.test(x)), r.B.lepesek.join(" / "));
   t.eq("vissza lehet váltani lépcsőre", r.C.via, "stairs");
   t.eq("új útvonalnál újra a lépcső az alap", r.D, "stairs");
-  t("földszintről nincs liftes alternatíva", !r.E.hasLift && !r.E.valaszto, JSON.stringify(r.E));
+  t("az alagsorból (a portától) nincs liftes alternatíva", !r.E.hasLift && !r.E.valaszto, JSON.stringify(r.E));
   t("és ezt meg is indokolja", /lift/i.test(r.E.jegyzet), r.E.jegyzet.slice(0, 60));
+  t("a földszintről van: egy menetben a IV. emeletre", r.G.hasLift && r.G.lift === "0>5", JSON.stringify(r.G));
   t("azonos szinten nincs választó", !r.F.hasLift && !r.F.valaszto, JSON.stringify(r.F));
   t("nincs JS hiba", p.jsErrors.length === 0, p.jsErrors.join(" | "));
 });

@@ -152,19 +152,25 @@ run("teremszámok Épület nézetben", async ({ t, ctx, base }) => {
       for (let i = 0; i < b.length; i++) for (let j = i+1; j < b.length; j++)
         if (b[i].left < b[j].right-.5 && b[j].left < b[i].right-.5 && b[i].top < b[j].bottom-.5 && b[j].top < b[i].bottom-.5) n++;
       return n; };
-    // lépésenként figyeli a számokat; gyors = ugyanaz a szám 6 lépésen belül
-    // újra vált, és az előző meg a mostani lépésben is végig a képen belül
-    // állt — ami közben a kép szélén át ki- vagy belépett, az nem villogás
+    // lépésenként figyeli a számokat; gyors = egy szám egy-két lépésre
+    // eltűnik vagy előjön (pislog), vagy hat lépésen belül háromszor vált,
+    // és az előző meg a mostani lépésben is végig a képen belül állt — ami
+    // közben a kép szélén át ki- vagy belépett, az nem villogás. Egy nagyobb
+    // terem száma mögé egyszer elbújni nem az: körbejáráskor az F08 öt
+    // lépésig takarta az F07-et, amíg elhaladt mellette (a felső szárny
+    // felvétele után, más illesztésnél jött elő). A régi hiba minden lépésben
+    // váltott, azt mindkét szabály elkapja.
     // (a helyet a böngésző méri, nem a kód saját mezőiből olvassuk)
     const terkep = document.getElementById("mapwrap").getBoundingClientRect();
     function figyel() {
       const bentE = L => { const b = L.e.getBoundingClientRect();
         return b.left > terkep.left && b.right < terkep.right && b.top > terkep.top && b.bottom < terkep.bottom; };
-      const volt = LABS.map(L => L.on), mikor = LABS.map(() => -99), vbent = LABS.map(bentE);
+      const volt = LABS.map(L => L.on), mikor = LABS.map(() => -99), elotte = LABS.map(() => -99), vbent = LABS.map(bentE);
       let lepes = 0; const o = { valt:0, gyors:0 };
       o.lep = () => { lepes++; LABS.forEach((L, j) => { const bent = bentE(L);
         if (L.on !== volt[j]) { o.valt++;
-          if (bent && vbent[j] && lepes - mikor[j] <= 6) o.gyors++; mikor[j] = lepes; volt[j] = L.on; }
+          if (bent && vbent[j] && (lepes - mikor[j] <= 2 || lepes - elotte[j] <= 6)) o.gyors++;
+          elotte[j] = mikor[j]; mikor[j] = lepes; volt[j] = L.on; }
         vbent[j] = bent; }); };
       return o;
     }

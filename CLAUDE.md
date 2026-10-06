@@ -11,7 +11,7 @@ gyűjti össze, amit egy új munkamenetnek tudnia kell, mielőtt hozzányúl.
 A projekt meetingjén ez a kettő lett kimondva, és minden vitás kérdést ez dönt el:
 
 - **Hallgató first.** Ami nem a hallgatónak szól, az zaj. Ezért van halványítva
-  a 183 helyiségből 87 (irodák, üzemeltetés, raktárak, dolgozói területek),
+  a 223 helyiségből 109 (irodák, üzemeltetés, raktárak, dolgozói területek),
   ezért nincs rektori réteg, és ezért nem indul demó útvonallal az app.
 - **Telefon first.** Minden döntésnél a telefon a mérce, nem az asztali gép.
   Ezért indul alaprajzzal (telefonon 76 fps a 3D 13-ával szemben), és ezért
@@ -19,7 +19,7 @@ A projekt meetingjén ez a kettő lett kimondva, és minden vitás kérdést ez 
 
 ## Felépítés
 
-`index.html` (245 KB) **maga a teljes alkalmazás** — HTML, CSS és JS egy
+`index.html` (~360 KB, tömörítve ~100 KB) **maga a teljes alkalmazás** — HTML, CSS és JS egy
 fájlban, build lépés és futásidejű függőség nélkül. Ez szándékos: a
 GitHub Pages statikusan szolgálja ki, és offline is működik. Az egyetlen külső
 fájl a `fonts/`, az `icons/`, a `data/` és a `sw.js`.
@@ -29,7 +29,7 @@ A beépített `const D = {...}` tartalmazza az épületet:
 | kulcs | mi | méret |
 | --- | --- | --- |
 | `levels` | 7 szint, az Alagsortól (−1) a IV. emeletig (5) | |
-| `rooms` | helyiségek: `code`, `name`, `cat`, `level`, `area`, poligon | 183 |
+| `rooms` | helyiségek: `code`, `name`, `cat`, `level`, `area`, poligon (lyukas helyiségnél bevágással egy gyűrű), `doors`, `via` | 223 |
 | `cats` | 15 helyiség-kategória (a színüket a kód `CATS` táblája adja, a tervtári színkulcsból) | |
 | `walls`, `masks` | falgeometria és a szint sziluettje | |
 | `grid` | a járásrács, ezen fut a Dijkstra | |
@@ -363,8 +363,11 @@ Ami ezt működteti, és amit ezért ne bonts meg:
 - Élből nézve a számok egy keskeny sávba torlódnak: amelyik egy nagyobb
   terem számával ütközne, az kimarad, így sosem lógnak egymásra.
 - Mindkét döntés kétirányú: megjelenni nagyobb terem (15%) és szabad hely
-  (6 px) kell, mint ottmaradni, és ami már látszik, azt egy újonnan beférő
-  nem szoríthatja ki. Hiszterézis nélkül a remegő ujj alatt 24 lépésből
+  (6 px, élhez közel 14 px-ig: `pSzam`) kell, mint ottmaradni, és ami már
+  látszik, azt egy újonnan beférő nem szoríthatja ki. Élhez közel két
+  különböző mélységű szám egy remegésnyi dőlésre egymáshoz képest is 7 px-t
+  mozdul (81° és 82,5° közt a földszinti F03 és az aula felirata), és 6
+  px-nél minden lépésben ki-be kapcsolt. Hiszterézis nélkül a remegő ujj alatt 24 lépésből
   120-szor kapcsoltak; bármelyik egyedül is elég, együtt biztos. Egy
   időzítős várakozást is kipróbáltunk, az mérhetően nem segített, ezért
   nincs benne.
@@ -372,9 +375,11 @@ Ami ezt működteti, és amit ezért ne bonts meg:
   ahogy magát a termet is —, ezért addig látszik, amíg bármelyik része bent
   van. Egy változat a szélen is döntött (új szám csak egészen bent), és
   erős nagyításnál a remegő ujj alatt ott ingázott.
-- A tesztben villogásnak az számít, ha ugyanaz a szám pár lépésen belül
-  újra vált, miközben végig a képen belül áll. A kép szélén át ki-be lépő,
-  vagy egy nagyobb terem száma mögé egyszer elbújó szám jogosan vált.
+- A tesztben villogásnak az számít, ha egy szám egy-két lépésre eltűnik vagy
+  előjön (pislog), vagy hat lépésen belül háromszor vált, miközben végig a
+  képen belül áll. A kép szélén át ki-be lépő, vagy egy nagyobb terem száma
+  mögé egyszer elbújó szám jogosan vált — körbejáráskor az F08 öt lépésig
+  takarja az F07-et, amíg elhalad mellette.
 - Mindegyik saját rétegen van (`will-change`), így a mozgatásuk csak
   tologatás. Mérve (SwiftShader) Épület nézetes gesztus közben 30 lépésre
   összesen ~1 ms festést adnak, a lépésidő a mérési zajon belül marad.
@@ -424,7 +429,7 @@ továbbra is belemerül, a fölsőkre a szintválasztó visz.
 
 **A térkép egyetlen tab-állomás.** A helyiségek `role="button"`-ok, de
 `tabindex="-1"`-gyel: fókuszt csak a nyilaktól kapnak (roving tabindex). Ha
-bármelyik `tabindex="0"`-t kapna, a billentyűzetes felhasználónak 182-szer
+bármelyik `tabindex="0"`-t kapna, a billentyűzetes felhasználónak 222-szer
 kellene tabbolnia, hogy a térképen túljusson. A `tests/a11y.js` ezt számolja.
 
 **A fókusz nem maradhat `aria-hidden` ágon.** Csak az aktív szint látszik a
@@ -485,7 +490,39 @@ ingatlan.uni-obuda.hu/termek (mentett lapok) --parse-rooms.py--> data/rooms.json
 Neptun kurzusórarend-export (xlsx)           --parse-neptun.py--> /tmp/neptun.json
                          rooms.json + neptun.json --build-termek.py--> data/termek.json
 Tervtár OA épületadatok (xls)          --tervtar-ajtoszam.py--> az index.html NEPTUN táblája
+Tervtár OA alaprajzok (PDF) + épületadatok --tervlap-szarny.py--> D: a hiányzó szárny
+OE-OA.ifc (Archicad-export, 2023)            --ifc-ajtok.py--> D: doors, via
 ```
+
+A térkép (`D`) kézzel nem szerkesztendő: a régi generátor adatára a fenti két
+eszköz épít, ebben a sorrendben (a szárny után az ajtók, hogy az új
+helyiségek is megkapják), utána a `tervtar-ajtoszam.py` az ajtószámokat. A
+PDF, az xls és az IFC belső anyag, egyik se kerüljön a repóba. A szárnyról:
+- A régi adat keretével levágta a felső szárny északkeleti végét (41
+  helyiség, 10 órarendi terem). Az eszköz a PDF falait a térkép falaira
+  illeszti, a helyiségeket a falak közti szabad térből vágja ki, és ahol a
+  keret nő, mindent eltol (a rácslépés egész többszörösével, a lifttel és az
+  ajtókkal együtt).
+- A kivágás módszerét a térkép meglévő 139 helyiségén mértük, ahol a
+  helyes sokszög ismert (IoU ≥ 0,97 és terület ±3%): négy független
+  módszerből a falvégek közti hidakra és a falréteg vonalaira épülő nyert
+  (94%). A négy kombinációja a mércén három helyiséggel többet adott (96%),
+  a szárnyon viszont semmit: ott mind a 40-et az első adta, ±1%-on belül.
+  Ezért csak az van benne (a másik három együtt ~1200 sor lett volna).
+- **A lyukas helyiség egy gyűrű, bevágással.** A II–IV. emeleti folyosók
+  közepén korláttal körbevett légtér van; a térkép formátuma egyetlen
+  gyűrűt ismer, ezért a lyuk egy nulla szélességű bevágással fűződik a
+  külső gyűrűhöz (`poli()`). Enélkül a légtér járható folyosónak látszana,
+  a folyosó területe pedig 245 m² lenne a pecsét 177-e helyett.
+- **Ára az Épület nézetben, telefonon.** A GPU-s tesztúton (SwiftShader,
+  telefonprofil, 5 futás mediánja) a körbejárás lépésideje 78 ms-ról 188-ra
+  nőtt; a kétujjas döntés (71 → 74) és az alaprajzi tolás (33 → 33) nem
+  változott. Nem a nagyobb keret (üres szárnnyal 76 ms) és nem a
+  raszterezés (~3 ms): a kompozitálás (`SwapBuffers`). A szárny a felső
+  szinteken is tartalmat ad, és elforgatva ezek a halvány szintek a kép
+  jóval nagyobb részét fedik. A szobák alakja (lyuk, csúcsszám) nem számít
+  (±7%). Valódi telefonon mérendő; ha ott is akad, a nem aktív szintek
+  rajzán kell faragni, nem a szárnyon.
 
 ```
 python3 tools/parse-neptun.py 2026-27-1-NIK-kurzus-orarend-adatok-v1.xlsx /tmp/neptun.json
@@ -521,7 +558,8 @@ sem látszik rajta első ránézésre:
   feliratok már induláskor abból dolgoznak. Forrása az Egyetemi Tervtár OA
   épületadat-táblája (2025.08.21), a „HELYISÉG SZÁMA KARI NYILVÁNT." oszlop;
   a `tools/tervtar-ajtoszam.py` állítja elő, csak a térképen szereplő
-  helyiségekre (most 79 pár). A táblát magát ne tedd a repóba: belső anyag.
+  helyiségekre (most 112 pár; a nyilvántartás minden számozott helyisége a
+  térképen van, és mind a 24 órarendi terem párt kapott). A táblát magát ne tedd a repóba: belső anyag.
   Ami a nyilvántartásban ellentmondásos (ugyanaz a szám két helyiségen,
   folyosón teremszám), az kimarad, az eszköz kiírja. Ahol van pár, a térkép
   felirata, a kereső és az adatlap címe az ajtószám, az adatlapon ott a
@@ -531,8 +569,8 @@ sem látszik rajta első ránézésre:
   egyetemi teremlap fotóiból kikövetkeztetve, és az egyik téves lett: a
   144 fős F06-ot a 146 m²-es OA00F03-ra tettük, mert „utána csak ez marad" —
   a nyilvántartás szerint az OA00F03 az F09, az F06 pedig az OA00F16, a felső
-  szárny északkeleti végén, ami a térképről hiányzik. A kizárásos érvelés a
-  hiányos tervlapon csúszott el. A másik három (F01, F02, Audmax) egyezik a
+  szárny északkeleti végén, ami akkor hiányzott a térképről. A kizárásos
+  érvelés a hiányos tervlapon csúszott el. A másik három (F01, F02, Audmax) egyezik a
   nyilvántartással.
 - **A földszinten a tervlapi rövid kód Neptun-névnek látszik.** A tervlap is
   F01…F14-nek számozza a helyiségeit, de a tervlapi F04 a büfé, az F07 a női
@@ -592,5 +630,6 @@ MÁSODIK `github-pages` artifactot hoz létre — a `deploy-pages` ilyenkor
 
 ## Ami nyitott
 
-Lásd [docs/NYITOTT-KERDESEK.md](docs/NYITOTT-KERDESEK.md) — négy dolog vár
-külső információra, és ezek közül kettő valódi funkcióhiányt okoz.
+Lásd [docs/NYITOTT-KERDESEK.md](docs/NYITOTT-KERDESEK.md) — négy pont vár
+külső információra; valódi funkcióhiányt közülük a más karok hiányzó órarendje
+okoz.

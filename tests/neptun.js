@@ -30,7 +30,7 @@ run("Neptun-nevek és párosítás", async ({ t, ctx, browser, base }) => {
     const alak = f.filter(x => /^F0\d$/.test(x));
     const fold = { f01:db("F01"), f02:db("F02"), f09:db("F09"), f06:db("F06"), f11:db("F11"), f12:db("F12"), f03:db("F03"),
       f10:db("F10"), alak, alakPar:alak.every(x => Object.values(NEPTUN).includes(x)),
-      kie01:kie("F01"), kie02:kie("F02"), kie09:kie("F09"), kie08:kie("F08"),
+      kie01:kie("F01"), kie02:kie("F02"), kie09:kie("F09"), kie08:kie("F08"), kie06:kie("F06"), kie05:kie("F05"),
       bufe:kie("OA00F04"), raktar:kie("OA00F05") };
     select("OA00F11"); await w(1500);
     const kartya = { cim:document.querySelector(".rcard .name").textContent,
@@ -46,8 +46,11 @@ run("Neptun-nevek és párosítás", async ({ t, ctx, browser, base }) => {
       && (r.fold.kie01 || []).includes("OA00F11") && (r.fold.kie02 || []).includes("OA00F12")
       && (r.fold.kie09 || []).includes("OA00F03") && (r.fold.kie08 || []).includes("OA00F01"), JSON.stringify(r.fold));
   /* Az F06 a nyilvántartás szerint az OA00F16, a felső szárny északkeleti
-     végén, ami nincs rajta a térképen; az OA00F03-on korábban tévesen állt. */
-  t("az F06 felirat nem áll a térképen (a terme hiányzik a tervlapról)", r.fold.f06 === 0, JSON.stringify(r.fold));
+     végén, ami korábban hiányzott a térképről; addig az OA00F03-on állt,
+     tévesen (az az F09). */
+  t("az F06 egyszer áll, a szárny végi OA00F16-on, és mellette az F05 az OA00F15-ön",
+    r.fold.f06 === 1 && (r.fold.kie06 || []).includes("OA00F16") && (r.fold.kie05 || []).includes("OA00F15"),
+    JSON.stringify(r.fold));
   t("pár nélkül a tervlapi kód a felirat", r.fold.f10 === 1, JSON.stringify(r.fold));
   /* A tervlapi rövid kód alakra egyezik a földszinti Neptun-nevekkel: a büfé
      a tervlapon F04, a raktára F05. A valódi Neptun-nevek mellett ezek
@@ -73,18 +76,21 @@ run("Neptun-nevek és párosítás", async ({ t, ctx, browser, base }) => {
   const tl = await p.evaluate(() => { const x = LABS.find(l => l.r.code === "OA00F11"); return x && x.e.textContent; });
   t("Épület nézetben az álló teremszám is a Neptun-név", tl === "F01", tl);
 
-  /* A foglalható termek listájából a kinyitott sor a térképre visz, ha a
-     terem rajta van; a hiányzó szárny termeinél (F05) nincs ilyen gomb. */
+  /* A foglalható termek listájából a kinyitott sor a térképre visz — a
+     felső szárny termeinél (F05) is, amióta a szárny a térképen van: mind a
+     24 órarendi teremnek van párja. */
   const ugras = await p.evaluate(async () => {
     const w = ms => new Promise(r => setTimeout(r, ms));
     await tmLoad(); quick("@ROOMS"); await w(200);
+    const nincsPar = TM.rooms.filter(x => !codeOfNev(x.nev)).map(x => x.nev);
     S.tmOpen = "F05"; renderTermek(); const f05 = !!document.querySelector("[data-goto]");
     S.tmOpen = "1.10"; renderTermek(); const b = document.querySelector("[data-goto]");
     const felirat = b && b.textContent; b && b.click(); await w(400);
-    return { f05, felirat, sel:S.sel, szint:S.level, cim:(document.querySelector(".rcard .name") || {}).textContent };
+    return { f05, nincsPar, felirat, sel:S.sel, szint:S.level, cim:(document.querySelector(".rcard .name") || {}).textContent };
   });
   t("a foglalható termek listájából a terem a térképre visz", ugras.sel === "OA10E45" && ugras.szint === 2
-    && ugras.cim === "1.10" && !!ugras.felirat && !ugras.f05, JSON.stringify(ugras));
+    && ugras.cim === "1.10" && !!ugras.felirat && ugras.f05, JSON.stringify(ugras));
+  t("mind a 24 órarendi terem a térképen van", ugras.nincsPar.length === 0, ugras.nincsPar.join(", "));
   t("nincs JS hiba", p.jsErrors.length === 0, p.jsErrors.join(" | "));
 
   /* Párosító mód, valódi egérrel: teremre kattintás, a Neptun-név
@@ -126,10 +132,12 @@ run("Neptun-nevek és párosítás", async ({ t, ctx, browser, base }) => {
 
   const sima = await open(pctx, base, { settle: 1200 });
   const simaR = await sima.evaluate(() => { const f = [...document.querySelectorAll(".floor.on .glabel .lbl")].map(x => x.textContent);
-    return { nev:neptunOf("OA00F14"), sav:!!document.querySelector(".pairbar"), f04:f.includes("F04"), f05:f.includes("F05") }; });
-  // az OA00F14 a beépített számát viseli (F04), nem a helyben adott „F05"-öt
-  t("párosító mód nélkül a helyi pár nem jelenik meg", simaR.nev === "F04" && !simaR.sav && simaR.f04 && !simaR.f05,
-    JSON.stringify(simaR));
+    return { nev:neptunOf("OA00F14"), nev15:neptunOf("OA00F15"), sav:!!document.querySelector(".pairbar"),
+             f04:f.includes("F04"), f05:f.filter(x => x === "F05").length }; });
+  /* az OA00F14 a beépített számát viseli (F04), nem a helyben adott „F05"-öt;
+     az F05 egyszer áll, a beépített helyén (OA00F15) */
+  t("párosító mód nélkül a helyi pár nem jelenik meg", simaR.nev === "F04" && simaR.nev15 === "F05" && !simaR.sav
+    && simaR.f04 && simaR.f05 === 1, JSON.stringify(simaR));
   t("a párosító módban sincs JS hiba", q.jsErrors.length === 0 && sima.jsErrors.length === 0,
     q.jsErrors.concat(sima.jsErrors).join(" | "));
   await pctx.close();
