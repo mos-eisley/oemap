@@ -171,6 +171,13 @@ felülírja. A gyorsgombok közül a **Legközelebbi mosdó** a menetidő szerin
 legközelebbi hallgatói mosdót adja (a lépcsőzéssel együtt, a dolgozói öltöző
 mosdói nélkül), a **Büfé** a büfét.
 
+**Az útvonal az ajtónál ér véget**, nem a teremhez legközelebbi folyosóponton:
+az ajtók helyét az épület IFC-modelljéből vesszük (`tools/ifc-ajtok.py`). Ha a
+teremnek több ajtaja van, a közelebbihez visz. Ahova csak egy másik helyiségen
+át lehet bejutni — a II. emeleti laborsorba az E01-en és az E03-on át, több
+irodába a szomszédosból —, ott az útvonal annak az ajtajáig vezet, és a
+lépések közt ott áll: **„Bejárat ezen át: OA20E01 · LABOR → OA20E03 · LABOR"**.
+
 Ismeretlen kódot a link csendben elhagy: az app elindul, csak épp kiválasztás
 nélkül. A panelben a megosztás gomb a pillanatnyi állapot linkjét adja —
 `navigator.share`-rel, ahol van, különben vágólapra.
@@ -311,7 +318,7 @@ python3 -m http.server 8000
 
 ```
 npm install     # playwright
-npm test        # mind a 15 tesztfájl
+npm test        # mind a 16 tesztfájl
 ```
 
 A tesztek maguk indítanak szervert és böngészőt szabad porton, így nem kell
