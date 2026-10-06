@@ -65,7 +65,7 @@ hagytak egy hibás kódot.
 | `tests/pwa.js` | manifest, service worker, **offline indulás**, a teremadat frissessége |
 | `tests/a11y.js` | billentyűzetes bejárás, felolvasónak szóló jelölés |
 | `tests/perf.js` | Épület nézet: képkockánként hány renderpass, a telefon (GPU-s) kódútján — **élesben bejelentett akadozás** |
-| `tests/neptun.js` | Neptun-nevek a térképen, a keresőben és az adatlapon (a beépített F01, F02, F06, Audmax); a földszinten Neptun-névnek látszó tervlapi kód (a büfé „F04”-e) nem állhat feliratként; a párosító mód (`?parosit`) |
+| `tests/neptun.js` | ajtószámok (Neptun-nevek) a térképen, a keresőben (pont nélkül is: „110”) és az adatlapon; az F06 nem állhat az OA00F03-on (az F09); a földszinten Neptun-névnek látszó tervlapi kód (a büfé „F04”-e) nem állhat feliratként; a foglalható termek listájából a térképre ugrás; a párosító mód (`?parosit`) |
 | `tests/sharp.js` | Épület nézet asztalon, nagyítva: éles-e a kép, nem mozdul-e a sűrűségtől, nem vált-e mozgás közben, csak az aktív szintnél, telefonon és más motorban nem, Firefoxban a saját kódútján (3D-ben minden szint saját transzformmal, a lapos alaprajzon egyik sem) — **élesben bejelentett „irgalmatlan életlen" asztali 3D, Chrome-ban és Firefoxban, és a Firefoxos „éles, homályos, megint éles" váltás** |
 
 ## Amit érdemes tudni, mielőtt hozzányúlsz
@@ -420,7 +420,12 @@ amiről a felhasználó semmit nem tud meg.
 **Ismétlődő teremkód.** A tervlapon az `OA00FK2` kétszer szerepel (ELŐTÉR és
 AULA). Az app `ROOM` táblája `Object.fromEntries`-szel épül, ott az UTOLSÓ nyer;
 a QR-generátor ugyanígy dönt, különben a matrica felirata mást ígérne, mint
-ahová visz. Ha új kódütközés jön be, ezt a szabályt tartsd.
+ahová visz. Ha új kódütközés jön be, ezt a szabályt tartsd. A két tervtári
+forrás itt eltér: a térkép a 2026.01.09-i alaprajzot követi (ott az FK2
+kétszer áll, és nincs FK6), a 2025.08.21-i épületadat-táblában viszont az
+ELŐTÉR az OA00FK3, és onnan a folyosók egy hellyel eltolva számozódnak
+(FK3–FK6). Hogy melyik a helyes, azt az építészek döntik el; javítani csak a
+QR-matricákkal együtt szabad, mert azok a mostani kódra mutatnak.
 
 ## Adatfolyam
 
@@ -428,6 +433,7 @@ ahová visz. Ha új kódütközés jön be, ezt a szabályt tartsd.
 ingatlan.uni-obuda.hu/termek (mentett lapok) --parse-rooms.py--> data/rooms.json
 Neptun kurzusórarend-export (xlsx)           --parse-neptun.py--> /tmp/neptun.json
                          rooms.json + neptun.json --build-termek.py--> data/termek.json
+Tervtár OA épületadatok (xls)          --tervtar-ajtoszam.py--> az index.html NEPTUN táblája
 ```
 
 ```
@@ -459,21 +465,24 @@ sem látszik rajta első ránézésre:
   épület. Ezek a nyilvántartás `F05`, `LABOR 1.13`, `Audmax` termei — de nem
   az alaprajz kódjai (lásd `docs/NYITOTT-KERDESEK.md`, 1.). Az óra fajtája a
   kurzuskódból jön (`_EA` előadás, `_GY` gyakorlat, `_LA` labor).
-- **A tervlapi kód és a Neptun-név megfeleltetése az app `NEPTUN` táblája**
-  (`index.html`, a `ROOM` mellett), nem a teremadaté: a feliratok már
-  induláskor abból dolgoznak. Csak megerősített pár kerülhet bele — a név
-  félrevezet, a méret csak ott dönt, ahol kényszerít. Most négy pár van
-  benne, a megrendelő jóváhagyásával. Hármat a méret kényszerít ki (2026.
-  szept. 28.): F01 = OA00F11 (268 fő a földszint egyetlen elég nagy,
-  255,8 m²-es termébe), F06 = OA00F03 (144 fő; utána csak ez a 146 m²-es
-  marad), Audmax = OA10E18 (330 fő, a kerek, 304,6 m²-es nagyelőadó). Az
-  F02 = OA00F12 párt az egyetemi teremlap fotói adták (szept. 29.; a
-  bizonyítékok és a többi teremről kiderült dolgok a
-  `docs/NYITOTT-KERDESEK.md` 1. pontjában). A teremlapok fotói nem
-  megbízhatóak: több labornál ugyanazokat a képeket használják. Ahol
-  van pár, a térkép felirata, a kereső és az adatlap címe a Neptun-név, az
-  adatlapon ott a foglaltság (`tmCard()`, ugyanazzal a sorral és napi
-  órákkal, mint a listában: `tmRow()`, `tmDetail()`).
+- **A tervlapi kód és az ajtószám (Neptun-név) megfeleltetése az app
+  `NEPTUN` táblája** (`index.html`, a `ROOM` mellett), nem a teremadaté: a
+  feliratok már induláskor abból dolgoznak. Forrása az Egyetemi Tervtár OA
+  épületadat-táblája (2025.08.21), a „HELYISÉG SZÁMA KARI NYILVÁNT." oszlop;
+  a `tools/tervtar-ajtoszam.py` állítja elő, csak a térképen szereplő
+  helyiségekre (most 79 pár). A táblát magát ne tedd a repóba: belső anyag.
+  Ami a nyilvántartásban ellentmondásos (ugyanaz a szám két helyiségen,
+  folyosón teremszám), az kimarad, az eszköz kiírja. Ahol van pár, a térkép
+  felirata, a kereső és az adatlap címe az ajtószám, az adatlapon ott a
+  foglaltság (`tmCard()`, ugyanazzal a sorral és napi órákkal, mint a
+  listában: `tmRow()`, `tmDetail()`).
+- **Méretből ne következtess párt.** Előtte négy pár volt, a méretből és az
+  egyetemi teremlap fotóiból kikövetkeztetve, és az egyik téves lett: a
+  144 fős F06-ot a 146 m²-es OA00F03-ra tettük, mert „utána csak ez marad" —
+  a nyilvántartás szerint az OA00F03 az F09, az F06 pedig az OA00F16, a felső
+  szárny északkeleti végén, ami a térképről hiányzik. A kizárásos érvelés a
+  hiányos tervlapon csúszott el. A másik három (F01, F02, Audmax) egyezik a
+  nyilvántartással.
 - **A földszinten a tervlapi rövid kód Neptun-névnek látszik.** A tervlap is
   F01…F14-nek számozza a helyiségeit, de a tervlapi F04 a büfé, az F07 a női
   mosdó — a Neptun F04-e és F07-e tanterem. Amíg minden felirat tervlapi kód
@@ -481,10 +490,11 @@ sem látszik rajta első ránézésre:
   `roomLabel()` az F01…F09 alakú tervlapi kód helyett a teljes kódot írja ki
   (OA00F04), amíg a teremnek nincs párja; ugyanígy, ha egy rövid kód egy
   másik terem kiosztott Neptun-nevével ütközne.
-- **A párokat a párosító mód állítja elő** (`?parosit` a címben): teremre
-  kattintás, a Neptun-név kiválasztása (elöl az azonos emeletiek, férőhellyel),
-  a lista kimásolása. A helyben megadott párok (`localStorage`) csak ebben a
-  módban élnek; a kimásolt listát kell a `NEPTUN` táblába írni.
+- **A párosító mód** (`?parosit` a címben) a nyilvántartásból hiányzó vagy
+  vitatott pároknál segít: teremre kattintás, a Neptun-név kiválasztása (elöl
+  az azonos emeletiek, férőhellyel), a lista kimásolása. A helyben megadott
+  párok (`localStorage`) csak ebben a módban élnek, és felülírják a
+  beépítettet; a kimásolt listát kell a `NEPTUN` táblába írni.
 
 Az órák heti ismétlődésként kerülnek a `termek.json`-ba (`[nap, tól, ig,
 hetek bitmaszkja, fajta, tárgy sorszáma]`), nem napokra kibontva: egy félév

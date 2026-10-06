@@ -209,26 +209,27 @@ tartanak órát, az ő óráik viszont nincsenek benne a NIK-exportban — ezér
 ugyanígy feldolgozható.
 
 **Ezek nem az alaprajz kódjai.** Az `F01…F09`, az `Audmax` és a laborok
-(`1.10`…`2.20`) az egyetem hivatalos teremnevei (a Neptunban `BA.F.01`,
-`BA.1.13`); a tervlap más (üzemeltetési) számozást használ, és a kettő
-összerendelése még nincs meg. Például a hivatalos `F01` 268 fős, míg a tervlap
-`OA00F01`-e 95,7 m². A kettőt az app `NEPTUN` táblája köti össze, és csak
-megerősített pár kerülhet bele. Ahol van pár, a térkép felirata, a kereső és az
-adatlap a Neptun-nevet mutatja, és a teremre kattintva az adatlapján ott a
-foglaltság is. Most négy pár van benne: három, amelyet a méret egyértelműen
-kijelöl — az **F01** (a földszint 255,8 m²-es nagyelőadója), az **F06** (a
-146 m²-es terem) és az **Audmax** (az I. emelet kerek nagyelőadója) —, és az
-**F02** (a földszint felső szárnyának szélső terme), amelyet az egyetemi
-teremlap fotói jelölnek ki. A földszinten a
-tervlap is F01…F14-nek számozza a helyiségeit (a büfé ott F04), ezért ahol még
-nincs pár, a térképen a teljes tervlapi kód áll (`OA00F04`), nem egy
-Neptun-névnek látszó rövid kód.
+(`1.10`…`2.20`) az ajtón álló teremszámok (a Neptunban `BA.F.01`,
+`BA.1.13`); a tervlap más (üzemeltetési) számozást használ. Például az `F01`
+a tervlap `OA00F11`-e, a tervlapi `OA00F01` pedig az `F08`. A kettőt az app
+`NEPTUN` táblája köti össze, az Egyetemi Tervtár épületadataiból (a kari
+nyilvántartás oszlopa; `tools/tervtar-ajtoszam.py`): most 79 helyiség,
+köztük az órarendi termek közül 14. A térkép felirata, a kereső (pont
+nélkül is: `110`) és az adatlap az ajtószámot mutatja, és a teremre
+kattintva az adatlapján ott a foglaltság is; a foglalható termek listájából
+pedig a **Megmutatom a térképen** gomb visz a teremhez. A másik 10 órarendi
+terem (`F05`, `F06`, `1.13`, `1.14`, `1.17`, `1.19`, `2.13`, `2.14`, `2.18`,
+`2.20`) a felső szárny északkeleti végén van, ami a térképről még hiányzik.
+A földszinten a tervlap is F01…F14-nek számozza a helyiségeit (a büfé ott
+F04), ezért ahol nincs ajtószám, a térképen a teljes tervlapi kód áll
+(`OA00F04`), nem egy teremszámnak látszó rövid kód.
 
-**Párosító mód.** A párokat az épületet ismerő ember adja meg, az appban:
-`https://mayydayy99.github.io/oemap/?parosit`. Kattints egy teremre, válaszd
-ki a Neptun-nevét; a panel alján a **Lista másolása** a párokat
-`F01 = OA00F11` alakban adja, ezt kell a `NEPTUN` táblába írni. Addig a
-helyben megadott párok csak ebben a módban, azon az eszközön látszanak.
+**Párosító mód.** Ha egy pár hiányzik vagy vitatott, az épületet ismerő ember
+megadhatja az appban: `https://mayydayy99.github.io/oemap/?parosit`.
+Kattints egy teremre, válaszd ki a Neptun-nevét; a panel alján a **Lista
+másolása** a párokat `F01 = OA00F11` alakban adja, ezt kell a `NEPTUN`
+táblába írni. Addig a helyben megadott párok csak ebben a módban, azon az
+eszközön látszanak.
 Részletek: [docs/NYITOTT-KERDESEK.md](docs/NYITOTT-KERDESEK.md).
 
 ## Arculat
