@@ -24,8 +24,8 @@ keretével levágta a felső szárny északkeleti végét: minden szinten hiány
    cellára pontosan átvihető).
 
 A nevet, a kategóriát és a kari számot az épületadat-táblából (xls) veszi, az
-alapterületet a PDF pecsétjéből. Az eltolást kiírja: a kódban beégetett
-lift-koordinátákat (LIFTS) kézzel kell vele eltolni.
+alapterületet a PDF pecsétjéből. Az eltolás minden koordinátára vonatkozik
+(helyiségek, ajtók, falak, lépcsők, lift: `D.lifts`), és ki is írja.
 
 Használat:
   python3 tools/tervlap-szarny.py <oe-oa_tervtari_alaprajzok.pdf> \\
@@ -363,6 +363,7 @@ def main(pdf, xls, html, jelentes=None):
     # régi adat eltolása
     for r in D["rooms"]:
         r["poly"] = [tol(*p) for p in r["poly"]]; r["cx"], r["cy"] = tol(r["cx"], r["cy"])
+        if r.get("doors"): r["doors"] = [tol(*p) for p in r["doors"]]
     for lv in D["walls"]:
         D["walls"][lv] = [[tol(*p) for p in w] for w in D["walls"][lv]]
     for st in D["stairs"]:
@@ -418,7 +419,7 @@ def main(pdf, xls, html, jelentes=None):
            "csonka_javitva": sorted(csere), "nem_sikerult": rossz, "kategoria": KAT,
            "uj_falak": {lv: len(v) for lv, v in uj_falak.items()}}
     if jelentes: json.dump(rep, open(jelentes, "w"), ensure_ascii=False, indent=1)
-    print(f"eltolás: x +{ox} m, y +{oy} m  (a LIFTS koordinátáit ennyivel told el!)")
+    print(f"eltolás: x +{ox} m, y +{oy} m")
     print(f"új keret {W1} × {H1} m, rács {GW1} × {GH1}")
     print(f"új helyiség: {len(uj_termek)}, csonkított javítva: {len(csere)}, nem sikerült: {len(rossz)}")
     for x in rossz: print("   nem sikerült:", x)

@@ -42,7 +42,7 @@ honnan/hova, útvonal, forgatás, panelállás). Aki ezt megérti, érti az appo
 
 ```
 npm install          # playwright (a böngésző a képen már megvan)
-npm test             # mind a 15 tesztfájl
+npm test             # mind a 16 tesztfájl
 node tests/run.js url share     # csak egy-kettő
 ```
 
@@ -66,6 +66,7 @@ hagytak egy hibás kódot.
 | `tests/a11y.js` | billentyűzetes bejárás, felolvasónak szóló jelölés |
 | `tests/perf.js` | Épület nézet: képkockánként hány renderpass, a telefon (GPU-s) kódútján — **élesben bejelentett akadozás** |
 | `tests/neptun.js` | ajtószámok (Neptun-nevek) a térképen, a keresőben (pont nélkül is: „110”) és az adatlapon; az F06 nem állhat az OA00F03-on (az F09); a földszinten Neptun-névnek látszó tervlapi kód (a büfé „F04”-e) nem állhat feliratként; a foglalható termek listájából a térképre ugrás; a párosító mód (`?parosit`) |
+| `tests/ajtok.js` | az útvonal az ajtó előtt ér véget, több ajtó közül a közelebbinél; a csak más helyiségen át megközelíthető termekhez (I. emelet E03–E07, II. emelet E03, E04) is van útvonal, és a lépések kiírják, min át |
 | `tests/ikonok.js` | mosdó-, lépcső- és liftjel: minden mosdón és lépcsőházon a jó jel, a teremszám helyett, a feliratpontján; Épület nézetben magonként egy jelvény, alapnagyításon mind kint, teremszámra nem lógva |
 | `tests/sharp.js` | Épület nézet asztalon, nagyítva: éles-e a kép, nem mozdul-e a sűrűségtől, nem vált-e mozgás közben, csak az aktív szintnél, telefonon és más motorban nem, Firefoxban a saját kódútján (3D-ben minden szint saját transzformmal, a lapos alaprajzon egyik sem) — **élesben bejelentett „irgalmatlan életlen" asztali 3D, Chrome-ban és Firefoxban, és a Firefoxos „éles, homályos, megint éles" váltás** |
 
@@ -380,7 +381,7 @@ Ami ezt működteti, és amit ezért ne bonts meg:
 
 **Mosdó, lépcső, lift: piktogram a teremszám helyett** (az építészek kérése,
 ezeket keresik a legtöbben). Melyik helyiségnek mi jár, azt a neve dönti el
-(`iconsOf()`); a lift a tervlapon nem helyiség, a `LIFTS` lépcsőmagjában
+(`iconsOf()`); a lift a tervlapon nem helyiség, a `D.lifts` lépcsőmagjában
 jár, ott a lépcső mellé kerül. Alaprajzon a szint rajzában áll, helyiségenként
 (`iconBadge()`, a jelek `<symbol>`-ok, `<use>`-zal). Épület nézetben az álló
 feliratok közt, de **magonként egy jelvényben** (`MAG_M` = 10 m-en belül egy
@@ -431,6 +432,41 @@ felolvasónak; az `updateView()` ezért mielőtt elrejtene egy szintet,
 megnézi, benne áll-e a fókusz, és kihozza a térképre. Aki a szintváltáshoz
 nyúl, ezt vigye tovább — enélkül a felolvasó némán áll egy olyan elemen,
 amiről a felhasználó semmit nem tud meg.
+
+**Az útvonal az ajtónál ér véget — az ajtók az IFC-modellből jönnek.** A
+helyiségek `doors` (az ajtók előtti pontok) és `via` (a helyiség, amelyiken
+át megközelíthető) mezőit a `tools/ifc-ajtok.py` írja be az épület
+IFC-modelljéből (Archicad-export, 2023; belső anyag, nem a repóba). Előtte a
+helyiség a hozzá legközelebbi folyosócellához kötődött 6 m-en belül: az
+Audmax útvonala a déli falánál ért véget, ahol nincs ajtó, és hét
+helyiséghez — laborsor, irodából nyíló iroda — nem volt útvonal. Amit tudni
+kell:
+- Az IFC minden elemet általános elemként (proxy) ad, a típus a névből jön
+  (`Fal`, `D…` ajtó, `A…` ablak). Tükrözött, ~23°-kal elforgatott, méterben;
+  egyetlen merev transzform illeszti minden szintre, és a térkép falainak
+  ~90%-a 10 cm-en belül esik rá (a félemeleten 41%: ott a földszintről
+  felnyúló falak az IFC-ben a földszinthez tartoznak). Ez független
+  megerősítés arra is, hogy a térkép szintjei egymáshoz képest pontosak.
+- Az ajtó irányát és a fal vastagságát az ajtó **gazdafala** adja az IFC-ből,
+  nem a térkép fala: a térképről a válaszfalak egy része hiányzik, ott a
+  nyílás mellett nincs falvég, amihez igazodni lehetne (az első változat így
+  a 314 ajtóból alig 130-at talált meg). A térkép falai csak ellenőriznek: ahol
+  az ajtó két oldala közti szakasz térképi falat metsz, ott azóta befalazták —
+  az IFC 2023-as, a térkép 2026-os, és a térkép nyer.
+- Csak az úthálózatra nyíló ajtó számít: a járható cellák lépcsőkkel
+  összekötött legnagyobb része. Egy elszigetelt járható folt (az I. emeleti
+  E03 közösségi tér, amit csak az E01 laboron át lehet megközelíteni) nem az.
+- A `via` láncban is állhat (II. emelet: E04 ← E03 ← E01). Az app követi
+  (`entryOf()`), az útvonal a lánc utolsó helyiségének ajtajáig vezet, és a
+  lépésekben kiírja, min át („Bejárat ezen át:"). Több ajtónál a keresés
+  mindegyikből indul, és bármelyik célajtónál megáll — a közelebbit kapod.
+- Az IFC-ben nincs lift, és a lépcsőknek nincs geometriája, csak helye. A
+  lift ezért továbbra is kézzel felvett (`D.lifts`). A félemeleti FL4 és FL5
+  az IFC szerint a földszintről az Audmax alsó szintjére visz; nincs
+  összekötve, mert akkor az útvonal az Audmaxon át vághatna rövidebbet.
+- Sorrend: előbb a szárny (`tervlap-szarny.py`), utána ez, hogy az új
+  helyiségek ajtói is bekerüljenek. A `tests/ajtok.js` őrzi; ha az app nem
+  veszi figyelembe a `doors`-t és a `via`-t, tízből hat állítása elbukik.
 
 **Ismétlődő teremkód.** A tervlapon az `OA00FK2` kétszer szerepel (ELŐTÉR és
 AULA). Az app `ROOM` táblája `Object.fromEntries`-szel épül, ott az UTOLSÓ nyer;
