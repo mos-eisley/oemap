@@ -26,6 +26,10 @@ import xlrd
 FEJ = "HELYISÉG SZÁMA KARI"
 # a folyosó száma nem teremszám: egy „2.61" felirat a folyosón félrevezetne
 KOZLEKEDO = ("KÖZLEKED", "KÖZELEKD")
+# A nyilvántartás betűs alszáma, ahol a Neptunban csak a szám áll: a „117a"
+# (OA10E36, SCIENCE LABOR) az egyetlen 117-es terem, a Neptunban pedig
+# egyetlen BA.1.17 van. Az ajtón ellenőrizendő.
+NEPTUN_ALAK = {"1.17a": "1.17"}
 
 
 def egyseges(k):
@@ -67,7 +71,7 @@ def main(xls, html):
         if n is None or any(f in fun.upper() for f in KOZLEKEDO):
             kimaradt.append(f"{kod} „{kari}” ({fun or '?'})")
             continue
-        jo[kod] = n
+        jo[kod] = NEPTUN_ALAK.get(n, n)
     # ugyanaz a szám két helyiségen: egyik sem kerül ki
     tobb = {n for n, db in collections.Counter(jo.values()).items() if db > 1}
     for kod in sorted(k for k, n in jo.items() if n in tobb):
