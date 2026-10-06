@@ -42,7 +42,7 @@ honnan/hova, útvonal, forgatás, panelállás). Aki ezt megérti, érti az appo
 
 ```
 npm install          # playwright (a böngésző a képen már megvan)
-npm test             # mind a 14 tesztfájl
+npm test             # mind a 15 tesztfájl
 node tests/run.js url share     # csak egy-kettő
 ```
 
@@ -66,6 +66,7 @@ hagytak egy hibás kódot.
 | `tests/a11y.js` | billentyűzetes bejárás, felolvasónak szóló jelölés |
 | `tests/perf.js` | Épület nézet: képkockánként hány renderpass, a telefon (GPU-s) kódútján — **élesben bejelentett akadozás** |
 | `tests/neptun.js` | ajtószámok (Neptun-nevek) a térképen, a keresőben (pont nélkül is: „110”) és az adatlapon; az F06 nem állhat az OA00F03-on (az F09); a földszinten Neptun-névnek látszó tervlapi kód (a büfé „F04”-e) nem állhat feliratként; a foglalható termek listájából a térképre ugrás; a párosító mód (`?parosit`) |
+| `tests/ikonok.js` | mosdó-, lépcső- és liftjel: minden mosdón és lépcsőházon a jó jel, a teremszám helyett, a feliratpontján; Épület nézetben magonként egy jelvény, alapnagyításon mind kint, teremszámra nem lógva |
 | `tests/sharp.js` | Épület nézet asztalon, nagyítva: éles-e a kép, nem mozdul-e a sűrűségtől, nem vált-e mozgás közben, csak az aktív szintnél, telefonon és más motorban nem, Firefoxban a saját kódútján (3D-ben minden szint saját transzformmal, a lapos alaprajzon egyik sem) — **élesben bejelentett „irgalmatlan életlen" asztali 3D, Chrome-ban és Firefoxban, és a Firefoxos „éles, homályos, megint éles" váltás** |
 
 ## Amit érdemes tudni, mielőtt hozzányúlsz
@@ -376,6 +377,20 @@ Ami ezt működteti, és amit ezért ne bonts meg:
 - Mindegyik saját rétegen van (`will-change`), így a mozgatásuk csak
   tologatás. Mérve (SwiftShader) Épület nézetes gesztus közben 30 lépésre
   összesen ~1 ms festést adnak, a lépésidő a mérési zajon belül marad.
+
+**Mosdó, lépcső, lift: piktogram a teremszám helyett** (az építészek kérése,
+ezeket keresik a legtöbben). Melyik helyiségnek mi jár, azt a neve dönti el
+(`iconsOf()`); a lift a tervlapon nem helyiség, a `LIFTS` lépcsőmagjában
+jár, ott a lépcső mellé kerül. Alaprajzon a szint rajzában áll, helyiségenként
+(`iconBadge()`, a jelek `<symbol>`-ok, `<use>`-zal). Épület nézetben az álló
+feliratok közt, de **magonként egy jelvényben** (`MAG_M` = 10 m-en belül egy
+mag): egyenként a szomszédos jelek a képernyőn egymásra estek, és telefonon a
+II. emeleten 10-ből 3 látszott — épp a lépcső maradt ki. A jelvény a terem
+méretétől függetlenül kint van, és elsőbbséget kap a számokkal szemben. Körülötte
+meredek szögben nagyobb a megjelenési tartalék (`pIco`, 6 → 18 px 65° és 85°
+közt): 80°-nál a mellette álló szám egy remegésnyi dőlésre 13 px-t ugrik, és
+6 px-nél ki-be kapcsolt; laposabb szögben a nagy tartalék csak számokat vinne
+el (telefonon a földszinten 12-ből 6-ot).
 
 **A lejárt vagy hiányos órarendi adat nem „szabad”.** A `tmNow()` a félév
 oktatási hetein kívül `nodata`-t ad, ünnepnapon `holiday`-t (mindkettő `–`

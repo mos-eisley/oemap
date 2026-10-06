@@ -50,9 +50,15 @@ az a helyén marad, amíg van helye. A nézetváltás, az illesztés vagy a
 szintváltás mozgása alatt eltűnnek, és a végén az új helyükön úsznak be;
 ujjal mozgatva végig követik a képet.
 
+A **mosdókon, lépcsőházakon és a liften piktogram** áll a teremszám helyett
+(női, férfi, akadálymentes mosdó, lépcső, lift), alaprajzon helyiségenként.
+Épület nézetben magonként egy jelvény mutatja, mi van ott (például lépcső,
+férfi és női mosdó), hogy a szomszédos jelek ne takarják ki egymást; ezek
+alapnagyításon is mind kint vannak.
+
 A fejlécben a **Hallgatói / Minden** kapcsoló dönti el, mely helyiségek
 látszanak. Hallgatói nézetben az irodák, üzemeltetési terek, raktárak és
-dolgozói területek semleges szürkén, felirat nélkül jelennek meg — ez a 183
+dolgozói területek halványan, felirat nélkül jelennek meg — ez a 183
 helyiségből 87. Nem tűnnek el: a födém sziluettje az összes poligonból áll
 össze, kivéve őket lyukas lenne az alaprajz. Keresésből és kiválasztásból sem
 esnek ki, csak nem versenyeznek a figyelemért.
@@ -297,7 +303,7 @@ python3 -m http.server 8000
 
 ```
 npm install     # playwright
-npm test        # mind a 14 tesztfájl
+npm test        # mind a 15 tesztfájl
 ```
 
 A tesztek maguk indítanak szervert és böngészőt szabad porton, így nem kell

@@ -31,7 +31,7 @@ run("Neptun-nevek és párosítás", async ({ t, ctx, browser, base }) => {
     const fold = { f01:db("F01"), f02:db("F02"), f09:db("F09"), f06:db("F06"), f11:db("F11"), f12:db("F12"), f03:db("F03"),
       f10:db("F10"), alak, alakPar:alak.every(x => Object.values(NEPTUN).includes(x)),
       kie01:kie("F01"), kie02:kie("F02"), kie09:kie("F09"), kie08:kie("F08"),
-      bufe:kie("OA00F04"), wc:kie("OA00F07") };
+      bufe:kie("OA00F04"), raktar:kie("OA00F05") };
     select("OA00F11"); await w(1500);
     const kartya = { cim:document.querySelector(".rcard .name").textContent,
       tm:(document.querySelector(".rcard .rtm") || {}).textContent || "" };
@@ -50,13 +50,14 @@ run("Neptun-nevek és párosítás", async ({ t, ctx, browser, base }) => {
   t("az F06 felirat nem áll a térképen (a terme hiányzik a tervlapról)", r.fold.f06 === 0, JSON.stringify(r.fold));
   t("pár nélkül a tervlapi kód a felirat", r.fold.f10 === 1, JSON.stringify(r.fold));
   /* A tervlapi rövid kód alakra egyezik a földszinti Neptun-nevekkel: a büfé
-     a tervlapon F04, a női mosdó F07. A valódi Neptun-nevek mellett ezek
+     a tervlapon F04, a raktára F05. A valódi Neptun-nevek mellett ezek
      megtévesztenének, ezért a földszinten F01…F09 alakú felirat csak
-     párosított teremen állhat, a többin a teljes tervlapi kód. */
+     párosított teremen állhat, a többin a teljes tervlapi kód. (A női mosdó,
+     a tervlapi F07, piktogramot kap, feliratot nem.) */
   t("a földszinten Neptun-névnek látszó felirat csak párosított teremen áll",
     r.fold.alakPar && r.fold.alak.length >= 7, r.fold.alak.join(", "));
-  t("a Neptun-névnek látszó tervlapi kód helyén a teljes kód: a büfén OA00F04, a női mosdón OA00F07",
-    (r.fold.bufe || []).includes("OA00F04") && (r.fold.wc || []).includes("OA00F07"), JSON.stringify(r.fold));
+  t("a Neptun-névnek látszó tervlapi kód helyén a teljes kód: a büfén OA00F04, a raktárán OA00F05",
+    (r.fold.bufe || []).includes("OA00F04") && (r.fold.raktar || []).includes("OA00F05"), JSON.stringify(r.fold));
   t("az adatlap címe a Neptun-név, és ott a foglaltsága", r.kartya.cim === "F01" && r.kartya.tm.includes("BA.F.01"),
     JSON.stringify(r.kartya).slice(0, 200));
   t("az I. emeleten is az ajtószám a felirat: Audmax, 1.10", r.emelet1.includes("Audmax") && r.emelet1.includes("1.10"),
