@@ -398,10 +398,12 @@ button{cursor:pointer;background:none;border:0}
   stroke-linejoin:round}
 /* A térkép maga egyetlen tab-állomás; a termek közt a nyilak léptetnek. */
 .stage:focus-visible{outline:2px solid var(--accent);outline-offset:-4px;border-radius:0}
-/* Nem hallgatói helyiségek: semleges kitöltés, halványan. A .showstaff a
-   fejléc kapcsolójától kerül fel, olyankor visszakapja a kategóriaszínét. */
-.room.staff{fill:var(--sunk);opacity:.62}
-.showstaff .room.staff{fill:var(--cat);opacity:1}
+/* Nem hallgatói helyiségek: a saját tervtári színükben, de halványan — a
+   színkulcs az építészeké, és a dolgozói helyiség attól még felismerhető
+   marad, hogy háttérbe húzódik. A .showstaff a fejléc kapcsolójától kerül
+   fel, olyankor teljes színben állnak. */
+.room.staff{opacity:.62}
+.showstaff .room.staff{opacity:1}
 .room.sel{stroke:var(--accent);stroke-width:.5}
 
 .ftag{position:absolute;white-space:nowrap;pointer-events:none;text-align:right;
@@ -1039,12 +1041,22 @@ function steps(rt,mm){
 }
 
 /* ------------------------------------------------------------------ színek */
+/* A helyiségek színe az Egyetemi Tervtár funkcióalaprajzainak színkulcsa
+   (Egyetemi Tervtár alapinformációk, 2026.02.24), a kulcs sorrendjében: az
+   építészek kérése, hogy a térkép az ő színezésüket kövesse, és ugyanígy
+   olvasható legyen, mint a funkcióalaprajzaik. Az értékek a kulcs képéből
+   mérve, a jelmagyarázat is ebben a sorrendben áll. */
+const CATS={"ELŐADÓ - SZEMINÁRIUM":"#fa9a90","LABOR":"#fcbcb5","IRODÁK":"#fff7da",
+  "VIZES HELYISÉGEK":"#87b6b8","SPORT - ÖLTÖZŐK":"#cac7df","HÖK":"#f9daa0","KÖZLEKEDŐK":"#cfcfcf",
+  "ELŐTEREK":"#e7e7e7","KÖZÖSSÉGI TEREK":"#ffb062","RAKTÁROZÁS/TÁROLÁS":"#d1d685",
+  "DOLGOZÓI TERÜLETEK":"#bdd0d7","ÜZEMELTETÉS":"#99acbf","EGYETEMI SZOLGÁLTATÁS":"#b0c3a8",
+  "KÖNYVTÁR":"#d3c7be","KÜLSŐS SZOLGÁLTATÁS":"#b5909b"};
 const DARK=[11,19,28];
 const _c={};
 const isDark=()=>{const a=document.documentElement.getAttribute("data-theme");
   return a?a==="dark":matchMedia("(prefers-color-scheme: dark)").matches;};
 function cc(cat){
-  const base=D.cats[cat]||"#cfd6dd",key=cat+(isDark()?"|d":"|l");
+  const base=CATS[cat]||D.cats[cat]||"#cfd6dd",key=cat+(isDark()?"|d":"|l");
   if(_c[key])return _c[key];
   let out=base;
   if(isDark()){
@@ -1106,7 +1118,6 @@ function buildFloors(){
     for(const r of rs){
       const po=el("polygon",{points:r.poly.map(p=>p.join(",")).join(" "),fill:cc(r.cat),
         class:"room"+(r.code?" pick":"")+(S.sel===r.code?" sel":"")+(STAFF.has(r.cat)?" staff":"")});
-      if(STAFF.has(r.cat)) po.style.setProperty("--cat",cc(r.cat));
       if(r.code){
         po.addEventListener("click",e=>{e.stopPropagation();select(r.code);});
         const nm=r.code+" · "+(r.name||r.cat);
@@ -2288,7 +2299,7 @@ function renderPanel(){
           <span>${t.qentry}<small>OA00FK1</small></span></button>
       </div>
       <details class="legfold"><summary>${t.legend2}</summary>
-        <div class="grid">${Object.keys(D.cats).map(n=>
+        <div class="grid">${Object.keys(CATS).map(n=>
           `<div><i style="background:${cc(n)}"></i>${esc(n.toLowerCase())}</div>`).join("")}</div></details>`;
   }
   box.innerHTML=h;
@@ -2354,7 +2365,7 @@ function renderRail(){
 function renderLegend(){
   const t=T();
   $("legT").textContent=t.legend;
-  $("legPop").innerHTML=`<div class="grid">${Object.keys(D.cats).map(n=>
+  $("legPop").innerHTML=`<div class="grid">${Object.keys(CATS).map(n=>
     `<div><i style="background:${cc(n)}"></i>${esc(n.toLowerCase())}</div>`).join("")}</div>
     <div class="src">${esc(D.meta.source)}</div>`;
 }

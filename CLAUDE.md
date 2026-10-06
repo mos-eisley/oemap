@@ -30,7 +30,7 @@ A beépített `const D = {...}` tartalmazza az épületet:
 | --- | --- | --- |
 | `levels` | 7 szint, az Alagsortól (−1) a IV. emeletig (5) | |
 | `rooms` | helyiségek: `code`, `name`, `cat`, `level`, `area`, poligon | 183 |
-| `cats` | 15 helyiség-kategória és a színük | |
+| `cats` | 15 helyiség-kategória (a színüket a kód `CATS` táblája adja, a tervtári színkulcsból) | |
 | `walls`, `masks` | falgeometria és a szint sziluettje | |
 | `grid` | a járásrács, ezen fut a Dijkstra | |
 | `stairs`, `lifts` | függőleges átjárók a szintek közt | |
@@ -60,7 +60,7 @@ hagytak egy hibás kódot.
 | `tests/labels.js` | teremszámok Épület nézetben: ott vannak, állnak, a termük fölött, élből nézve is, és nem villognak |
 | `tests/lift.js` | lépcső vs. lift alternatíva |
 | `tests/sheet.js` | az alsó panel aljának elérhetősége |
-| `tests/staff.js` | hallgatói/minden szűrő |
+| `tests/staff.js` | hallgatói/minden szűrő; a tervtári színkulcs (minden helyiség, a halványított is a saját színében; a jelmagyarázat sorrendje) |
 | `tests/termek.js` | foglalható termek: heti órák, páros/páratlan hét, ünnepnap, a félév előtti és utáni nap, a más karral közös termek, a térképen kiválasztott terem adatlapja, és a deploy után a régi service workerben ragadt fájl |
 | `tests/pwa.js` | manifest, service worker, **offline indulás**, a teremadat frissessége |
 | `tests/a11y.js` | billentyűzetes bejárás, felolvasónak szóló jelölés |
