@@ -721,7 +721,7 @@ const I18N={hu:{
   shareRoute:"Útvonal · %s → %s", shareRoom:"%s · OA épület",
   stStudent:"Hallgatói", stAll:"Minden", stTitle:"Mely helyiségek látszanak",
   stHint:"Az irodák, raktárak és üzemeltetési terek halványan jelennek meg.",
-  qwc:"Legközelebbi mosdó", qbufe:"Büfé", qentry:"Főbejárat · előtér",
+  qwc:"Legközelebbi mosdó", qbufe:"Büfé", qentry:"Porta",
   qrooms:"Foglalható termek", qroomsSub:"most szabad vagy foglalt",
   tmTitle:"Foglalható termek", tmFree:"Szabad", tmBusy:"Foglalt",
   tmUntil:"%s-ig", tmFrom:"%s-tól", tmNoData:"Erre a napra nincs adat",
@@ -735,7 +735,7 @@ const I18N={hu:{
   pairFor:"Neptun-név ehhez: %s", pairNone:"Nincs Neptun-neve", pairTaken:"most: %s",
   tmRange:"%s. félév, Neptun: %s – %s.",
   kEloadas:"előadás", kGyakorlat:"gyakorlat", kLabor:"labor", kEgyeb:"egyéb",
-  qsub:"innen: %s", qsub0:"a földszinti előtértől", legend2:"Funkció szerinti színek",
+  qsub:"innen: %s", qsub0:"a portától", legend2:"Funkció szerinti színek",
   mapLabel:"Alaprajz — %s", mapLabel3:"Épület, 3D nézet — %s",
   mapHint:"Nyílbillentyűkkel léptethetsz a helyiségek közt, Enterrel kiválasztod. A Page Up és Page Down szintet vált.",
   aLevel:"%s. Ezen a szinten %s helyiség van.",
@@ -764,7 +764,7 @@ const I18N={hu:{
   shareRoute:"Route · %s → %s", shareRoom:"%s · OA building",
   stStudent:"Student", stAll:"All", stTitle:"Which rooms are shown",
   stHint:"Offices, stores and plant rooms are shown dimmed.",
-  qwc:"Nearest toilet", qbufe:"Café", qentry:"Main entrance · lobby",
+  qwc:"Nearest toilet", qbufe:"Café", qentry:"Front desk",
   qrooms:"Bookable rooms", qroomsSub:"free or busy right now",
   tmTitle:"Bookable rooms", tmFree:"Free", tmBusy:"Busy",
   tmUntil:"until %s", tmFrom:"from %s", tmNoData:"No data for this day",
@@ -778,7 +778,7 @@ const I18N={hu:{
   pairFor:"Neptun name for %s", pairNone:"No Neptun name", pairTaken:"now: %s",
   tmRange:"Semester %s, from Neptun: %s to %s.",
   kEloadas:"lecture", kGyakorlat:"practice", kLabor:"lab", kEgyeb:"other",
-  qsub:"from %s", qsub0:"from the ground-floor lobby", legend2:"Function colours",
+  qsub:"from %s", qsub0:"from the front desk", legend2:"Function colours",
   mapLabel:"Floor plan — %s", mapLabel3:"Building, 3D view — %s",
   mapHint:"Use the arrow keys to move between rooms and Enter to select. Page Up and Page Down change level.",
   aLevel:"%s. This level has %s rooms.",
@@ -831,6 +831,11 @@ const BB=(()=>{let a=1e9,b=1e9,c=-1e9,d=-1e9;
   return {x0:a,y0:b,x1:c,y1:d,cx:(a+c)/2,cy:(b+d)/2,w:(c-a)*PXM,h:(d-b)*PXM};})();
 const OFFX=PW/2-BB.cx*PXM, OFFY=PH/2-BB.cy*PXM;
 const ROOM=Object.fromEntries(D.rooms.filter(r=>r.code).map(r=>[r.code,r]));
+/* Honnan indul a navigáció, ha a hallgató nem ad meg indulást (a megrendelő
+   kérése): a porta, az alagsori bejárat (OAX1AK1 szélfogó, OAX1AK2 aula)
+   mellett. Aki QR-kódot olvas be vagy maga választ indulást („Innen"), az
+   onnan indul. */
+const START="OAX1A02";
 /* A tervlapi kód és az ajtón álló teremszám megfeleltetése. A hallgató az
    ajtón és a Neptun-órarendjében ugyanazt a számot látja (F01, 1.10, Audmax),
    a tervlap viszont a saját üzemeltetési kódját (OA00F11), és a két számozás
@@ -2379,7 +2384,7 @@ function renderPanel(){
         <button class="qbtn" data-q="@ENTRY"><svg width="19" height="19" viewBox="0 0 20 20" fill="none"
           stroke="currentColor" stroke-width="1.5"><path d="M11.5 2.8h4.2v14.4h-4.2"/>
           <path d="M8.6 10H2.9M5.6 6.9 2.5 10l3.1 3.1"/></svg>
-          <span>${t.qentry}<small>OA00FK1</small></span></button>
+          <span>${t.qentry}<small>${START}</small></span></button>
       </div>
       <details class="legfold"><summary>${t.legend2}</summary>
         <div class="grid">${Object.keys(CATS).map(n=>
@@ -2405,21 +2410,34 @@ function renderPanel(){
     catch(_){ ta.focus(); ta.select(); } };
   if(px) px.onclick=()=>{ location.href=location.pathname+location.hash; };
 }
+/* Mi számít találatnak a gyorsgomboknál. A névben keresés magában kevés: a
+   „BÜFÉ" a büfé raktárára (OA00F05) is illik, és onnan közelebb esett, mint a
+   büfé; a „WC" pedig a porta mögötti dolgozói öltözőblokk két mosdójára
+   (OAX1A09, OAX1A12) is, és a portáról indulva épp oda vitt volna. */
+const DOLGOZOI_WC=new Set(["OAX1A09","OAX1A12"]);
+const QUICK_OK=(key,r)=>{
+  const n=(r.name||"").toUpperCase();
+  if(key==="BÜFÉ") return n==="BÜFÉ";
+  if(key==="WC") return n.includes("WC") && !DOLGOZOI_WC.has(r.code);
+  return n.includes(key);
+};
 function quick(key){
   if(key==="@ROOMS"){ S.view0=S.tmOpen=null; S.termek=true;
     renderTermek(); tmLoad().then(()=>{ if(S.termek) renderTermek(); });
     if(MOB()) setSnap("full");
     return; }
-  if(key==="@ENTRY"){ const e=ROOM["OA00FK1"]; if(e){S.from=e.code;select(e.code);renderPanel();} return; }
+  if(key==="@ENTRY"){ const e=ROOM[START]; if(e){S.from=e.code;select(e.code);renderPanel();} return; }
   const src = S.from ? ROOM[S.from]
-    : (ROOM["OA00FK1"] || D.rooms.filter(r=>r.circ&&r.level===S.level).sort((a,b)=>b.area-a.area)[0]);
+    : (ROOM[START] || D.rooms.filter(r=>r.circ&&r.level===S.level).sort((a,b)=>b.area-a.area)[0]);
   if(!src) return;
   let best=null;
   for(const r of D.rooms){
-    if(!r.code||!(r.name||"").toUpperCase().includes(key)) continue;
+    if(!r.code||!QUICK_OK(key,r)) continue;
     const rt=findRoute(src,r); if(!rt) continue;
-    const m=analyse(rt);
-    if(!best||m.dist<best.m.dist) best={r,m};
+    // menetidő, a lépcsővel együtt: a vízszintes táv magában a portáról három
+    // emelettel feljebb lévő mosdót adta „legközelebbinek"
+    const m=analyse(rt), sec=m.dist/1.3+m.vert*22;
+    if(!best||sec<best.sec) best={r,m,sec};
   }
   if(!best) return;
   S.from=src.code; S.to=best.r.code; S.sel=best.r.code;
@@ -2431,7 +2449,7 @@ function epRow(kind){
   return `<button class="ep ${kind==="to"?"to":""}" data-ep="${kind}"><span class="pin"></span>
     <span class="txt"><small>${kind==="from"?t.start:t.dest}</small>
     <span>${r?esc((r.name||r.cat)+" · "+r.code):"—"}</span></span>
-    ${r?`<span class="x" data-clear="${kind}">×</span>`:""}</button>`;
+    ${r&&!(kind==="from"&&c===START&&S.to)?`<span class="x" data-clear="${kind}">×</span>`:""}</button>`;
 }
 function renderRail(){
   const rail=$("rail");
@@ -2493,6 +2511,8 @@ function setVia(v){
   updateView();
 }
 function recompute(){
+  // cél van, indulás nincs: a portáról
+  if(S.to && !S.from && ROOM[START] && S.to!==START) S.from=START;
   const pair=S.from&&S.to&&S.from!==S.to;
   const a=pair?ROOM[S.from]:null, b=pair?ROOM[S.to]:null;
   S.routes={stairs:pair?findRoute(a,b,PORTAL):null, lift:pair?findRoute(a,b,PORTAL_LIFT):null};

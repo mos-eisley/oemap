@@ -162,6 +162,14 @@ kilépne:
 | `#OA10E18` | ez a terem ki van választva |
 | `#from=OA00FK1` | „itt vagyok" — az indulás megvan, a célt a hallgató adja meg |
 | `#from=OA00FK1&to=OA10E18` | kész útvonal |
+| `#to=OA10E18` | útvonal a portától |
+
+**Alapból a portáról indul a navigáció** (OAX1A02, az alagsori bejárat
+mellett): ha a hallgató célt választ („Ide", link, gyorsgomb), de indulást
+nem, az útvonal onnan számol. Amit maga ad meg (QR-kód, „Innen"), az
+felülírja. A gyorsgombok közül a **Legközelebbi mosdó** a menetidő szerint
+legközelebbi hallgatói mosdót adja (a lépcsőzéssel együtt, a dolgozói öltöző
+mosdói nélkül), a **Büfé** a büfét.
 
 Ismeretlen kódot a link csendben elhagy: az app elindul, csak épp kiválasztás
 nélkül. A panelben a megosztás gomb a pillanatnyi állapot linkjét adja —
