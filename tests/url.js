@@ -28,6 +28,41 @@ run("mély link (URL-állapot)", async ({ t, ctx, base }) => {
   t("#from=&to= kiszámolja az útvonalat", c.from==="OA00FK1" && c.to==="OA10E18" && c.ut, JSON.stringify(c));
   await p.close();
 
+  /* C2) A megrendelő kérése: ha nincs megadva indulás, a navigáció a
+     portáról indul — linkből, az „Ide” gombbal és a gyorsgombokkal is.
+     Amit a hallgató maga ad meg (QR, „Innen”), az felülírja. */
+  p = await open(ctx, base + "#to=OA10E18", { settle: 1400 });
+  let c2 = await st(p);
+  t("csak cél: a portáról indul, és van útvonal", c2.from === "OAX1A02" && c2.to === "OA10E18" && c2.ut, JSON.stringify(c2));
+  const x = await p.evaluate(() => [...document.querySelectorAll("[data-ep='from'] .x")].length);
+  t("a portáról induló útvonalnál az indulás nem törölhető (azonnal visszajönne)", x === 0, "× gomb: " + x);
+  await p.close();
+  p = await open(ctx, base, { settle: 1400 });
+  await p.evaluate(() => select("OA20E01")); await p.waitForTimeout(300);
+  await p.click("#bT"); await p.waitForTimeout(400);
+  const ide = await st(p);
+  t("az „Ide” gomb a portáról tervez", ide.from === "OAX1A02" && ide.to === "OA20E01" && ide.ut, JSON.stringify(ide));
+  await p.evaluate(() => { S.from = S.to = S.sel = null; S.route = null; renderPanel(); });
+  await p.evaluate(() => quick("WC")); await p.waitForTimeout(400);
+  const wc = await st(p);
+  t("a gyorsgomb is a portáról keres", wc.from === "OAX1A02" && !!wc.to && wc.ut, JSON.stringify(wc));
+  /* A portáról a legközelebbi mosdó a földszinti mosdócsoport: nem a porta
+     mögötti dolgozói öltöző WC-je, és nem egy három emelettel feljebb lévő,
+     ami csak vízszintesen van közelebb. A büfé gomb a büfébe visz, nem a
+     raktárába. */
+  const wcSzint = await p.evaluate(c => ROOM[c] && ROOM[c].level, wc.to);
+  t("a mosdó gomb hallgatói mosdót ad, a menetidő szerint a legközelebbit",
+    !["OAX1A09", "OAX1A12"].includes(wc.to) && wcSzint === 0, JSON.stringify(wc) + " szint " + wcSzint);
+  await p.evaluate(() => { S.from = S.to = S.sel = null; S.route = null; quick("BÜFÉ"); }); await p.waitForTimeout(300);
+  t.eq("a büfé gomb a büfébe visz", (await st(p)).to, "OA00F04");
+  const sub = await p.evaluate(() => { S.from = S.to = S.sel = null; S.route = null; renderPanel();
+    return document.querySelector(".qgrid small") && document.querySelector(".qgrid small").textContent; });
+  t("a gyorsgombok alcíme a portát mondja", sub === "a portától", sub);
+  await p.close();
+  p = await open(ctx, base + "#from=OA00FK1&to=OA10E18", { settle: 1400 });
+  t.eq("a megadott indulás felülírja a portát", (await st(p)).from, "OA00FK1");
+  await p.close();
+
   // D) rövid alak, és a jó szintre ugrás
   p = await open(ctx, base + "#OA20E01", { settle: 1400 });
   let d = await st(p);

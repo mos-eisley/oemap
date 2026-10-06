@@ -54,7 +54,7 @@ hagytak egy hibás kódot.
 | fájl | mit őriz |
 | --- | --- |
 | `tests/view.js` | alaprajz/épület váltás, szintváltás, kiválasztás valódi egérrel és érintéssel (Épület nézetben is), a falak oldallapja — **élesben bejelentett: asztalon kattintásra nem jött elő a terem** |
-| `tests/url.js` | mély linkek, a vissza gomb, hibás link |
+| `tests/url.js` | mély linkek, a vissza gomb, hibás link; indulás nélkül a portáról (`START`) tervez — linkből, az „Ide” gombbal, a gyorsgombokkal; a mosdó és a büfé gomb célja |
 | `tests/share.js` | megosztás gomb mindkét ága |
 | `tests/gestures.js` | csippentés, forgatás, tolás, a kétujjas felemelés, akadozó képnél is — **élesben bejelentett fagyás**, „csúnya átmenet" és a vissza nem váltó lefelé húzás |
 | `tests/labels.js` | teremszámok Épület nézetben: ott vannak, állnak, a termük fölött, élből nézve is, és nem villognak |
