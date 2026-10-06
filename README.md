@@ -245,8 +245,10 @@ Az Óbudai Egyetem Brand Guide 2026 / 1.0 szerint:
 
 Az útvonal narancs marad: tájékozódási szín, nem arculati elem, és a kézikönyv
 másodlagos színei közül egyik sem ad elég kontrasztot a világos alaprajzon.
-A helyiség-kategóriák színei szintén változatlanok — azok a jelmagyarázathoz
-tartoznak, nem a márkamegjelenéshez.
+A helyiség-kategóriák színei nem a márkához, hanem az Egyetemi Tervtár
+funkcióalaprajzaihoz igazodnak: a színkulcsuk (alapinformációk, 2026.02.24)
+15 színe, az ő sorrendjükben, az építészek kérésére. A hallgatói nézetben a
+dolgozói helyiségek ugyanebben a színben, halványan állnak.
 
 A betűtípusok szabadon terjeszthetők (Metropolis: public domain, Open Sans és
 IBM Plex Mono: SIL Open Font License); a licencfájlok a `fonts/` mappában vannak.
