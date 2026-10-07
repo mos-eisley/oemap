@@ -3,7 +3,9 @@
    vagyok"-ja (#from=…), magyar nyelv, alaprajz; tíz másodperccel előtte szól,
    és egy érintés megállítja. Gesztus közben soha, és totem-mód nélkül soha.
    Naponta egyszer újratölt. Az időt a Playwright órája ugratja, nem várunk
-   percekig; a használat valódi kattintás, mert csak a valódi bevitel számít. */
+   percekig; a használat valódi kattintás, mert csak a valódi bevitel számít.
+   Élesben jelentették, hogy „nem működik": egy meglévő link végére írt
+   ?totem a # után kerül, és ott a totem mód csendben nem kapcsolt be. */
 const { run, DESKTOP } = require("./lib");
 
 run("totem-mód", async ({ t, ctx, base }) => {
@@ -78,8 +80,30 @@ run("totem-mód", async ({ t, ctx, base }) => {
   t("a totemen nincs JS hiba", p.jsErrors.length === 0, p.jsErrors.join(" | "));
   await p.close();
 
-  // totem-mód nélkül soha nem áll vissza
+  // a link végére írt ?totem (vagy &totem) a # után kerül: így is totem mód,
+  // a cím a szokásos alakra áll, és a from sem vész el
+  for (const veg of ["?totem", "&totem"]) {
+    const r = await nyit(base + "#from=OA00FK1" + veg);
+    const cim = await r.evaluate(() => ({ totem:TOTEM, search:location.search, hash:location.hash, from:S.from,
+      jelez:(document.querySelector("#toast.on") || {}).textContent || "" }));
+    t(`„#from=OA00FK1${veg}”: totem mód, a cím ?totem#from=OA00FK1 alakra áll, a from megvan`,
+      cim.totem === true && cim.search === "?totem" && cim.hash === "#from=OA00FK1" && cim.from === "OA00FK1", JSON.stringify(cim));
+    t(`„#from=OA00FK1${veg}”: induláskor szól, hogy totem módban fut`, /Totem/.test(cim.jelez), cim.jelez);
+    await hasznal(r); await r.mouse.move(700, 400);
+    await r.clock.fastForward(61000); await r.waitForTimeout(1500);
+    const v = await allapot(r);
+    t(`„#from=OA00FK1${veg}”: egy perc tétlenség után alaphelyzet, a totem helyével`,
+      v.from === "OA00FK1" && !v.to && v.lang === "hu" && v.mode === 2 && v.hash === "#from=OA00FK1", JSON.stringify(v));
+    await r.reload({ waitUntil:"load" }); await r.waitForFunction(() => document.querySelectorAll(".floor").length > 0);
+    t(`„#from=OA00FK1${veg}”: újratöltve is totem mód marad`, await r.evaluate(() => TOTEM && location.search === "?totem"));
+    t(`„#from=OA00FK1${veg}”: nincs JS hiba`, r.jsErrors.length === 0, r.jsErrors.join(" | "));
+    await r.close();
+  }
+
+  // totem-mód nélkül soha nem áll vissza, és nem is szól róla
   const q = await nyit(base + "#from=OA00FK1");
+  const csendes = await q.evaluate(() => (document.querySelector("#toast.on") || {}).textContent || "");
+  t("totem mód nélkül induláskor nincs totem-jelzés", !/Totem/.test(csendes), csendes);
   await hasznal(q);
   const elotte = await allapot(q);
   await q.clock.fastForward(5 * 60000); await q.waitForTimeout(500);
