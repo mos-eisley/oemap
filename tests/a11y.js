@@ -162,5 +162,51 @@ run("billentyűzet és felolvasó", async ({ t, ctx, base }) => {
   t("a találati sor aria-current-öt használ, nem aria-selected",
     res.current && !res.selected, JSON.stringify(res));
 
+  /* ---- az újrarajzolás nem dobja el a fókuszt ----
+     A panel, a foglalható termek listája és a szintválasztó innerHTML-lel
+     épül újra, a szintek a téma váltásakor. Előtte egy gombnyomás után a
+     fókusz a <body>-ra esett, és a következő Tab a panel elejére vitt vissza,
+     nem a megnyomott gomb utánra. Valódi billentyűvel, mert a szintetikus
+     kattintás nem ugyanazt az utat járja. */
+  const fokusz = () => p.evaluate(() => { const a = document.activeElement;
+    return { id: a.id, q: a.dataset.q, l: a.dataset.l, code: a.dataset.code, tag: a.tagName,
+      panelben: document.getElementById("scroll").contains(a), to: S.to, lv: S.level }; });
+  await p.evaluate(() => { S.from = S.to = null; S.wc = null; select("OA00F01"); });
+  await p.waitForTimeout(300);
+  await p.locator("#bT").focus(); await p.keyboard.press("Enter"); await p.waitForTimeout(300);
+  const ide = await fokusz();
+  t("az „Ide megyek” után a fókusz ugyanazon a gombon marad", ide.to === "OA00F01" && ide.id === "bT", JSON.stringify(ide));
+
+  await p.evaluate(() => { S.from = S.to = S.sel = null; S.wc = null; recompute(); refreshSel(); renderPanel(); });
+  await p.locator('[data-q="WC"]').focus(); await p.keyboard.press("Enter"); await p.waitForTimeout(300);
+  const wc = await fokusz();
+  t("a mosdó gomb után a fókusz a gombon marad, fölötte a lista", wc.q === "WC" &&
+    await p.evaluate(() => !!document.querySelector("[data-wc]")), JSON.stringify(wc));
+  await p.locator("[data-wc]").first().focus(); await p.keyboard.press("Enter"); await p.waitForTimeout(400);
+  const sor = await fokusz();
+  t("ha a választott sor eltűnik (kész az útvonal), a fókusz a panelben marad", !!sor.to && sor.panelben,
+    JSON.stringify(sor));
+
+  // a foglalható termek listája: a sor kinyitása után a fókusz ugyanazon a soron
+  await p.evaluate(() => { S.from = S.to = S.sel = null; quick("@ROOMS"); });
+  await p.waitForSelector("[data-tm]");
+  const nev = await p.locator("[data-tm]").nth(1).getAttribute("data-tm");
+  await p.locator(`[data-tm="${nev}"]`).focus(); await p.keyboard.press("Enter"); await p.waitForTimeout(300);
+  const tm = await p.evaluate(() => ({ tm: document.activeElement.dataset.tm, nyitva: S.tmOpen }));
+  t("a foglalható termek listájában a kinyitott sor marad fókuszban", tm.nyitva === nev && tm.tm === nev,
+    JSON.stringify({ nev, ...tm }));
+
+  await p.locator('#rail [data-l="2"]').focus(); await p.keyboard.press("Enter"); await p.waitForTimeout(600);
+  const sint = await fokusz();
+  t("a szintválasztó gombja a szintváltás után is fókuszban marad", sint.lv === 2 && sint.l === "2", JSON.stringify(sint));
+
+  await p.locator("#stage").focus(); await p.keyboard.press("ArrowDown");
+  const kod = (await fokusz()).code;
+  await p.emulateMedia({ colorScheme: "dark" }); await p.waitForTimeout(600);
+  const tema = await fokusz();
+  t("a rendszer témájának váltása után a fókusz ugyanazon a termen marad", !!kod && tema.code === kod &&
+    await p.evaluate(() => matchMedia("(prefers-color-scheme: dark)").matches), JSON.stringify({ kod, ...tema }));
+  await p.emulateMedia({ colorScheme: "light" });
+
   t("nincs JS hiba", p.jsErrors.length === 0, p.jsErrors.join(" | "));
 }, DESKTOP);

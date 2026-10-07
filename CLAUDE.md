@@ -19,7 +19,7 @@ A projekt meetingjén ez a kettő lett kimondva, és minden vitás kérdést ez 
 
 ## Felépítés
 
-`index.html` (~380 KB, tömörítve ~108 KB) **maga a teljes alkalmazás** — HTML, CSS és JS egy
+`index.html` (~410 KB, tömörítve ~113 KB) **maga a teljes alkalmazás** — HTML, CSS és JS egy
 fájlban, build lépés és futásidejű függőség nélkül. Ez szándékos: a
 GitHub Pages statikusan szolgálja ki, és offline is működik. Az egyetlen külső
 fájl a `fonts/`, az `icons/`, a `data/` és a `sw.js`. A `meres.html` nem az app
@@ -35,6 +35,7 @@ A beépített `const D = {...}` tartalmazza az épületet:
 | `walls`, `masks` | falgeometria és a szint sziluettje | |
 | `grid` | a járásrács, ezen fut a Dijkstra | |
 | `stairs`, `lifts` | függőleges átjárók a szintek közt | |
+| `flights` | lépcsőkarok az induló szintjükön (a fokok körvonala és a járásvonal); csak rajz, az útvonal a `stairs`-en fut | 38 |
 
 Az `S` objektum az egész futásidejű állapot (nyelv, téma, nézet, szint,
 honnan/hova, útvonal, forgatás, panelállás). Aki ezt megérti, érti az appot.
@@ -43,7 +44,7 @@ honnan/hova, útvonal, forgatás, panelállás). Aki ezt megérti, érti az appo
 
 ```
 npm install          # playwright (a böngésző a képen már megvan)
-npm test             # mind a 21 tesztfájl
+npm test             # mind a 22 tesztfájl
 node tests/run.js url share     # csak egy-kettő
 ```
 
@@ -64,12 +65,13 @@ hagytak egy hibás kódot.
 | `tests/staff.js` | hallgatói/minden szűrő; a tervtári színkulcs (minden helyiség, a halványított is a saját színében; a jelmagyarázat sorrendje) |
 | `tests/termek.js` | foglalható termek: heti órák, páros/páratlan hét, ünnepnap, a félév előtti és utáni nap, a más karral közös termek, a térképen kiválasztott terem adatlapja, a sorrend (ami most szabad, elöl; az indulástól menetidő szerint), és a deploy után a régi service workerben ragadt fájl |
 | `tests/pwa.js` | manifest, service worker, **offline indulás**, a teremadat frissessége |
-| `tests/a11y.js` | billentyűzetes bejárás, felolvasónak szóló jelölés |
+| `tests/a11y.js` | billentyűzetes bejárás, felolvasónak szóló jelölés; a panel és a szintválasztó újrarajzolása, a téma váltása nem dobja el a fókuszt |
 | `tests/perf.js` | Épület nézet: képkockánként hány renderpass, a telefon (GPU-s) kódútján — **élesben bejelentett akadozás** |
 | `tests/neptun.js` | ajtószámok (Neptun-nevek) a térképen, a keresőben (pont nélkül is: „110”) és az adatlapon; az F06 nem állhat az OA00F03-on (az F09); a földszinten Neptun-névnek látszó tervlapi kód (a büfé „F04”-e) nem állhat feliratként; a foglalható termek listájából a térképre ugrás; a párosító mód (`?parosit`) |
 | `tests/ajtok.js` | az útvonal az ajtó előtt ér véget, több ajtó közül a közelebbinél; a csak más helyiségen át megközelíthető termekhez (I. emelet E03–E07, II. emelet E03, E04) is van útvonal, és a lépések kiírják, min át |
 | `tests/lepesek.js` | az útvonal lépései: a lépcsőzés egy lépésben, nevén nevezett célszinttel („Lépcsőn fel a II. emeletre”, angolul „…to the 2nd floor”), a félemelet fél emelet, a cél az ajtószámmal |
 | `tests/eler.js` | minden helyiséghez van-e út (lépcsőn a portától, lifttel a földszintről); a kivételek listája két irányba szigorú |
+| `tests/lepcsok.js` | a lépcsőkarok rajza: minden lépcsőház minden szintváltásánál ott a kar, karonként egy kis path a falak alatt, és a vonalára kattintva a lépcsőház jön elő, nem törlődik a kijelölés |
 | `tests/ikonok.js` | mosdó-, lépcső- és liftjel: minden mosdón és lépcsőházon a jó jel, a teremszám helyett, a feliratpontján; Épület nézetben magonként egy jelvény, alapnagyításon mind kint, teremszámra nem lógva |
 | `tests/sharp.js` | Épület nézet asztalon, nagyítva: éles-e a kép, nem mozdul-e a sűrűségtől, nem vált-e mozgás közben, csak az aktív szintnél, telefonon és más motorban nem, Firefoxban a saját kódútján (3D-ben minden szint saját transzformmal, a lapos alaprajzon egyik sem) — **élesben bejelentett „irgalmatlan életlen" asztali 3D, Chrome-ban és Firefoxban, és a Firefoxos „éles, homályos, megint éles" váltás** |
 | `tests/totem.js` | totem mód: egy perc tétlenség után alaphelyzet, tíz másodperccel előtte szól, gesztus közben soha, naponta újratölt — a Playwright órájával, percekig várás nélkül; a link végére, a # után írt `?totem` is bekapcsolja — **élesben bejelentett: „nem működik az alaphelyzet"** |
@@ -463,6 +465,21 @@ megnézi, benne áll-e a fókusz, és kihozza a térképre. Aki a szintváltásh
 nyúl, ezt vigye tovább — enélkül a felolvasó némán áll egy olyan elemen,
 amiről a felhasználó semmit nem tud meg.
 
+**Az újrarajzolás sem dobhatja el a fókuszt.** A panel (`renderPanel()`), a
+foglalható termek listája (`renderTermek()`) és a szintválasztó
+(`renderRail()`) `innerHTML`-lel épül újra, a szintek a téma váltásakor
+(`applyTheme()`). Ha a fókusz ezekben állt, az elem kikerül alóla, a fókusz a
+`<body>`-ra esik, és a következő Tab (Chromiumban mérve) a panel elejére visz
+vissza, nem a megnyomott gomb utánra. Ezért újraépítés előtt a
+`fokuszElotte()` megjegyzi, min állt (`id`, vagy a `FOKUSZ_KULCS` egyik
+`data-*` kulcsa), a `fokuszUtana()` pedig utána ugyanarra teszi vissza; ha az
+már nincs (a választott mosdósor eltűnt, mert kész az útvonal), a doboz első
+gombjára. Ha közben a kód maga vitte máshová a fókuszt (térkép, kereső), azt
+nem írja felül. A téma váltása után az `applyTheme()` a térképen álló fókuszt
+ugyanarra a teremre adja vissza. Új panelgombnál adj `id`-t vagy
+`FOKUSZ_KULCS`-beli `data-*` kulcsot, különben az első gombra kerül vissza a
+fókusz. A `tests/a11y.js` valódi billentyűvel nyomja végig.
+
 **Totem mód (`?totem#from=<a totem helye>`).** Az e-totemen ott maradt az
 előző ember útvonala, nyelve, nézete. Egy perc tétlenség után a `totemAlap()`
 mindent visszaállít: a címben megadott „itt vagyok”, magyar nyelv, alaprajz, a
@@ -533,13 +550,60 @@ kell:
   (`entryOf()`), az útvonal a lánc utolsó helyiségének ajtajáig vezet, és a
   lépésekben kiírja, min át („Bejárat ezen át:"). Több ajtónál a keresés
   mindegyikből indul, és bármelyik célajtónál megáll — a közelebbit kapod.
-- Az IFC-ben nincs lift, és a lépcsőknek nincs geometriája, csak helye. A
-  lift ezért továbbra is kézzel felvett (`D.lifts`). A félemeleti FL4 és FL5
-  az IFC szerint a földszintről az Audmax alsó szintjére visz; nincs
-  összekötve, mert akkor az útvonal az Audmaxon át vághatna rövidebbet.
+- A lépcső és a lift is benne van az IFC-ben, csak nem név szerint
+  kereshetően: lásd a következő pontot. A félemeleti FL4 és FL5 az IFC
+  szerint a földszintről az Audmax alsó szintjére visz; nincs összekötve,
+  mert akkor az útvonal az Audmaxon át vághatna rövidebbet.
 - Sorrend: előbb a szárny (`tervlap-szarny.py`), utána ez, hogy az új
   helyiségek ajtói is bekerüljenek. A `tests/ajtok.js` őrzi; ha az app nem
   veszi figyelembe a `doors`-t és a `via`-t, tízből hat állítása elbukik.
+
+**A lépcső és a lift az IFC-ben: benne van, csak nem ott, ahol keresnéd.**
+Ez a fájl korábban azt írta, hogy az IFC-ben nincs lift, és a lépcsőknek
+nincs geometriája, csak helye. Ez téves volt: a vizsgálat a lépcsőnek csak a
+tárolóját nézte, liftet pedig név szerint keresett. Amit tudni kell:
+- A lépcső **tárolóelem** (`LÉPCSŐ`; az export beállítása: „Stair export
+  mode: Container Element"). A tárolónak csak helye van, a geometria a
+  részeiben, a 44 karban (`LK SZERKEZET`, Brep). A kar az `IfcRelAggregates`
+  révén tartozik a tárolóhoz, és saját szintje sincs: a tárolóét örökli.
+- **Lift nevű elem nincs**, és `IfcTransportElement` sincs. A fülke névtelen
+  könyvtári elem (`Tárgy`), egy 2,5 m magas doboz, amit csak a méretéről és a
+  helyéről lehet felismerni. Az aknát a födémek mutatják: nyíláselem
+  (`IfcOpeningElement`) nincs rajtuk, de a szint födémjeinek egyesített
+  körvonalában ott a lyuk. Az FL3 magban két 1,26×1,56 m-es fülke áll, az
+  akna 15,7 m² a földszint, az I., a II. és a III. emelet födémjében (a
+  IV.-ben 19,3 m²). Van egy **második lift** is, amit az app nem ismer: egy
+  1,26×2,56 m-es fülke a földszinten, az alagsori OAX1A25 LIFT GÉPÉSZET
+  fölött, és egy 7,9 m²-es akna az I. és a II. emelet födémjében (a III.
+  emeleté már zárja).
+- Az export csak a **kijelölt elemeket** tartalmazza („Elements to export:
+  Selected elements only"). Ha valamit nem találsz benne, attól az még
+  lehet az épületben.
+- A karokat a `tools/ifc-lepcsok.py` írja a térképbe (`D.flights`). A
+  karonként felfelé néző vízszintes lapokat magasság szerint csoportosítja,
+  ezek a fokok; a járásvonal a fokok közepén fut alulról felfelé, a végén
+  nyílheggyel. A kar az induló szintjén áll. Ami nagyobbrészt a szint
+  helyiségein kívül esik (az épület szélén, kívül álló lépcsők), az
+  kimarad: 44-ből 38 kar kerül a térképre. **Ez csak rajz:** az útvonal
+  továbbra is a `D.stairs` magjain fut, a lift a kézzel felvett `D.lifts`-en.
+- A rajz karonként egy kis path a szint SVG-jében, a falak alatt (lásd a
+  falak oldallapját: egy csempe minden átfedő path-t feldolgoz), és átengedi
+  a kattintást (`pointer-events:none`): különben a vonalára kattintás a
+  színpadig buborékozna, és a lépcsőház kiválasztása helyett a kijelölést
+  törölné. Az ára a mérési zajon belül van (GPU-s tesztút, telefonprofil):
+  az alaprajzi tolás előtte és utána is 32,5–32,8 ms/lépés, a körbejárás
+  208,5 → 209,1 ms/lépés (öt kör mediánja), egy külön, hatkörös mérésben
+  226,5 → 222,4. Egy korai mérés +7%-ot mutatott a körbejárásra; két
+  ismétlés, amely alatt semmi más nem futott, nem hozta vissza. Azt is
+  kipróbáltuk, hogy 3D-ben csak az aktív szinten álljon: nem lett mérhetően
+  gyorsabb, ezért minden szinten ott van, és Épület nézetben a lépcsőházak
+  egymás fölött is kirajzolódnak.
+- Az IFC-ben három átjáró van, ami az útvonaltervezésből hiányzik: a második
+  lift; egy folyosói lépcső a földszinttől az I. emeletig (az OA00FK5, OA01FK1
+  és OA10EK2 folyosón); és egy lépcső az alagsorból a földszintre, az FL1 mag
+  mellett. A két lépcső a rajzon már látszik. Hogy hallgatók használhatják-e
+  őket, azt az építészek és az üzemeltetés tudja megmondani (lásd
+  `docs/NYITOTT-KERDESEK.md`, 3.); addig nincsenek bekötve.
 
 **Az útvonal lépései nevén nevezik a szintet, és egyben lépcsőznek.** Előtte a
 portától a II. emeletig négy külön sor jött („Lépcsőn fel a(z) földszint
@@ -602,11 +666,13 @@ Neptun kurzusórarend-export (xlsx)           --parse-neptun.py--> /tmp/neptun.j
 Tervtár OA épületadatok (xls)          --tervtar-ajtoszam.py--> az index.html NEPTUN táblája
 Tervtár OA alaprajzok (PDF) + épületadatok --tervlap-szarny.py--> D: a hiányzó szárny
 OE-OA.ifc (Archicad-export, 2023)            --ifc-ajtok.py--> D: doors, via
+OE-OA.ifc                                  --ifc-lepcsok.py--> D: flights
 ```
 
-A térkép (`D`) kézzel nem szerkesztendő: a régi generátor adatára a fenti két
-eszköz épít, ebben a sorrendben (a szárny után az ajtók, hogy az új
-helyiségek is megkapják), utána a `tervtar-ajtoszam.py` az ajtószámokat. A
+A térkép (`D`) kézzel nem szerkesztendő: a régi generátor adatára a fenti
+három eszköz épít, ebben a sorrendben (a szárny után az ajtók, hogy az új
+helyiségek is megkapják, és a lépcsőkarok, amelyek a szárnnyal megnőtt
+kerethez illeszkednek), utána a `tervtar-ajtoszam.py` az ajtószámokat. A
 PDF, az xls és az IFC belső anyag, egyik se kerüljön a repóba. A szárnyról:
 - A régi adat keretével levágta a felső szárny északkeleti végét (41
   helyiség, 10 órarendi terem). Az eszköz a PDF falait a térkép falaira

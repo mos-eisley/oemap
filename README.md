@@ -57,6 +57,12 @@ A **mosdókon, lépcsőházakon és a liften piktogram** áll a teremszám helye
 férfi és női mosdó), hogy a szomszédos jelek ne takarják ki egymást; ezek
 alapnagyításon is mind kint vannak.
 
+A **lépcsőkarok** úgy látszanak, mint egy tervlapon: a fokok vékony vonala, és
+a fokok közepén a járásvonal, a végén nyíllal a felfelé vezető irányba. Az
+épület IFC-modelljéből jönnek (`tools/ifc-lepcsok.py`), és mindig az induló
+szintjükön állnak. A rajz csak tájékoztat: az útvonal a lépcsőházakon át
+vezet, ahogy eddig.
+
 A fejlécben a **Hallgatói / Minden** kapcsoló dönti el, mely helyiségek
 látszanak. Hallgatói nézetben az irodák, üzemeltetési terek, raktárak és
 dolgozói területek halványan, felirat nélkül jelennek meg — ez a 223
