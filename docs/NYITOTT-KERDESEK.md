@@ -79,7 +79,7 @@ modellt is kiadják (a helyiségekkel, `IfcSpace`), az eszköz újrafuttatható.
 
 ---
 
-## 3. A lift a földszintről már elérhető — az alagsorból nem
+## 3. Liftek és lépcsők — az alagsorból nincs liftes út, és az IFC három további átjárót mutat
 
 **Mi volt.** A hallgatók csak az **FL3 magban** lévő liftet használhatják
 (`D.lifts`; se a tervlap, se az IFC nem jelöli külön). A földszinten ez a
@@ -97,10 +97,31 @@ félemeleti pihenők, de azok a többi lépcsőház részei. Órarendi terem nin
 köztük. A `tests/eler.js` kivételként rögzíti mindkettőt, és szól, ha
 bármelyik elérhetővé válik.
 
+**Amit az IFC-modell mutat (2026. okt. 7.).** Az épület IFC-modelljében
+(Archicad-export, 2023) három olyan átjáró van, amit az útvonaltervezés nem
+ismer:
+- **Egy második lift** az FL2 lépcsőház közelében, a térkép (29, 40)
+  méteres pontján: a fülke a földszinten áll, alatta az alagsorban az
+  OAX1A25 LIFT GÉPÉSZET van, az akna az I. és a II. emelet födémjén megy át.
+  A térképen ezen a helyen egyik szinten sincs helyiség.
+- **Egy folyosói lépcső** a földszinttől a félemeleten át az I. emeletig, az
+  OA00FK5, az OA01FK1 és az OA10EK2 folyosón.
+- **Egy lépcső az alagsorból a földszintre** az FL1 mag mellett: az alagsorban
+  az OAX1A30 TÁROLÓ helyén indul, és a földszinten egy olyan pontra érkezik,
+  ahol a térképen nincs helyiség.
+
+A két lépcső a térképen már kirajzolva látszik (az összes lépcsőkar az
+IFC-ből jön, `tools/ifc-lepcsok.py`), de útvonal nem vezet rajtuk. A lift az
+IFC-ben névtelen elem, csak a méretéről és a helyéről ismerhető fel, és az
+export csak a kijelölt elemeket tartalmazza — ezért kell a megerősítés.
+
 **Kitől kell.** Az üzemeltetéstől: van-e hallgatók által használható lift az
-alagsorból (a tervlap az AL1 magban is jelöl liftet). Ha van, a `D.lifts`-be
-kell felvenni. Az építészektől: van-e lépcső nélküli bejutás a II. emelet
-déli tömbjébe — ha igen, a térképről hiányzik egy átjáró.
+alagsorból (a tervlap az AL1 magban is jelöl liftet), és használhatják-e a
+hallgatók az OAX1A25 fölötti második liftet. Ha igen, a `D.lifts`-be kell
+felvenni. Az építészektől: van-e lépcső nélküli bejutás a II. emelet déli
+tömbjébe — ha igen, a térképről hiányzik egy átjáró —, és nyilvános-e a
+folyosói, illetve az FL1 melletti lépcső. Ha igen, a `D.stairs`-be kell
+felvenni őket; a `tests/eler.js` szól, ha ettől egy kivétel elérhetővé válik.
 
 ---
 
@@ -170,14 +191,14 @@ tab-állomás, a termek közt a nyilak léptetnek, az Enter választ, a Page
 Up/Down szintet vált; a kiválasztás, az útvonal eredménye és a szintváltás
 élő régióban is elhangzik. A díszítő SVG-rétegek és a nem aktív szintek
 `aria-hidden`-ök, így a felolvasó az aktív szint helyiségeit látja, nem
-mind a hétét. Őrzője a `tests/a11y.js` (29 állítás).
+mind a hétét. Őrzője a `tests/a11y.js` (38 állítás).
 
-Ami ebből még hátravan, és nem külső információra vár: a panel
-újrarajzolása (`renderPanel`) minden kiválasztáskor eldobja a benne lévő
-fókuszt, és a téma váltása újraépíti a szinteket, amitől a térképen álló
-fókusz elveszik. Egyik sem teszi használhatatlanná a felületet — a kurzor
-állapota megmarad, a következő nyíl ugyanoda tér vissza —, de egy
-billentyűzetes felhasználónak felesleges visszaút.
+Ami ebből utoljára hátravolt, az is kész (2026. okt. 7.): a panel, a
+foglalható termek listája és a szintválasztó újrarajzolása már nem dobja el a
+benne álló fókuszt (előtte a `<body>`-ra esett, és a következő Tab a panel
+elejére vitt vissza), a téma váltása után pedig a fókusz ugyanarra a teremre
+kerül vissza a térképen. Lásd CLAUDE.md, „Az újrarajzolás sem dobhatja el a
+fókuszt”.
 
 **A nézetváltás asztalon még akad.** Telefonon megoldva: a váltás alatt SVG-n
 belül már semmi nem animál, így a mozgás közben a raszterezés 0–5 ms (előtte
