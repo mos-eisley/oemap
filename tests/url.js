@@ -43,16 +43,35 @@ run("mély link (URL-állapot)", async ({ t, ctx, base }) => {
   const ide = await st(p);
   t("az „Ide” gomb a portáról tervez", ide.from === "OAX1A02" && ide.to === "OA20E01" && ide.ut, JSON.stringify(ide));
   await p.evaluate(() => { S.from = S.to = S.sel = null; S.route = null; renderPanel(); });
-  await p.evaluate(() => quick("WC")); await p.waitForTimeout(400);
-  const wc = await st(p);
-  t("a gyorsgomb is a portáról keres", wc.from === "OAX1A02" && !!wc.to && wc.ut, JSON.stringify(wc));
-  /* A portáról a legközelebbi mosdó a földszinti mosdócsoport: nem a porta
-     mögötti dolgozói öltöző WC-je, és nem egy három emelettel feljebb lévő,
-     ami csak vízszintesen van közelebb. A büfé gomb a büfébe visz, nem a
-     raktárába. */
-  const wcSzint = await p.evaluate(c => ROOM[c] && ROOM[c].level, wc.to);
-  t("a mosdó gomb hallgatói mosdót ad, a menetidő szerint a legközelebbit",
-    !["OAX1A09", "OAX1A12"].includes(wc.to) && wcSzint === 0, JSON.stringify(wc) + " szint " + wcSzint);
+  /* A mosdó gomb fajtánként egy sort ad (női, férfi, akadálymentes), a
+     menetidő szerint a legközelebbit, a lépcsőzéssel együtt — nem a porta
+     mögötti dolgozói öltözők WC-jét, és nem a raktárból nyíló mosdót. A sorra
+     koppintva indul az útvonal, a portáról. */
+  const wc = await p.evaluate(async () => {
+    const w = ms => new Promise(r => setTimeout(r, ms));
+    quick("WC"); await w(300);
+    const sorok = [...document.querySelectorAll("[data-wc]")].map(e => ({ c:e.dataset.wc, t:e.querySelector("b").textContent }));
+    document.querySelector("[data-wc]").click(); await w(400);
+    const ut = { from:S.from, to:S.to, ut:!!S.route };
+    // a III. emeletről: ott nincs női mosdó, a sor a II. emeletit adja
+    S.from = "OA30E01"; S.to = S.sel = null; S.route = null; renderPanel(); await w(100);
+    const qr = document.querySelector(".qgrid small") && document.querySelector(".qgrid small").textContent;
+    quick("WC"); await w(300);
+    const harmadik = [...document.querySelectorAll("[data-wc]")].map(e => ({ c:e.dataset.wc, lv:ROOM[e.dataset.wc].level }));
+    return { sorok, ut, qr, harmadik, szint:Object.fromEntries(sorok.map(x => [x.c, ROOM[x.c].level])) };
+  });
+  t("a mosdó gomb három sort ad: női, férfi, akadálymentes", wc.sorok.map(x => x.t).join("|") === "Női mosdó|Férfi mosdó|Akadálymentes mosdó",
+    JSON.stringify(wc.sorok));
+  t("egyik sem dolgozói vagy raktárból nyíló mosdó", !wc.sorok.some(x => ["OAX1A09", "OAX1A12", "OA20E26"].includes(x.c)),
+    JSON.stringify(wc.sorok));
+  t("a portához a földszinti női és akadálymentes mosdó a legközelebbi", wc.szint.OA00F07 === 0 && wc.szint.OA00F06 === 0,
+    JSON.stringify(wc.szint));
+  t("a sorra koppintva a portáról indul az útvonal", wc.ut.from === "OAX1A02" && wc.ut.to === wc.sorok[0].c && wc.ut.ut,
+    JSON.stringify(wc.ut));
+  t("ha csak az indulás adott (QR), a gyorsgombok onnan számolnak", /^innen: /.test(wc.qr || ""), wc.qr);
+  t("a III. emeletről a női mosdó a II. emeleten, a férfi és az akadálymentes helyben",
+    wc.harmadik.length === 3 && wc.harmadik[0].lv === 3 && wc.harmadik[1].lv === 4 && wc.harmadik[2].lv === 4,
+    JSON.stringify(wc.harmadik));
   await p.evaluate(() => { S.from = S.to = S.sel = null; S.route = null; quick("BÜFÉ"); }); await p.waitForTimeout(300);
   t.eq("a büfé gomb a büfébe visz", (await st(p)).to, "OA00F04");
   const sub = await p.evaluate(() => { S.from = S.to = S.sel = null; S.route = null; renderPanel();

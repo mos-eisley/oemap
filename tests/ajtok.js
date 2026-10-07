@@ -44,16 +44,17 @@ run("ajtók és átjárók", async ({ t, ctx, base }) => {
   });
   t("a csak más helyiségen át elérhető termekhez is van útvonal",
     Object.values(at).every(Boolean), JSON.stringify(at));
+  // a helyiségek az ajtajukon álló számmal: E01 = 2.32, E03 = 2.24, E04 = 2.21
   t.eq("a lépésekben a bejárat sorrendben: előbb az E01, aztán az E03",
-    at.OA20E04 && at.OA20E04.at, "OA20E01 · LABOR → OA20E03 · LABOR");
-  t("a cél utána is maga a terem", at.OA20E04 && /^OA20E04/.test(at.OA20E04.utolso), JSON.stringify(at.OA20E04));
+    at.OA20E04 && at.OA20E04.at, "2.32 · LABOR → 2.24 · LABOR");
+  t("a cél utána is maga a terem", at.OA20E04 && /^2\.21 /.test(at.OA20E04.utolso), JSON.stringify(at.OA20E04));
 
   const ki = await p.evaluate(() => {
     const rt = findRoute(ROOM["OA10E07"], ROOM["OAX1A02"]);
     const st = rt && steps(rt, analyse(rt)), k = st && st.find(s => s.t === T().outThru);
     return k && k.d;
   });
-  t("onnan indulva a kijáratot írja ki", /^OA10E06/.test(ki || ""), ki);
+  t("onnan indulva a kijáratot írja ki (az E06, ajtaján 1.23)", /^1\.23 /.test(ki || ""), ki);
 
   /* Az útvonal ajtónál ér véget; több ajtó közül annál, amelyik az induláshoz
      közelebb esik. Ajtónként azt az egyajtós forrást választjuk, amelyiknek

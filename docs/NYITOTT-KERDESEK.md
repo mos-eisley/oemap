@@ -1,7 +1,8 @@
 # Nyitott kérdések
 
-Négy pont maradt nyitva. Valódi funkcióhiányt a 4. okoz (más karok órái a
-közös termekben); a többi apróság vagy döntés, amihez külső információ kell.
+Öt pont maradt nyitva. Valódi funkcióhiányt a 4. okoz (más karok órái a
+közös termekben); az 5. egy telefonos mérésre vár, a többi apróság vagy
+döntés, amihez külső információ kell.
 Mindegyiknél ott van, hogy **mi hiányzik**, **kitől**, és **mit kell majd
 csinálni**, ha megjön.
 
@@ -89,9 +90,17 @@ folyosó (OA00FK7) a szárnnyal együtt hiányzott.
 FL3 lifttel). Az alagsorból — a portáról — nincs: a lift nem megy le
 odáig, és az app ezt meg is írja.
 
+**A II. emelet déli tömbje lifttel sem érhető el** (OA20E01–E12, köztük a
+2.21-es, a 2.24-es és a 2.32-es labor): a térképen a II. emeleti
+liftmegállóból nem vezet oda folyosó, csak az EL1 lépcső. Ugyanígy a
+félemeleti pihenők, de azok a többi lépcsőház részei. Órarendi terem nincs
+köztük. A `tests/eler.js` kivételként rögzíti mindkettőt, és szól, ha
+bármelyik elérhetővé válik.
+
 **Kitől kell.** Az üzemeltetéstől: van-e hallgatók által használható lift az
 alagsorból (a tervlap az AL1 magban is jelöl liftet). Ha van, a `D.lifts`-be
-kell felvenni.
+kell felvenni. Az építészektől: van-e lépcső nélküli bejutás a II. emelet
+déli tömbjébe — ha igen, a térképről hiányzik egy átjáró.
 
 ---
 
@@ -120,6 +129,35 @@ Audmaxban a KVK és az RKK is tart órát (a régi táblában az ottani foglalá
 `neptun.json`-t, és amelyik termet minden használó kar exportja lefedi, abból
 kerüljön ki a `kozos` jelzés (`SHARED`). Az egyetemi szünnapokat (rektori
 szünet, TDK) a `--szunnap`-nak kell megadni — ezek sincsenek az exportban.
+
+---
+
+## 5. Gyorsabb körbejárás telefonon — egy telefonos mérésre vár
+
+**Mi a baj.** A felső szárny felvétele óta az Épület nézet körbejárása a
+GPU-s tesztúton lépésenként jóval lassabb (lásd CLAUDE.md, „Ára az Épület
+nézetben, telefonon”). Az idő ~80%-a a renderpassok rajza: szintenként egy.
+
+**Amit kipróbáltunk.** Körbejárás közben elrejteni az aktív fölötti
+szinteket. A körbejárás 19%-kal gyorsabb lett, de elengedéskor a böngésző
+újraraszterezi őket: a tesztúton ez egyetlen 5,3 s-os képkocka, és ha a
+következő mozdulat ebbe esik, az 77%-kal lassabb. A tesztút GPU-ja
+szoftveres; egy valódi GPU-n a raszterezés jóval olcsóbb, ott a mérleg
+megfordulhat. Ezt csak telefonon lehet eldönteni, ezért addig nem került be.
+
+**Kitől kell.** Bárkitől, akinek telefonja van: a
+https://mayydayy99.github.io/oemap/meres.html lapon **Indítás**, kb.
+másfél perc várakozás (közben nem kell érinteni), és a táblázat
+képernyőképe. Minél többféle telefonról (régebbi Android, iPhone), annál
+jobb.
+
+**Mit kell csinálni, ha megjön.** Ha a „felső szintek rejtve” oszlopban a
+körbejárás érezhetően gyorsabb, és az elengedés utáni leghosszabb kép nem
+sokkal hosszabb, mint a „minden szint” oszlopban, bekerülhet: a
+`syncFloors()` körbejárás közben 0 átlátszóságot ad a fölöttes szinteknek,
+elengedéskor visszaadja (a mérőlap „rejtve” változata pontosan ezt csinálja,
+CSS-sel). Ha az elengedés utáni kép hosszú, marad így, és a nem aktív szintek
+rajzán kell faragni.
 
 ---
 
