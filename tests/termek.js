@@ -102,6 +102,35 @@ run("foglalható termek", async ({ t, ctx, browser, base }) => {
   const tl = l.sorok.find(x => x.nev === eset.lyuk.nev);
   t("két óra közt szabadnak mutatja", tl && tl.jel === "free", JSON.stringify(tl) + " @ " + eset.lyuk.ido);
 
+  /* Sorrend: elöl, ami most szabad, aztán a „Szabad?", a foglalt (az előbb
+     szabaduló elöl), végül, amiről nincs adat. A szabadok közül, indulás
+     nélkül az, amelyik tovább szabad; ha a hallgató megadta, honnan indul,
+     a legközelebbi. Minden sorban ott a gyalogos idő. */
+  const rend = await p.evaluate(async js => {
+    eval(js);
+    const w = ms => new Promise(r => setTimeout(r, ms)), now = new Date();
+    const CS = { free:0, maybe:1, busy:2 };
+    const olvas = () => [...document.querySelectorAll(".tmrow")].map(x => {
+      const r = TM.rooms.find(q => q.nev === x.dataset.tm), st = tmNow(r, now);
+      return { nev:r.nev, g:CS[st.state] ?? 3, until:st.until, kov:st.next ? st.next.from : 1440,
+               perc:+((x.querySelector(".tms b") || {}).textContent || "x").split(" ")[0] }; });
+    S.from = null; quick("@ROOMS"); await w(300); const alap = olvas();
+    S.from = "OA40E01"; quick("@ROOMS"); await w(300); const innen = olvas();   // IV. emelet: a fájl sorrendjének a fordítottja
+    S.from = null;
+    return { alap, innen };
+  }, freeze(eset.foglalt.ido));
+  const novekvo = (xs, k) => xs.every((x, i) => !i || xs[i - 1][k] <= x[k]);
+  const csop = g => rend.alap.filter(x => x.g === g);
+  t("elöl a szabad, aztán a „Szabad?”, a foglalt, végül a nincs adat", novekvo(rend.alap, "g") &&
+    csop(0).length > 0 && csop(2).length > 0, rend.alap.map(x => x.nev + ":" + x.g).join(" "));
+  t("a foglaltak közül az előbb szabaduló elöl", novekvo(csop(2), "until"), JSON.stringify(csop(2).map(x => [x.nev, x.until])));
+  t("indulás nélkül a szabadok közül az, amelyik tovább szabad", csop(0).every((x, i, a) => !i || a[i - 1].kov >= x.kov),
+    JSON.stringify(csop(0).map(x => [x.nev, x.kov])));
+  t("minden sorban ott a gyalogos idő", rend.alap.every(x => x.perc >= 1), JSON.stringify(rend.alap.map(x => x.perc)));
+  const innenSz = rend.innen.filter(x => x.g === 0);
+  t("megadott indulásnál a szabadok közül a legközelebbi elöl", novekvo(innenSz, "perc") && innenSz.length > 1,
+    JSON.stringify(innenSz.map(x => [x.nev, x.perc])));
+
   // a hetek bitmaszkja: amelyik héten az óra nincs, ugyanakkor szabad
   const pv = (await panel(eset.parite.van)).sorok.find(x => x.nev === eset.parite.nev);
   const pn = (await panel(eset.parite.nincs)).sorok.find(x => x.nev === eset.parite.nev);

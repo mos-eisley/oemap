@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Telefonos mérés</title>
+<style>
+:root{--bg:#eceff4;--surface:#fff;--ink:#0d151f;--muted:#61748a;--line:#d5dde7;--accent:#00288c;--accent-ink:#fff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#080d13;--surface:#121a24;--ink:#e7eef6;--muted:#8ba0b7;--line:#1f2c3a;--accent:#799aec;--accent-ink:#05101b}}
+:root[data-theme="dark"]{--bg:#080d13;--surface:#121a24;--ink:#e7eef6;--muted:#8ba0b7;--line:#1f2c3a;--accent:#799aec;--accent-ink:#05101b}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+iframe{position:fixed;inset:0;width:100%;height:100%;border:0}
+.lap{position:fixed;left:16px;right:16px;bottom:16px;max-width:520px;margin:0 auto;max-height:calc(100dvh - 32px);
+  overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;z-index:2}
+h1{font-size:17px;margin:0 0 6px}
+p{margin:6px 0;color:var(--muted)}
+button{font:inherit;border:0;border-radius:10px;padding:10px 14px;margin-top:8px;background:var(--accent);
+  color:var(--accent-ink);font-weight:600;cursor:pointer}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-variant-numeric:tabular-nums}
+th,td{text-align:right;padding:6px;border-bottom:1px solid var(--line);vertical-align:bottom}
+th:first-child,td:first-child{text-align:left}
+th{font-size:12px;font-weight:600;color:var(--muted)}
+pre{white-space:pre-wrap;word-break:break-all;font-size:11px;color:var(--muted);margin:8px 0 0}
+.allapot{position:fixed;top:0;left:0;right:0;padding:6px 16px;background:var(--surface);color:var(--muted);
+  font-size:12px;z-index:2}
+</style>
+</head>
+<body>
+<!-- A mérendő app, ugyanabból a buildből, a telefon teljes képernyőjén -->
+<iframe id="app" title="OA térkép"></iframe>
+<div class="lap" id="lap">
+  <h1>Épület nézet mérése ezen a telefonon</h1>
+  <p>Körbejárást, elengedést és kétujjas döntést játszik le az Épület nézetben, kétféleképpen:
+    ahogy most van (minden szint látszik), és úgy, hogy körbejárás közben a felső szintek el
+    vannak rejtve. Körülbelül másfél perc. Közben ne érintsd a képernyőt, és ne zárd le a telefont.</p>
+  <button id="indit">Indítás</button>
+</div>
+<div class="allapot" id="allapot" hidden></div>
+<script>
+/* Telefonos mérőlap. A tesztböngésző szoftveres GPU-n fut (SwiftShader): ott a
+   relatív számok megbízhatók, az abszolútak nem. A „körbejárás közben rejtett
+   felső szintek” ötletnél viszont a kettő ellentétes irányba húz: a körbejárás
+   gyorsul (szintenként egy renderpass-szal kevesebb), elengedés után viszont a
+   böngésző újraraszterezi az elrejtett szinteket, és ez a következő mozdulatba
+   csúszik. Hogy egy valódi telefonon melyik nyom többet, azt csak ott lehet
+   megmérni. Ez a lap a valódi appot tölti be, és ugyanazt a mozdulatsort
+   játssza le, mint a tesztúton a mérés (lásd CLAUDE.md). A rejtett változatot
+   egy CSS-szabály adja: az app maga nem tud róla. */
+const Q = new URLSearchParams(location.search);
+const KOROK = Math.max(1, +Q.get("korok") || 3), LEPES = Math.max(2, +Q.get("lepes") || 30);
+const VALTOZAT = { alap:"minden szint", rejt:"felső szintek rejtve" };
+const SOR = { korbe:"körbejárás, ms/lépés", utana:"elengedés után a leghosszabb kép, ms", dontes:"kétujjas döntés, ms/lépés" };
+const ifr = document.getElementById("app"), all = document.getElementById("allapot"), lap = document.getElementById("lap");
+const varj = ms => new Promise(r => setTimeout(r, ms));
+let futas = 0;
+
+function betolt(){
+  return new Promise((res, rej) => {
+    ifr.onload = async () => {
+      const w = ifr.contentWindow;
+      for(let i = 0; i < 200; i++){
+        if(w.document.querySelectorAll(".floor").length && typeof w.setMode === "function") return res(w);
+        await varj(100);
+      }
+      rej(new Error("az app nem indult el"));
+    };
+    ifr.src = "index.html?meres=" + (++futas);       // minden mérés friss lapon
+  });
+}
+
+/* Egy lépés két képkocka, mint a tesztúti mérésben: 60 Hz-en a legjobb
+   érték ~33 ms/lépés. */
+async function mer(w, valtozat){
+  const d = w.document, st = d.getElementById("stage"), app = d.getElementById("app");
+  // szintetikus mutató: a böngésző nem engedné átvenni
+  st.setPointerCapture = () => {}; st.releasePointerCapture = () => {};
+  const ujj = (type, x, y, id) => st.dispatchEvent(new w.PointerEvent(type,
+    { pointerId:id, clientX:x, clientY:y, bubbles:true, pointerType:"touch", isPrimary:id === 1 }));
+  const ket = () => new Promise(r => w.requestAnimationFrame(() => w.requestAnimationFrame(r)));
+  if(valtozat === "rejt"){
+    const css = d.createElement("style");
+    css.textContent = ".orbitx .floor.above{opacity:0!important}";
+    d.head.appendChild(css);
+  }
+  const x = Math.round(w.innerWidth / 2), y = Math.round(w.innerHeight * .39);
+  w.setMode(3); await varj(3000);
+
+  let t0 = w.performance.now();
+  if(valtozat === "rejt") app.classList.add("orbitx");
+  ujj("pointerdown", x, y, 1);
+  for(let i = 1; i <= LEPES; i++){ ujj("pointermove", x + i * 6, y + i * 2, 1); await ket(); }
+  ujj("pointerup", x + LEPES * 6, y + LEPES * 2, 1);
+  const korbe = (w.performance.now() - t0) / LEPES;
+  // az app 40 ms után veszi le a gesztus állapotát; utána úsznak vissza a szintek
+  if(valtozat === "rejt"){ await varj(60); app.classList.remove("orbitx"); }
+
+  let elozo = w.performance.now(), utana = 0;
+  const veg = elozo + 1500;
+  for(;;){
+    const t = await new Promise(r => w.requestAnimationFrame(r));
+    utana = Math.max(utana, t - elozo); elozo = t;
+    if(t > veg) break;
+  }
+
+  t0 = w.performance.now();
+  ujj("pointerdown", x - 55, y, 1); ujj("pointerdown", x + 55, y, 2);
+  for(let i = 1; i <= LEPES; i++){ ujj("pointermove", x - 55, y - i * 3, 1); ujj("pointermove", x + 55, y - i * 3, 2); await ket(); }
+  ujj("pointerup", x - 55, y - LEPES * 3, 1); ujj("pointerup", x + 55, y - LEPES * 3, 2);
+  const dontes = (w.performance.now() - t0) / LEPES;
+  return { korbe:Math.round(korbe), utana:Math.round(utana), dontes:Math.round(dontes) };
+}
+
+const median = a => { const v = a.slice().sort((p, q) => p - q), k = v.length >> 1;
+  return v.length % 2 ? v[k] : Math.round((v[k - 1] + v[k]) / 2); };
+
+async function indit(){
+  lap.hidden = true; all.hidden = false; ifr.style.pointerEvents = "none";
+  let ebren = null;
+  try{ ebren = await navigator.wakeLock.request("screen"); }catch(e){}
+  const ered = { alap:[], rejt:[] }, hibak = [];
+  try{
+    let n = 0;
+    for(let k = 0; k < KOROK; k++) for(const v of Object.keys(VALTOZAT)){   // felváltva: a zaj mindkettőt érje
+      all.textContent = `Mérés: ${++n} / ${KOROK * 2} (${VALTOZAT[v]}) — ne érintsd a képernyőt`;
+      const w = await betolt();
+      w.addEventListener("error", e => hibak.push(e.message));
+      await varj(1500);
+      ered[v].push(await mer(w, v));
+    }
+  }catch(e){ hibak.push(e.message); }
+  try{ ebren && ebren.release(); }catch(e){}
+  all.hidden = true; lap.hidden = false; ifr.style.pointerEvents = "";
+  mutat(ered, hibak);
+}
+
+function mutat(ered, hibak){
+  const eszkoz = `${navigator.userAgent} · ${innerWidth}×${innerHeight} · DPR ${devicePixelRatio}`;
+  const kesz = Object.values(ered).every(a => a.length);
+  const szoveg = JSON.stringify({ eszkoz, korok:KOROK, lepes:LEPES, ered, hibak });
+  lap.innerHTML = `<h1>Eredmény</h1>
+    ${kesz ? `<table id="tabla"><tr><th></th>${Object.values(VALTOZAT).map(n => `<th>${n}</th>`).join("")}</tr>
+      ${Object.entries(SOR).map(([k, n]) => `<tr><td>${n}</td>${Object.keys(VALTOZAT).map(v =>
+        `<td data-k="${k}" data-v="${v}">${median(ered[v].map(x => x[k]))}</td>`).join("")}</tr>`).join("")}</table>
+      <p>${KOROK} kör mediánja; egy lépés két képkocka, 60 Hz-en a legjobb érték ~33 ms.</p>` : ""}
+    ${hibak.length ? `<p id="hiba">Hiba: ${hibak.map(h => h.replace(/[<&]/g, "")).join(" | ")}</p>` : ""}
+    <p>Küldd el ennek a képernyőképét, vagy másold ki az adatokat:</p>
+    <button id="masol">Adatok másolása</button><pre id="adat"></pre>`;
+  document.getElementById("adat").textContent = szoveg;
+  document.getElementById("masol").onclick = async e => {
+    try{ await navigator.clipboard.writeText(szoveg); e.target.textContent = "Kimásolva"; }
+    catch(_){ e.target.textContent = "Jelöld ki és másold a szöveget"; }
+  };
+}
+
+document.getElementById("indit").onclick = indit;
+</script>
+</body>
+</html>

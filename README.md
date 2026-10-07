@@ -17,6 +17,7 @@ fájl — nincs build lépés, nincs függőség, nincs csomagkezelő.
 | `data/` | Foglalható termek és foglaltságuk (generált) |
 | `tools/` | Az adatot előállító szkriptek és a QR-ív generátora |
 | `tests/` | Böngészős regressziós tesztek (`npm test`) |
+| `meres.html` | Telefonos mérőlap: az Épület nézet mozdulatainak képkockaideje egy valódi telefonon |
 | `CLAUDE.md` | Fejlesztői jegyzet — ezt olvasd, mielőtt hozzányúlsz |
 | `docs/` | Nyitott kérdések, amik külső információra várnak |
 | `.github/workflows/deploy-pages.yml` | Automatikus deploy GitHub Pages-re |
@@ -163,20 +164,48 @@ kilépne:
 | `#from=OA00FK1` | „itt vagyok" — az indulás megvan, a célt a hallgató adja meg |
 | `#from=OA00FK1&to=OA10E18` | kész útvonal |
 | `#to=OA10E18` | útvonal a portától |
+| `#from=OA00FK1&to=OA10E18&via=lift` | kész útvonal, lifttel |
 
 **Alapból a portáról indul a navigáció** (OAX1A02, az alagsori bejárat
 mellett): ha a hallgató célt választ („Ide", link, gyorsgomb), de indulást
 nem, az útvonal onnan számol. Amit maga ad meg (QR-kód, „Innen"), az
-felülírja. A gyorsgombok közül a **Legközelebbi mosdó** a menetidő szerint
-legközelebbi hallgatói mosdót adja (a lépcsőzéssel együtt, a dolgozói öltöző
-mosdói nélkül), a **Büfé** a büfét.
+felülírja. A gyorsgombok közül a **Legközelebbi mosdó** három sort ad — női,
+férfi, akadálymentes —, mindegyikből a menetidő szerint legközelebbit (a
+lépcsőzéssel együtt; a dolgozói öltöző mosdói és az irodákból nyíló mosdók
+nélkül), a **Büfé** a büfét.
 
 **Az útvonal az ajtónál ér véget**, nem a teremhez legközelebbi folyosóponton:
 az ajtók helyét az épület IFC-modelljéből vesszük (`tools/ifc-ajtok.py`). Ha a
 teremnek több ajtaja van, a közelebbihez visz. Ahova csak egy másik helyiségen
 át lehet bejutni — a II. emeleti laborsorba az E01-en és az E03-on át, több
 irodába a szomszédosból —, ott az útvonal annak az ajtajáig vezet, és a
-lépések közt ott áll: **„Bejárat ezen át: OA20E01 · LABOR → OA20E03 · LABOR"**.
+lépések közt ott áll: **„Bejárat ezen át: 2.32 · LABOR → 2.24 · LABOR"**.
+
+A lépések az ajtón álló számot írják ki, a lépcsőzést pedig egy lépésben, a
+célszinttel: **„Lépcsőn fel a II. emeletre · Lépcsőház · OA00FL3 · 2 szint"**
+(angolul „Take the stairs up to the 2nd floor”). A félemelet a lépcsőházak
+pihenője, a szintváltások közt fél emeletnek számít.
+
+## Telefonra küldés
+
+Asztalon és a totemen az útvonal alatt a **Küldd el a telefonodra** gomb
+QR-kódot mutat. A telefon kamerájával beolvasva ugyanez az útvonal nyílik meg
+rajta, a lift választásával együtt, és onnan a hallgató viszi magával.
+Telefonon nincs ilyen gomb: ott a megosztás gomb ugyanezt tudja.
+
+## Totem mód
+
+Egy e-totemen az app a saját helyéről indul, és magától visszaáll:
+
+```
+https://mayydayy99.github.io/oemap/?totem#from=OA00FK1
+```
+
+A `from` a totem helye. Egy perc tétlenség után minden visszaáll (az indulás,
+magyar nyelv, alaprajz, cél nélkül); tíz másodperccel előtte szól, és egy
+érintés megállítja. Mozdulat közben soha nem áll vissza. Naponta egyszer
+újratölt, hogy a friss adat és a friss kód is megjöjjön. A totemről küldött
+QR-kód linkje már nem totem mód: a telefonon nem áll vissza semmi.
 
 Ismeretlen kódot a link csendben elhagy: az app elindul, csak épp kiválasztás
 nélkül. A panelben a megosztás gomb a pillanatnyi állapot linkjét adja —
@@ -203,7 +232,10 @@ szintszámok megadásával (`... qr.html 0 1`).
 A kereső alatti gyorsgombok közt a **Foglalható termek** megmutatja, melyik
 OA-terem szabad vagy foglalt éppen, és ha foglalt, milyen óra van benne
 (tárgy, előadás/gyakorlat/labor, meddig). Kinyitva a napi órák és a
-felszereltség látszik.
+felszereltség látszik. Elöl az áll, ami most szabad: ha az indulás megvan
+(QR-kód, totem, „Innen”), a menetidő szerint — minden sorban ott a perc —,
+különben aszerint, meddig marad szabad; a foglaltak közül az, amelyik
+hamarabb felszabadul.
 
 Az adat két forrásból áll össze, a hivatalos teremnéven:
 
@@ -319,7 +351,7 @@ python3 -m http.server 8000
 
 ```
 npm install     # playwright
-npm test        # mind a 16 tesztfájl
+npm test        # mind a 21 tesztfájl
 ```
 
 A tesztek maguk indítanak szervert és böngészőt szabad porton, így nem kell

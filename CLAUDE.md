@@ -19,10 +19,11 @@ A projekt meetingjén ez a kettő lett kimondva, és minden vitás kérdést ez 
 
 ## Felépítés
 
-`index.html` (~360 KB, tömörítve ~100 KB) **maga a teljes alkalmazás** — HTML, CSS és JS egy
+`index.html` (~380 KB, tömörítve ~108 KB) **maga a teljes alkalmazás** — HTML, CSS és JS egy
 fájlban, build lépés és futásidejű függőség nélkül. Ez szándékos: a
 GitHub Pages statikusan szolgálja ki, és offline is működik. Az egyetlen külső
-fájl a `fonts/`, az `icons/`, a `data/` és a `sw.js`.
+fájl a `fonts/`, az `icons/`, a `data/` és a `sw.js`. A `meres.html` nem az app
+része: telefonos mérőlap (lásd „Körbejárás közben rejtett felső szintek”).
 
 A beépített `const D = {...}` tartalmazza az épületet:
 
@@ -42,7 +43,7 @@ honnan/hova, útvonal, forgatás, panelállás). Aki ezt megérti, érti az appo
 
 ```
 npm install          # playwright (a böngésző a képen már megvan)
-npm test             # mind a 16 tesztfájl
+npm test             # mind a 21 tesztfájl
 node tests/run.js url share     # csak egy-kettő
 ```
 
@@ -54,21 +55,26 @@ hagytak egy hibás kódot.
 | fájl | mit őriz |
 | --- | --- |
 | `tests/view.js` | alaprajz/épület váltás, szintváltás, kiválasztás valódi egérrel és érintéssel (Épület nézetben is), a falak oldallapja — **élesben bejelentett: asztalon kattintásra nem jött elő a terem** |
-| `tests/url.js` | mély linkek, a vissza gomb, hibás link; indulás nélkül a portáról (`START`) tervez — linkből, az „Ide” gombbal, a gyorsgombokkal; a mosdó és a büfé gomb célja |
+| `tests/url.js` | mély linkek, a vissza gomb, hibás link; indulás nélkül a portáról (`START`) tervez — linkből, az „Ide” gombbal, a gyorsgombokkal; a mosdóválasztó (női, férfi, akadálymentes, a dolgozói és a csak más helyiségen át megközelíthető mosdók nélkül) és a büfé gomb célja |
 | `tests/share.js` | megosztás gomb mindkét ága |
 | `tests/gestures.js` | csippentés, forgatás, tolás, a kétujjas felemelés, akadozó képnél is — **élesben bejelentett fagyás**, „csúnya átmenet" és a vissza nem váltó lefelé húzás |
 | `tests/labels.js` | teremszámok Épület nézetben: ott vannak, állnak, a termük fölött, élből nézve is, és nem villognak |
 | `tests/lift.js` | lépcső vs. lift alternatíva |
 | `tests/sheet.js` | az alsó panel aljának elérhetősége |
 | `tests/staff.js` | hallgatói/minden szűrő; a tervtári színkulcs (minden helyiség, a halványított is a saját színében; a jelmagyarázat sorrendje) |
-| `tests/termek.js` | foglalható termek: heti órák, páros/páratlan hét, ünnepnap, a félév előtti és utáni nap, a más karral közös termek, a térképen kiválasztott terem adatlapja, és a deploy után a régi service workerben ragadt fájl |
+| `tests/termek.js` | foglalható termek: heti órák, páros/páratlan hét, ünnepnap, a félév előtti és utáni nap, a más karral közös termek, a térképen kiválasztott terem adatlapja, a sorrend (ami most szabad, elöl; az indulástól menetidő szerint), és a deploy után a régi service workerben ragadt fájl |
 | `tests/pwa.js` | manifest, service worker, **offline indulás**, a teremadat frissessége |
 | `tests/a11y.js` | billentyűzetes bejárás, felolvasónak szóló jelölés |
 | `tests/perf.js` | Épület nézet: képkockánként hány renderpass, a telefon (GPU-s) kódútján — **élesben bejelentett akadozás** |
 | `tests/neptun.js` | ajtószámok (Neptun-nevek) a térképen, a keresőben (pont nélkül is: „110”) és az adatlapon; az F06 nem állhat az OA00F03-on (az F09); a földszinten Neptun-névnek látszó tervlapi kód (a büfé „F04”-e) nem állhat feliratként; a foglalható termek listájából a térképre ugrás; a párosító mód (`?parosit`) |
 | `tests/ajtok.js` | az útvonal az ajtó előtt ér véget, több ajtó közül a közelebbinél; a csak más helyiségen át megközelíthető termekhez (I. emelet E03–E07, II. emelet E03, E04) is van útvonal, és a lépések kiírják, min át |
+| `tests/lepesek.js` | az útvonal lépései: a lépcsőzés egy lépésben, nevén nevezett célszinttel („Lépcsőn fel a II. emeletre”, angolul „…to the 2nd floor”), a félemelet fél emelet, a cél az ajtószámmal |
+| `tests/eler.js` | minden helyiséghez van-e út (lépcsőn a portától, lifttel a földszintről); a kivételek listája két irányba szigorú |
 | `tests/ikonok.js` | mosdó-, lépcső- és liftjel: minden mosdón és lépcsőházon a jó jel, a teremszám helyett, a feliratpontján; Épület nézetben magonként egy jelvény, alapnagyításon mind kint, teremszámra nem lógva |
 | `tests/sharp.js` | Épület nézet asztalon, nagyítva: éles-e a kép, nem mozdul-e a sűrűségtől, nem vált-e mozgás közben, csak az aktív szintnél, telefonon és más motorban nem, Firefoxban a saját kódútján (3D-ben minden szint saját transzformmal, a lapos alaprajzon egyik sem) — **élesben bejelentett „irgalmatlan életlen" asztali 3D, Chrome-ban és Firefoxban, és a Firefoxos „éles, homályos, megint éles" váltás** |
+| `tests/totem.js` | totem mód: egy perc tétlenség után alaphelyzet, tíz másodperccel előtte szól, gesztus közben soha, naponta újratölt — a Playwright órájával, percekig várás nélkül |
+| `tests/kuld.js` | telefonra küldés: a QR-kódot a képernyőképből olvassa vissza (jsQR), a csendzónát és a sérült kódot külön méri, sötét témában is; a beolvasott link telefonon ugyanazt az útvonalat nyitja meg, lifttel; a totemről `?totem` nélkül |
+| `tests/meres.js` | a telefonos mérőlap (`meres.html`) végigfut a valódi appon |
 
 ## Amit érdemes tudni, mielőtt hozzányúlsz
 
@@ -256,6 +262,25 @@ még a `requestAnimationFrame` is vár). Tesztben a váltás végét a
 böngészőtől kérdezd (`getAnimations()` … `finished`), egy köztes állapotot
 pedig megállított animációkon mérj (`pause()`, `currentTime`).
 
+**Körbejárás közben rejtett felső szintek — mérve, nem került be.** Az aktív
+fölötti szintek halványak, elforgatva viszont a kép nagy részét fedik, és a
+körbejárás ideje a renderpassokon múlik. Körbejárás közben elrejtve
+(átlátszóság 0) tényleg kevesebb a renderpass (képkockánként 5,4 a 10,1
+helyett), és a körbejárás gyorsul (GPU-s tesztút, telefon: 437 → 352
+ms/lépés, három kör mediánja). Csakhogy a Chromium a 0 átlátszóságú réteg
+csempéit eldobja, és elengedéskor mind az öt szintet újra kell raszterezni: a
+tesztúton ez egyetlen 5,3 s-os képkocka, és ha a következő mozdulat ebbe esik,
+az 77%-kal lassabb (162 → 286 ms/lépés). `will-change: opacity`-vel és
+`visibility: hidden`-nel ugyanígy. Hogy egy valódi telefonon melyik nyom
+többet — a gyorsabb körbejárás vagy az elengedés utáni akadás —, azt a
+szoftveres GPU nem mondja meg. Erre van a **`meres.html`**: a valódi appot
+tölti be, ugyanezt a mozdulatsort játssza le mindkét változattal, és
+táblázatba írja (a `tests/meres.js` csak azt őrzi, hogy végigfut). Tanulság a
+méréshez: a GPU-s úton a `RasterTask` csak rögzít, a raszterezés a
+GPU-folyamatban fut (`RasterDecoderImpl::DoEndRasterCHROMIUM`). A körbejárás
+GPU-ideje ~80%-ban `SwapBuffers` (a renderpassok rajza), ~13%-ban
+csempe-raszterezés.
+
 **Az Alaprajz is forgatható**, két ujjal csavarva. Az irány (`bearing()`,
 vagyis `rot.z`) a két nézetben KÖZÖS, és az alapállása 0: a tervlap rajzolt
 állása. Egy kamera dőlése nem forgatja a képet. Korábban az Épület nézet
@@ -438,6 +463,38 @@ megnézi, benne áll-e a fókusz, és kihozza a térképre. Aki a szintváltásh
 nyúl, ezt vigye tovább — enélkül a felolvasó némán áll egy olyan elemen,
 amiről a felhasználó semmit nem tud meg.
 
+**Totem mód (`?totem#from=<a totem helye>`).** Az e-totemen ott maradt az
+előző ember útvonala, nyelve, nézete. Egy perc tétlenség után a `totemAlap()`
+mindent visszaállít: a címben megadott „itt vagyok”, magyar nyelv, alaprajz, a
+tervlap rajzolt állása, zárt panel, hallgatói nézet, zárt QR-ablak. Tíz
+másodperccel előtte szól, és bármilyen valódi bevitel megállítja (a `window`-on,
+capture fázisban figyelt mutató-, billentyű- és görgőesemény); **gesztus közben
+(`.navving`) soha**, mert a kéz alól rántaná ki a képet. Amit senki nem
+használt, ahhoz nem nyúl; 20 óránként, nyugvó állapotban újratölt, hogy a
+friss adat és kód is megjöjjön. A `tests/totem.js` a Playwright órájával
+ugratja az időt (`clock.install`, `fastForward`), és valódi kattintással
+használja az appot, mert csak a valódi bevitel számít.
+
+**Telefonra küldés: a kódot a képernyőről olvassuk vissza.** Asztalon és a
+totemen (`!MOB() || TOTEM`) az útvonal összesítője alatt a „Küldd el a
+telefonodra” QR-kódot mutat a mély linkkel (`qrLink()`: az `urlOf()`, a cím
+`?totem` és `?parosit` része nélkül — a telefon ne váljon totemmé). A liftes
+változat is a link része (`via=lift`): a `setVia()` cserével írja a
+címsorba, hogy a vissza gomb ne a lépcsős változatra vigyen, az `applyUrl()`
+pedig a `recompute()` után állítja be, mert az lépcsőre áll. A kódoló
+(`qrMatrix()`, `qrPath()`) saját: bájt mód, M szint, 1–10. verzió. A
+fejlesztéskor 4653 mátrixon modulra egyezett a python-qrcode-dal — azzal
+készülnek a falra ragasztott matricák is, így ugyanarra a linkre ugyanaz a
+kép —, és a ZXing meg az OpenCV is olvasta, sérülten is. A `tests/kuld.js` a
+képernyőképből olvas (jsQR, fejlesztői függőség), és két dolgot külön mér,
+mert a jsQR elnézőbb egy telefon kamerájánál: a **csendzónát** (a kivágott
+képen legalább 4 modulnyi világos sáv; a jsQR egymodulnyival is olvas) és a
+**hibajavítást** (25 átfordított modul a közepén). Sötét témában is fehér
+alapon fekete a kód: a fordított kódot a kamerák többnyire nem olvassák. A
+nyitott ablakban az Esc csak az ablakot zárja (a globális billentyűkezelő
+ilyenkor kiszáll), a kiválasztás marad; a vissza gomb és a totem alaphelyzete
+bezárja (`qrBezar()`), mert a kód már nem a látott útvonalra mutatna.
+
 **Az útvonal az ajtónál ér véget — az ajtók az IFC-modellből jönnek.** A
 helyiségek `doors` (az ajtók előtti pontok) és `via` (a helyiség, amelyiken
 át megközelíthető) mezőit a `tools/ifc-ajtok.py` írja be az épület
@@ -472,6 +529,48 @@ kell:
 - Sorrend: előbb a szárny (`tervlap-szarny.py`), utána ez, hogy az új
   helyiségek ajtói is bekerüljenek. A `tests/ajtok.js` őrzi; ha az app nem
   veszi figyelembe a `doors`-t és a `via`-t, tízből hat állítása elbukik.
+
+**Az útvonal lépései nevén nevezik a szintet, és egyben lépcsőznek.** Előtte a
+portától a II. emeletig négy külön sor jött („Lépcsőn fel a(z) földszint
+szintre”, „…a(z) félemelet szintre”…), az angol felületen is magyar
+szintnévvel, és a célnál a tervlapi kód állt, nem az ajtón álló szám. Most az
+egymást követő, azonos irányú és fajtájú szintváltások egy lépésbe olvadnak, ha
+köztük 6 m-nél kevesebbet kell menni (ugyanabban a lépcsőházban maradsz). A
+lépés a célszintet ragozva mondja (`lvTo`: „a II. emeletre”, „to the 2nd
+floor”), mellette a lépcsőház kódját és azt, hány szint. **A félemelet a
+lépcsőházak pihenője, nem emelet**: az `emelet()` fél emeletnek veszi, így a
+szintváltások száma és a lépcsőzés ideje (22 s emeletenként) sem duplázódik. A
+cél és az átjárók az ajtószámmal állnak (`neptunOf`).
+
+**Egy keresés, sok cél: `dijkstra()` és `routeTo()`.** A mosdóválasztó, a
+foglalható termek menetideje és az elérhetőségi teszt egy indulásból sok célhoz
+kér útvonalat. Célonként külön keresés helyett egy cél nélküli Dijkstra fut
+(`dijkstra(r1, portals, null)`), és a `routeTo()` ebből olvassa ki bármelyik
+helyiség útját, a `via`-láncot az `entryOf()`-fal követve. A `findRoute()`
+ugyanez a mag, céllal: az az első célajtónál megáll.
+
+**A mosdóválasztó a nemet is kérdezi.** Egyetlen „legközelebbi mosdó” egy nőt
+is egy férfi mosdóhoz vitt, ha az volt közelebb. Most a gomb három sort ad —
+női, férfi, akadálymentes —, mindegyikből a menetidő szerint legközelebbit, az
+indulástól (ha nincs, a portától); a nemre nem jelölt mosdó mindkét sorba
+számít. Kimarad, amibe csak egy másik helyiségen át lehet bejutni (`via`:
+irodából nyíló mosdók), és az alagsori dolgozói öltöző két mosdója
+(`DOLGOZOI_WC`). A `tests/url.js` mindkét kizárást számon kéri.
+
+**A foglalható termek közül ami most szabad, elöl.** Szabad, utána „Szabad?”,
+végül foglalt; a szabadok közt, ha az indulás megvan (QR, totem, „Innen”), a
+menetidő dönt — minden sorban ott a perc —, indulás nélkül az, hogy meddig
+marad szabad; a foglaltak közt az, amelyik hamarabb felszabadul. A
+menetidőket indulásonként egyszer számoljuk (`tmIdok()`: egy keresés), nem
+soronként.
+
+**Minden helyiséghez van út — és a kivételek nem avulhatnak el.** A
+`tests/eler.js` minden kódolt helyiséget végignéz lépcsőn a portától és
+lifttel a földszintről. A kivételek listája két irányba szigorú: egy új
+elérhetetlen helyiség és egy közben elérhetővé vált kivétel is bukás. Lifttel
+nem érhető el a félemelet (a többi lépcsőház pihenője) és **a II. emelet déli
+tömbje** (OA20E01–E12): oda csak az EL1 lépcső visz (lásd
+`docs/NYITOTT-KERDESEK.md`, 3.). Az órarendi termek közül egyik sem ilyen.
 
 **Ismétlődő teremkód.** A tervlapon az `OA00FK2` kétszer szerepel (ELŐTÉR és
 AULA). Az app `ROOM` táblája `Object.fromEntries`-szel épül, ott az UTOLSÓ nyer;
@@ -521,8 +620,8 @@ PDF, az xls és az IFC belső anyag, egyik se kerüljön a repóba. A szárnyró
   raszterezés (~3 ms): a kompozitálás (`SwapBuffers`). A szárny a felső
   szinteken is tartalmat ad, és elforgatva ezek a halvány szintek a kép
   jóval nagyobb részét fedik. A szobák alakja (lyuk, csúcsszám) nem számít
-  (±7%). Valódi telefonon mérendő; ha ott is akad, a nem aktív szintek
-  rajzán kell faragni, nem a szárnyon.
+  (±7%). Valódi telefonon mérendő (erre van a `meres.html`); ha ott is
+  akad, a nem aktív szintek rajzán kell faragni, nem a szárnyon.
 
 ```
 python3 tools/parse-neptun.py 2026-27-1-NIK-kurzus-orarend-adatok-v1.xlsx /tmp/neptun.json
@@ -630,6 +729,6 @@ MÁSODIK `github-pages` artifactot hoz létre — a `deploy-pages` ilyenkor
 
 ## Ami nyitott
 
-Lásd [docs/NYITOTT-KERDESEK.md](docs/NYITOTT-KERDESEK.md) — négy pont vár
+Lásd [docs/NYITOTT-KERDESEK.md](docs/NYITOTT-KERDESEK.md) — öt pont vár
 külső információra; valódi funkcióhiányt közülük a más karok hiányzó órarendje
 okoz.
