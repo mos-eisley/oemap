@@ -201,11 +201,17 @@ Egy e-totemen az app a saját helyéről indul, és magától visszaáll:
 https://mayydayy99.github.io/oemap/?totem#from=OA00FK1
 ```
 
-A `from` a totem helye. Egy perc tétlenség után minden visszaáll (az indulás,
-magyar nyelv, alaprajz, cél nélkül); tíz másodperccel előtte szól, és egy
-érintés megállítja. Mozdulat közben soha nem áll vissza. Naponta egyszer
-újratölt, hogy a friss adat és a friss kód is megjöjjön. A totemről küldött
-QR-kód linkje már nem totem mód: a telefonon nem áll vissza semmi.
+A `from` a totem helye. Induláskor egy felirat jelzi, hogy totem módban fut —
+ha nem jelenik meg, a cím nem kért totem módot. A `totem` a link végére, a `#`
+után írva is működik (`…/oemap/#from=OA00FK1?totem`), az app a szokásos alakra
+igazítja. Egy perc tétlenség után minden visszaáll (az indulás, magyar nyelv,
+alaprajz, cél nélkül); tíz másodperccel előtte szól, és egy érintés
+megállítja. Mozdulat közben soha nem áll vissza. Naponta egyszer újratölt, hogy
+a friss adat és a friss kód is megjöjjön. A totemről küldött QR-kód linkje már
+nem totem mód: a telefonon nem áll vissza semmi.
+
+A totemen a teljes linket a böngésző kioszk módjában nyisd meg, ne a telepített
+appot: az a kezdőlapjáról indul, `?totem` nélkül.
 
 Ismeretlen kódot a link csendben elhagy: az app elindul, csak épp kiválasztás
 nélkül. A panelben a megosztás gomb a pillanatnyi állapot linkjét adja —

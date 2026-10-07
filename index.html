@@ -750,6 +750,7 @@ const I18N={hu:{
   stHint:"Az irodák, raktárak és üzemeltetési terek halványan jelennek meg.",
   qwc:"Legközelebbi mosdó", qbufe:"Büfé", qentry:"Porta", tmWalk:"%s perc",
   totemSoon:"10 másodperc múlva alaphelyzetbe áll — érintsd meg a képernyőt, ha még használod.",
+  totemOn:"Totem mód: egy perc tétlenség után alaphelyzetbe áll.",
   wcWomen:"Női mosdó", wcMen:"Férfi mosdó", wcAcc:"Akadálymentes mosdó",
   qrooms:"Foglalható termek", qroomsSub:"most szabad vagy foglalt",
   tmTitle:"Foglalható termek", tmFree:"Szabad", tmBusy:"Foglalt",
@@ -801,6 +802,7 @@ const I18N={hu:{
   stHint:"Offices, stores and plant rooms are shown dimmed.",
   qwc:"Nearest toilet", qbufe:"Café", qentry:"Front desk", tmWalk:"%s min",
   totemSoon:"Resetting in 10 seconds — touch the screen if you are still using it.",
+  totemOn:"Totem mode: resets after a minute without use.",
   wcWomen:"Women's toilet", wcMen:"Men's toilet", wcAcc:"Accessible toilet",
   qrooms:"Bookable rooms", qroomsSub:"free or busy right now",
   tmTitle:"Bookable rooms", tmFree:"Free", tmBusy:"Busy",
@@ -3195,7 +3197,8 @@ function readUrl(){
   const out={from:null,to:null,sel:null,via:null};
   if(!h) return out;
   if(!h.includes("=")){ out.sel=h.toUpperCase(); return out; }   // #OA10E18
-  for(const part of h.split("&")){
+  // a ? is elválasztó: egy link végére írt ?totem a hash-be kerül, és vinné a from-ot
+  for(const part of h.split(/[&?]/)){
     const [k,v]=part.split("=");
     if(v && ["from","to","sel"].includes(k)) out[k]=v.toUpperCase();
     else if(k==="via" && v==="lift") out.via=v;
@@ -3230,7 +3233,22 @@ addEventListener("hashchange",()=>{ if(!urlLock) applyUrl(); });
    megállítja; gesztus közben soha nem áll vissza. Naponta egyszer újratölt
    (nyugvó állapotban), hogy a friss adat és a friss kód is megjöjjön. Csak
    ha valaki használta: a már alaphelyzetben álló kép percenként nem ugrál. */
-const TOTEM=new URLSearchParams(location.search).has("totem");
+/* A „totem" a cím kereső részébe való (?totem#from=…), de egy meglévő link
+   végére írva a # után kerül (#from=OA00FK1?totem, …&totem): ott a böngésző a
+   hash részének veszi, és a totem mód csendben nem kapcsolt be — kívülről
+   semmi nem mutatta. Ezért a hash-ben is elfogadjuk, és átírjuk a kereső
+   részbe: a hash-t az app minden lépésnél újraírja, egy újratöltés után onnan
+   elveszne. */
+const TOTEM=(()=>{
+  const kulcs=x=>/^totem(=|$)/i.test(x);
+  const keresoben=[...new URLSearchParams(location.search).keys()].some(kulcs);
+  const resz=location.hash.replace(/^#/,"").split(/[&?]/).filter(Boolean);
+  if(!resz.some(kulcs)) return keresoben;
+  const hash=resz.filter(x=>!kulcs(x)).join("&");
+  const kereso=keresoben?location.search:(location.search?location.search+"&":"?")+"totem";
+  try{ history.replaceState(null,"",location.pathname+kereso+(hash?"#"+hash:"")); }catch(e){}
+  return true;
+})();
 const TOTEM_HAZ=location.hash, TOTEM_IDLE=60e3, TOTEM_SZOL=10e3, TOTEM_UJRA=20*3600e3, BETOLTVE=Date.now();
 let totemUtolso=Date.now(), totemPiszkos=false, totemSzolt=false;
 function totemAlap(){
@@ -3276,6 +3294,8 @@ urlLock=true; const fromUrl=applyUrl(); urlLock=false;
 if(!fromUrl){ recompute(); refreshSel(); }
 fit(); syncFlat();
 setSnap(MOB()?"peek":"full");
+// enélkül kívülről nem látszik, hogy a cím totem módot kért-e
+if(TOTEM) toast(T().totemOn,5000);
 addEventListener("orientationchange",()=>setTimeout(()=>{setSnap(snap);fit();},260));
 if("serviceWorker" in navigator)
   addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));

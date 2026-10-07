@@ -72,7 +72,7 @@ hagytak egy hibás kódot.
 | `tests/eler.js` | minden helyiséghez van-e út (lépcsőn a portától, lifttel a földszintről); a kivételek listája két irányba szigorú |
 | `tests/ikonok.js` | mosdó-, lépcső- és liftjel: minden mosdón és lépcsőházon a jó jel, a teremszám helyett, a feliratpontján; Épület nézetben magonként egy jelvény, alapnagyításon mind kint, teremszámra nem lógva |
 | `tests/sharp.js` | Épület nézet asztalon, nagyítva: éles-e a kép, nem mozdul-e a sűrűségtől, nem vált-e mozgás közben, csak az aktív szintnél, telefonon és más motorban nem, Firefoxban a saját kódútján (3D-ben minden szint saját transzformmal, a lapos alaprajzon egyik sem) — **élesben bejelentett „irgalmatlan életlen" asztali 3D, Chrome-ban és Firefoxban, és a Firefoxos „éles, homályos, megint éles" váltás** |
-| `tests/totem.js` | totem mód: egy perc tétlenség után alaphelyzet, tíz másodperccel előtte szól, gesztus közben soha, naponta újratölt — a Playwright órájával, percekig várás nélkül |
+| `tests/totem.js` | totem mód: egy perc tétlenség után alaphelyzet, tíz másodperccel előtte szól, gesztus közben soha, naponta újratölt — a Playwright órájával, percekig várás nélkül; a link végére, a # után írt `?totem` is bekapcsolja — **élesben bejelentett: „nem működik az alaphelyzet"** |
 | `tests/kuld.js` | telefonra küldés: a QR-kódot a képernyőképből olvassa vissza (jsQR), a csendzónát és a sérült kódot külön méri, sötét témában is; a beolvasott link telefonon ugyanazt az útvonalat nyitja meg, lifttel; a totemről `?totem` nélkül |
 | `tests/meres.js` | a telefonos mérőlap (`meres.html`) végigfut a valódi appon |
 
@@ -474,6 +474,17 @@ használt, ahhoz nem nyúl; 20 óránként, nyugvó állapotban újratölt, hogy
 friss adat és kód is megjöjjön. A `tests/totem.js` a Playwright órájával
 ugratja az időt (`clock.install`, `fastForward`), és valódi kattintással
 használja az appot, mert csak a valódi bevitel számít.
+
+Élesben jelentették, hogy „nem működik az alaphelyzet". Valós órával,
+egérrel, érintéssel, csippentéssel és befagyasztott háttérlappal is
+visszaállt; egy esetben nem: ha a `?totem` egy meglévő link végére, a `#`
+után került (`#from=OA00FK1?totem`). Ott a böngésző a hash részének veszi, a
+totem mód csendben nem kapcsolt be, és a from is elveszett. Ezért a `TOTEM` a
+hash-ben is keresi (`?totem` és `&totem` is), és átírja a címet a kereső
+részbe — a hash-t az app minden lépésnél újraírja, onnan egy újratöltés után
+elveszne. A `readUrl()` a `?`-et is elválasztónak veszi, így más toldalék sem
+viszi el a from-ot. Induláskor egy rövid felirat mondja, hogy totem módban fut:
+enélkül kívülről semmi nem mutatta, kért-e a cím totem módot.
 
 **Telefonra küldés: a kódot a képernyőről olvassuk vissza.** Asztalon és a
 totemen (`!MOB() || TOTEM`) az útvonal összesítője alatt a „Küldd el a

@@ -96,6 +96,13 @@ run("mély link (URL-állapot)", async ({ t, ctx, base }) => {
   t("az app ettől még elindul", await p.evaluate(() => document.querySelectorAll(".floor").length > 0));
   await p.close();
 
+  // a link végére írt paraméter (?utm=…, ?totem) a # után kerül: ne vigye el a célt
+  p = await open(ctx, base + "#from=OA00FK1&to=OA10E18?utm_source=qr", { settle: 1400 });
+  const vege = await st(p);
+  t("a # utáni ?-es toldalék nem viszi el az útvonalat", vege.from === "OA00FK1" && vege.to === "OA10E18" && vege.ut,
+    JSON.stringify(vege));
+  await p.close();
+
   // F) a kiválasztás írja a címsort, a vissza gomb visszalép
   p = await open(ctx, base, { settle: 1400 });
   await p.evaluate(() => select("OA00F01")); await p.waitForTimeout(400);
