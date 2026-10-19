@@ -38,6 +38,14 @@ jobs:
       # próbálkozás egy második "github-pages" artifactot hagy, amitől a deploy
       # elutasítja a futást. Helyette a teljes workflow-t futtasd újra, vagy
       # indítsd kézzel (Run workflow) — az saját artifactot kap.
+      # A forras/ a Tervtár belső anyaga (tervlapok, épületadat-táblák) és a
+      # belőlük készült leltár. A repó privát, de a Pages site NEM az: ami
+      # bekerül az artifactba, az nyilvános URL-en letölthető az oldalról.
+      # Ezért a publikált csomagból kimarad — az appnak nincs is rá szüksége,
+      # a kész adata a data/-ban van.
+      - name: Drop internal sources from the published bundle
+        run: rm -rf forras
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

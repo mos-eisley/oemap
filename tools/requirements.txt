@@ -1,0 +1,24 @@
+# A tools/ szkriptek Python-függőségei. Az app maga nem függ ezektől: az
+# index.html build és futásidejű függőség nélkül fut, ezek csak az adatot
+# állítják elő a Tervtár anyagaiból.
+#
+#   pip install -r tools/requirements.txt
+#
+# Verzió nincs rögzítve: ezek az eszközök évente néhányszor futnak, és a
+# kimenetüket úgyis ellenőrizni kell (területek, elérhetőség), nem a
+# csomagverzió őrzi a helyességet.
+
+# tervlap-szarny.py, tervlap-uj.py, epulet-json.py — a tervlapok PDF-je
+pymupdf
+# ugyanezek — geometria: sokszögek metszése, illesztés, vázpontok
+shapely
+scipy
+numpy
+# tervtar-ajtoszam.py, tervtar-leltar.py, tervlap-uj.py — a régi .xls táblák
+xlrd
+# tervtar-leltar.py — az újabb .xlsx táblák (FC, FG, FS, YC)
+openpyxl
+# ifc-ajtok.py, ifc-lepcsok.py — az épület IFC-modellje (csak az OA-hoz van)
+ifcopenshell
+# make-qr.py — a falra ragasztott „itt vagyok" matricák íve
+qrcode

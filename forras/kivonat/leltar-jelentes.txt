@@ -1,0 +1,209 @@
+25 tábla, 29 épület, 4643 helyiség, 1403 ajtószám, 105204 m2 -> C:/Users/EDTI/AppData/Local/Temp/claude/C--Users-EDTI/ce6a613c-27ab-4a13-a2ac-7e5841c3c20b/scratchpad/leltar.json
+
+épület  helyiség  ajtószám    terület   szint
+  BA         70        63       2016      6
+  BB        168       125       3530      7
+  BD         75        30       1028      2
+  BF        412       315      10864      7
+  FC         47         0       1937      3
+  FF         80         0       1410      4
+  FG        172         0       4706      5
+  FK         95         0       2848      3
+  FS        127         0       2124      3
+  KB        519       220       8272      8
+  KD        280       102       4432     11
+  KH        219         0       2764      4
+  KP        135       135       1991      6
+  KT        521         0       7091      7
+  OA        223       115       9440      7
+  OB         61         0       1863      3
+  OC        159         2       4126      6
+  OD        231       223       6761      9
+  OM        132         0       4346      6
+  TA        185        12       5835      5
+  TB        115         0       3230      5
+  TC        117         0       1728      6
+  TG         98         0       3378      5
+  TN          8         0        102      1
+  TT         19         0        417      1
+  UV          9         0        102      2
+  YA        179        49       5395      6
+  YB        119        11       2322      7
+  YC         68         1       1146      4
+
+olvashatatlan tábla (1):
+  oe_tervtar_kh_gyumolcs_u_lebenyi_kollegium.xls: AssertionError
+
+a lap nevéből nem jött ki a szint (4):
+  MENNYISÉGEK_TETŐTÉR  (156 sor)
+  MENNYISÉGEK_UDVAR SZINT  (36 sor)
+  MENNYISÉGEK_B-udvar szint  (36 sor)
+  MENNYISÉGEK_1-2 felszint  (24 sor)
+
+a szám közlekedőn áll, a térképre nem írható ki (118):
+  BAX1PL1 (A5/A) KÖZELEKDŐK
+  BBX1PK1 (N5) KÖZELEKDŐK
+  BBX1PL1 (N4) KÖZELEKDŐK
+  BFX1PK1 (P31) KÖZELEKDŐK
+  BFX1PK2 (P30) KÖZELEKDŐK
+  BFX1PK3 (P24) KÖZELEKDŐK
+  BFX1PK4 (P28) KÖZELEKDŐK
+  BFX1PK5 (P27) KÖZELEKDŐK
+  BFX1PK7 (P0/D) KÖZELEKDŐK
+  BFX1PK8 (P0/G) KÖZELEKDŐK
+  BFX1PK9 (P0/I) KÖZELEKDŐK
+  BFX1PL2 (P0/A) KÖZELEKDŐK
+  BFX1PL3 (P0/F) KÖZELEKDŐK
+  BFX1PL4 (P0/J) KÖZELEKDŐK
+  BA00FK1 (U3) KÖZELEKDŐK
+  BA00FL1 (A6) KÖZELEKDŐK
+  BB00FK1 (N3) KÖZELEKDŐK
+  BB00FK2 (U7) KÖZELEKDŐK
+  BB00FL1 (U14/A) KÖZELEKDŐK
+  BF00UL1 (U10) KÖZELEKDŐK
+  BA10EK1 (A36) KÖZELEKDŐK
+  BA10EK2 (A37) KÖZELEKDŐK
+  BA10EK3 (A40) KÖZELEKDŐK
+  BA10EK4 (A46/A) KÖZELEKDŐK
+  BA10EK5 (A46/B) KÖZELEKDŐK
+  BA10EL1 (A7) KÖZELEKDŐK
+  BB10EK1 (A9/C) KÖZELEKDŐK
+  BB10EK2 (A9/B) KÖZELEKDŐK
+  BB10EK3 (A9/A) KÖZELEKDŐK
+  BB10EL1 (A22) KÖZELEKDŐK
+  BF00F01 (003) KÖZELEKDŐK
+  BF00FK1 (002) KÖZELEKDŐK
+  BF00FK2 (004) KÖZELEKDŐK
+  BF00FK3 (005) KÖZELEKDŐK
+  BF00FK4 (006) KÖZELEKDŐK
+  BF00FK5 (007) KÖZELEKDŐK
+  BA20EK1 (135) KÖZELEKDŐK
+  BA20EK2 (129) KÖZELEKDŐK
+  BA20EL1 (A47) KÖZELEKDŐK
+  BB20EK1 (A48) KÖZELEKDŐK
+  BB20EK2 (135) KÖZELEKDŐK
+  BB20EL1 (A52) KÖZELEKDŐK
+  BF10EK1 (127) KÖZELEKDŐK
+  BF10EK2 (134) KÖZELEKDŐK
+  BF10EK3 (126) KÖZELEKDŐK
+  BA30EL1 (A57) KÖZELEKDŐK
+  BA40EK2 (231) KÖZELEKDŐK
+  BA40EK3 (231) KÖZELEKDŐK
+  BA40EL1 (A67) KÖZELEKDŐK
+  BF20EK1 (246) KÖZELEKDŐK
+  BF20EK3 (245) KÖZELEKDŐK
+  BB50EK1 (332) KÖZELEKDŐK
+  BB50EK2 (333) KÖZELEKDŐK
+  BB50EK3 (334) KÖZELEKDŐK
+  BF30EK1 (331) KÖZELEKDŐK
+  BF30EK4 (301) KÖZELEKDŐK
+  BF30EK5 (331) KÖZELEKDŐK
+  BDX1P09 (627) KÖZLEKEDŐK
+  BDX1P17 (629) KÖZLEKEDŐK
+  OA20EK2 (2.61) KÖZELEKDŐK
+  ODX2PK1 (P01) KÖZLEKEDŐK
+  ODX1PK1 (P02) KÖZLEKEDŐK
+  OD00FK1 (F01) KÖZLEKEDŐK
+  OD00FK2 (F01) KÖZLEKEDŐK
+  OD00FK4 (F01) KÖZLEKEDŐK
+  OD10EK1 (E01) KÖZLEKEDŐK
+  OD15EK1 (E01) KÖZLEKEDŐK
+  OD20EK1 (E03) KÖZLEKEDŐK
+  OD25EK1 (E03) KÖZLEKEDŐK
+  OD30EK1 (E03) KÖZLEKEDŐK
+  OD35EK1 (E03) KÖZLEKEDŐK
+  OD40EK1 (E04) KÖZLEKEDŐK
+  OD45EK1 (E04) KÖZLEKEDŐK
+  OD50EK1 (E05) KÖZLEKEDŐK
+  KB10EK3 (140) KÖZLEKEDŐK
+  KB10EK4 (138) KÖZLEKEDŐK
+  KB10EK5 (137) KÖZLEKEDŐK
+  KB10EL1 (139) KÖZLEKEDŐK
+  KB10EL2 (141) KÖZLEKEDŐK
+  KB20EK1 (250) KÖZLEKEDŐK
+  KB20EK2 (252) KÖZLEKEDŐK
+  KB30EK2 (352) KÖZLEKEDŐK
+  KB30EL2 (353) KÖZLEKEDŐK
+  KB60EK1 (650) KÖZLEKEDŐK
+  KB60EK2 (662) KÖZLEKEDŐK
+  KB70EK1 (704) KÖZLEKEDŐK
+  KB70EK2 (706) KÖZLEKEDŐK
+  KB70EL1 (705) KÖZLEKEDŐK
+  KB70EL2 (707) KÖZLEKEDŐK
+  KPX1PK1 (P08) KÖZLEKEDŐK
+  KPX1PK2 (P12) KÖZLEKEDŐK
+  KPX1PL1 (P01) KÖZLEKEDŐK
+  KPX1PL2 (P18) KÖZLEKEDŐK
+  KPX1PL3 (P21) KÖZLEKEDŐK
+  KP00FK1 (001) KÖZLEKEDŐK
+  KP00FK2 (003) KÖZLEKEDŐK
+  KP00FK3 (004) KÖZLEKEDŐK
+  KP00FK4 (012b) KÖZLEKEDŐK
+  KP00FK5 (020) KÖZLEKEDŐK
+  KP00FK6 (016) KÖZLEKEDŐK
+  KP00FK7 (014) KÖZLEKEDŐK
+  KP00FK8 (015) KÖZLEKEDŐK
+  KP00FL1 (019) KÖZLEKEDŐK
+  KP00FL2 (024) KÖZLEKEDŐK
+  KP10EK1 (118) KÖZLEKEDŐK
+  KP10EK2 (120) KÖZLEKEDŐK
+  KP10EK3 (119) KÖZLEKEDŐK
+  KP10EL1 (117) KÖZLEKEDŐK
+  KP10EL2 (121) KÖZLEKEDŐK
+  KP20EK1 (219) KÖZLEKEDŐK
+  KP20EL1 (218) KÖZLEKEDŐK
+  KP20EL2 (220) KÖZLEKEDŐK
+  KP30EK1 (320) KÖZLEKEDŐK
+  KP30EL1 (218) KÖZLEKEDŐK
+  KP30EL2 (321) KÖZLEKEDŐK
+  KP40EK1 (420) KÖZLEKEDŐK
+  KP40EL1 (218) KÖZLEKEDŐK
+  KP40EL2 (421) KÖZLEKEDŐK
+
+ugyanaz a kód több sorban (15):
+  BB: BB50EL1 x2
+  BF: BF30E01 x2, BF30E02 x2, BF30E03 x2
+  KD: KD00F20 x2, KD00FL3 x2
+  OC: OC30E27 x2, OC40E23 x2
+  OM: OM15E04 x2, OM40E06 x2
+  TA: TA00F12 x5, TA00F14 x5
+  TG: TG10E08 x2
+  YB: YB10E12 x2, YB10E14 x2
+
+ugyanaz az ajtószám több helyiségen (130) — ezeket a térképre így kiírni félrevezető:
+  BA: 136-137 x2, 2.31 x3, A36 x2
+  BB: A3 x2, A53 x2
+  BF: 0.02 x2, 0.06 x2, 0.07 x2, 0.10 x2, 0.11 x2, 0.40 x2, 1.01 x2, 1.02 x2, 1.04 x2, 1.05 x2, 1.06 x2, 1.07 x2, 1.08 x2, 1.09 x2, 1.10 x2, 1.11 x2, 1.12 x2, 1.13 x2, 1.14 x2, 1.21 x2, 1.26 x2, 2.01 x2, 2.02 x2, 2.03 x2, 2.04 x2, 2.42 x2, 2.51 x2, 2.52 x2, 2.53 x2, 3.01 x2, 3.02 x2, 3.03 x2, 3.04 x2, 3.05 x2, 3.06 x2, 3.07 x3, 3.08 x3, 3.09 x3, 3.10 x2, 3.11 x2, 3.12 x2, 3.31 x2, P01 x2, P03/1 x2, P08 x3, P10/1 x6, P14/2 x4, P16 x2, P17 x2, P18 x2, P19 x2, P20 x2, P21 x4, P24 x2, P25 x2, P26 x2, P27 x2, P27/A x2, P28 x2, P3/A x2, P30 x2, P32 x2, P33 x2, P9 x2
+  KB: 1.30 x2, 1.34 x2
+  KD: 2.03 x3, 3.02 x3, 4.01 x2, 4.02 x2, 4.03 x2, 4.04 x2, 4.05 x2, 4.06 x2, 4.07 x2, 4.08 x2, 5.01 x2, 5.02 x2, 5.03 x2, 5.04 x2, 5.05 x2, 5.06 x2, 5.07 x2, 5.08 x2, 6.01 x2, 6.02 x2, 6.03 x2, 6.04 x2, 6.05 x2, 6.06 x2, 6.07 x2, 6.08 x2, 7.01 x2, 7.02 x2, 7.03 x2, 7.04 x2, 7.05 x2, 7.06 x2, 7.07 x2, 7.08 x2, 7.09 x2
+  KP: 0.07b x2, 0.12a x2, 1.08 x3, 2.18 x3, 3.15 x2
+  OA: 2.16a x2
+  OD: 1.02 x2, 1.50 x2, 1.56 x2, 4.01 x2, 5.01 x2, E01 x20, E03 x29, E04 x13, E05 x2, F01 x27, L2 x2, L4 x3, L8 x2, P01 x3, P02 x12
+  YA: 4.01 x2, T01 x4, T02 x3
+
+a kari oszlopban nem ajtószám áll (840 helyiségnél), az első 25:
+  BB50EL1 (L302)
+  TG10E08 (KGK)
+  YB10E14 (108 tároló)
+  BFX1PL1 (LP01)
+  BB10E01 (061/4)
+  BB10E02 (061/1)
+  BF00F06 (053/2)
+  BF00F07 (053/2)
+  BF00F08 (053/2)
+  BF00F09 (053/2)
+  BF00F10 (053/1)
+  BF00F12 (052/2)
+  BF00F14 (052/1)
+  BF00F16 (NFV2)
+  BF00F17 (NFV3)
+  BF00F18 (NFV1)
+  BF00F19 (004/A)
+  BF00F20 (004/B)
+  BF00F21 (005/A)
+  BF00F22 (005/B)
+  BF00F35 (019/A)
+  BF00F37 (019/B)
+  BF00F42 (024/B)
+  BF00F43 (024/A)
+  BF00F55 (038/A)

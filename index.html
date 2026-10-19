@@ -784,7 +784,7 @@ const I18N={hu:{
   go:"Indulj innen:", arrive:"Cél:", inThru:"Bejárat ezen át:", outThru:"Kijárat ezen át:", walk:"Haladj tovább", left:"Fordulj balra", right:"Fordulj jobbra",
   stairs:"Lépcsőn", up:"fel", down:"le", via:"Lépcsőház", nLv:"%s szint", nRooms:"helyiség",
   epvOpen:"Épület választása", epvHere:"itt vagy", epvNoPlan:"alaprajz még nincs",
-  epvNote:"Alaprajz egyelőre csak az OA épülethez van. A többi épületről az Egyetemi Tervtár adatai látszanak: cím, szintek és helyiségek száma.",
+  epvNote:"Megnyitni egyelőre az OA és az OD épületet lehet. A többiről az Egyetemi Tervtár adatai látszanak: cím, szintek és helyiségek száma.",
   epvOther:"Ez a kód a(z) %s épületé, ahhoz viszont még nincs alaprajz.",
   epvUnknown:"Ez a kód egyetlen ismert épülethez sem tartozik.",
   epvNoData:"A(z) %s alaprajza most nem érhető el, ezért nem nyitható meg.",
@@ -840,7 +840,7 @@ const I18N={hu:{
   go:"Start at:", arrive:"Destination:", inThru:"Enter through:", outThru:"Leave through:", walk:"Continue", left:"Turn left", right:"Turn right",
   stairs:"Take the stairs", up:"up", down:"down", via:"Stairwell", nLv:"%s floors", nRooms:"rooms",
   epvOpen:"Choose building", epvHere:"you are here", epvNoPlan:"no floor plan yet",
-  epvNote:"Floor plans are available for the OA building only so far. For the other buildings the University Plan Archive data is shown: address, number of floors and rooms.",
+  epvNote:"So far the OA and OD buildings can be opened. For the others the University Plan Archive data is shown: address, number of floors and rooms.",
   epvOther:"This code belongs to building %s, which has no floor plan yet.",
   epvUnknown:"This code does not belong to any known building.",
   epvNoData:"The floor plan of %s is not available right now, so it cannot be opened.",
@@ -947,7 +947,10 @@ epuletGeo(D);
    bekötni — ezért az `epuletKesz()` a portát is megköveteli attól az épülettől,
    amire váltani lehet. Kitalálni nem szabad: egy rossz porta minden útvonalat
    rossz helyről indítana. */
-const PORTA={OA:"OAX1A02"};
+/* Az OD-é ugyanaz a minta, mint az OA-é: „PORTA" nevű, DOLGOZÓI TERÜLETEK
+   kategóriájú helyiség a bejáratnál, a SZÉLFOGÓ (OD00FK1) és az ELŐCSARNOK
+   (OD00FK2) mellett — nem következtetés, hanem a tervlap saját felirata. */
+const PORTA={OA:"OAX1A02", OD:"OD00F01"};
 let START=null;
 function epuletStart(d){
   START=PORTA[((d.rooms.find(r=>r.code)||{}).code||"").slice(0,2)]||null;
@@ -2835,7 +2838,12 @@ function recompute(){
 }
 function applyLang(){
   const t=T();
-  $("sub").textContent=t.sub; $("q").placeholder=t.ph;
+  /* Az alcím az OA-nál a lefordított `sub` (kar + cím, ahogy a megrendelő
+     kérte); másik épületnél a saját adata, különben a Doberdó úton állva a
+     Bécsi utat hirdetné. */
+  $("sub").textContent = D===D_OA ? t.sub
+    : [D.meta.faculty,D.meta.address].filter(Boolean).join(" · ");
+  $("q").placeholder=t.ph;
   /* Az épületlista a nyelvvel együtt újraépül (szintek, „alaprajz még nincs”,
      az ezres csoportosítás is más). A nyilvántartás előtt még nincs mit. */
   if(EPULETEK){ $("epvBtn").setAttribute("aria-label",t.epvOpen); epvRender(); }
@@ -3130,7 +3138,7 @@ document.addEventListener("click",e=>{
    gyorsítótár), a gomb el sem jelenik meg, és az app pontosan úgy viselkedik,
    mint a nyilvántartás előtt. Ezért van a fejlécben a gomb mellett egy statikus
    épületnév is: az egyik vagy a másik látszik, sosem mindkettő. */
-let EPULETEK=null, epvMsg="", epvVar="";
+let EPULETEK=null, epvMsg="", epvVar="", epvVarHash="";
 const epItt=()=>(Object.keys(ROOM)[0]||"").slice(0,2);
 
 function epvRender(){
@@ -3186,12 +3194,18 @@ function epvIsmeretlenKod(kod){
   if(!/^[A-Z]{2}/.test(kod||"")) return;
   /* A nyilvántartás a /data/ ágon, hálózatról jön, az első applyUrl() tehát
      még nem látja. A kódot félretesszük, és a lista megérkeztekor jelezzük —
-     különben pont a linkről érkező hallgató nem kapna semmit. */
-  epvVar=kod;
-  if(!EPULETEK) return;
-  epvVar="";
+     különben pont a linkről érkező hallgató nem kapna semmit. A CÍMET is el
+     kell tenni mellé: az ismeretlen kódot az applyUrl() elhagyja, és mire a
+     lista megjön, az app a hash-t már üres állapotra írta át. */
+  if(!EPULETEK){ epvVar=kod; epvVarHash=location.hash; return; }
+  const hash=epvVarHash||location.hash;
+  epvVar=""; epvVarHash="";
   const e=EPULETEK.epuletek[kod.slice(0,2)];
   if(e && e.kod===epItt()) return;        // a saját épület kódja, csak elírás
+  /* Ha az az épület megnyitható, a linknek ÉRVÉNYESÜLNIE kell: átváltunk rá,
+     és a cím újra lefut rajta. Egy falra ragasztott QR-kód vagy egy megosztott
+     útvonal így a másik épületben is odavisz, ahová mutat. */
+  if(e && e.navigalhato){ epuletValt(e.kod,hash); return; }
   epvNyit(e ? T().epvOther.replace("%s",e.nev) : T().epvUnknown);
 }
 
@@ -3232,7 +3246,7 @@ function epuletAllit(d){
 
 const EP_OA=((D_OA.rooms.find(r=>r.code)||{}).code||"").slice(0,2);
 let epvTolt=false;
-function epuletValt(kod){
+function epuletValt(kod,hashMegtart){
   if(epvTolt || kod===epItt()){ epvZar(); return; }
   epvTolt=true;
   /* Az OA-ra hálózat nélkül is vissza kell tudni jönni: az adata beégetve van. */
@@ -3242,7 +3256,11 @@ function epuletValt(kod){
     epvTolt=false;
     if(!epuletKesz(d)){ epvNyit(T().epvNoData.replace("%s",
       (EPULETEK.epuletek[kod]||{}).nev||kod)); return; }
+    /* Linkről érkezve a címet meg kell tartani: az epuletAllit() üres
+       állapotból indul és törli a hash-t, utána játsszuk vissza. */
+    const hash=hashMegtart||"";
     epuletAllit(d);
+    if(hash){ try{ history.replaceState({},"",hash); }catch(e){} applyUrl(); }
     const e=EPULETEK.epuletek[epItt()];
     if(e) $("epvNev").textContent=e.nev;
     epvZar();

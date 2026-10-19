@@ -45,7 +45,9 @@ honnan/hova, útvonal, forgatás, panelállás). Aki ezt megérti, érti az appo
 telephely, szintek és helyiségek száma, terület. A fejléc épületneve maga a
 választógomb, a lista telephely szerint csoportosít — és **nem mossa össze a
 „van alaprajza” és a „létezik” állapotot**: amelyik épületnek nincs geometriája
-az appban, az adatlapként látszik, megnyitás nélkül (`navigalhato`). Ha ki sem
+az appban, az adatlapként látszik, megnyitás nélkül (`navigalhato` — ezt a
+`tervlap-epuletek.py` abból állítja elő, hogy létezik-e a
+`data/epuletek/<kód>.json`, nem kézi listából). Ha ki sem
 írnánk, a hallgató azt hihetné, nincs is ilyen épület; ha megnyithatónak
 látszana, hiába kattintana.
 
@@ -92,11 +94,33 @@ porta nélkül a gyorsgombok rossz helyről indítanának — ilyenkor az épül
 marad adatlap, és a lista megmondja, hogy nem érhető el. **Ezért a `navigalhato`
 nem azt jelenti, hogy van tervlap**, hanem hogy az app adata kész.
 
+**Most két épület nyitható meg: az OA (beégetve) és az OD**
+(`data/epuletek/od.json`, a tervlapokból gépi úton kinyerve). Amit az OD-ről
+tudni kell:
+
+- **Ajtóadat nincs** (IFC csak az OA-hoz van), ezért az útvonal a helyiséghez
+  legközelebbi cellánál ér véget, nem az ajtajánál — ahogy az OA-nál is volt az
+  `ifc-ajtok.py` előtt.
+- **Lift sincs az adatban**: a tervlap helyiségnevei közt nem volt azonosítható
+  liftfülke, így az OD-ben nincs liftes alternatíva. Ez ellenőrizendő a
+  helyszínen; ha van, a `lifts` tömbbe kell felvenni.
+- **A 229 helyiségből 215-höz van út a portától.** Ami kimarad: a −2. szint
+  három helyisége (a szintet egyetlen lépcső sem köti be — a saját `ODX2PK1
+  LÉPCSŐ` helyisége is elérhetetlen), és egy tízes földszinti tömb (rajztermek,
+  raktárak, öltöző, WC, zuhanyzó, `OD00FK4` közlekedő). Mindkettő a maszkon
+  összefüggő, de a bejárat felől elvágott folt: a tervlapról hiányzik a nyílás,
+  ami bekötné. Ezt mérni kell, nem tippelni — a mérés egy sorban megvan:
+  `dijkstra(ROOM[START],PORTAL,null)` után `routeTo()` minden kódolt helyiségre.
+- **A porta kézzel felvett érték** (`PORTA.OD = "OD00F01"`): a tervlapon
+  „PORTA" nevű, DOLGOZÓI TERÜLETEK kategóriájú helyiség a SZÉLFOGÓ (`OD00FK1`)
+  és az ELŐCSARNOK (`OD00FK2`) mellett — ugyanaz a minta, mint az OA-é.
+
 ## Kipróbálás
 
 ```
 npm install          # playwright (a böngésző a képen már megvan)
 npm test             # mind a 23 tesztfájl
+pip install -r tools/requirements.txt   # csak a tools/ szkriptjeihez
 node tests/run.js url share     # csak egy-kettő
 ```
 
@@ -728,7 +752,9 @@ A térkép (`D`) kézzel nem szerkesztendő: a régi generátor adatára a fenti
 három eszköz épít, ebben a sorrendben (a szárny után az ajtók, hogy az új
 helyiségek is megkapják, és a lépcsőkarok, amelyek a szárnnyal megnőtt
 kerethez illeszkednek), utána a `tervtar-ajtoszam.py` az ajtószámokat. A
-PDF, az xls és az IFC belső anyag, egyik se kerüljön a repóba. A szárnyról:
+PDF, az xls és az IFC belső anyag. A repó privát, ezért a `forras/`-ban
+benne vannak — de a Pages site NEM privát, ezért a deploy a publikált
+csomagból kidobja őket (`deploy-pages.yml`). A szárnyról:
 - A régi adat keretével levágta a felső szárny északkeleti végét (41
   helyiség, 10 órarendi terem). Az eszköz a PDF falait a térkép falaira
   illeszti, a helyiségeket a falak közti szabad térből vágja ki, és ahol a
@@ -790,14 +816,16 @@ Amit a forrásokról tudni kell, mert egyik sem látszik első ránézésre:
   ami kódban YA.
 - A `HASZNÁLÓ` oszlop kimarad a leltárból: most mindenhol üres, de ha egyszer
   személynév kerül bele, annak nincs helye egy továbbadott listában.
-- **A leltár maga nem a repóba való** (1,2 MB, az egész egyetem helyiséglistája
-  a Tervtár belső anyagából); a `data/epuletek.json` igen, mert abban csak az
-  van, ami egy épületről kívülről is tudható.
+- **A leltár a `forras/kivonat/`-ban van, nem a `data/`-ban** (1,1 MB, az egész
+  egyetem helyiséglistája a Tervtár belső anyagából): a `forras/` kimarad a
+  Pages-re publikált csomagból, a `data/` nem. A `data/epuletek.json` azért
+  mehet oda, mert abban csak az van, ami egy épületről kívülről is tudható.
 
 ```
-python3 tools/tervtar-leltar.py /tmp/leltar.json oe-*epuletadatok*.xls* oe_tervtar_*kollegium*.xls
-python3 tools/tervlap-epuletek.py /tmp/epuletek.json /tmp/leltar.json \
-        --app data/epuletek.json oe-* oe_*
+python3 tools/tervtar-leltar.py forras/kivonat/leltar.json \
+        forras/oe-*epuletadatok*.xls* forras/oe_tervtar_*kollegium*.xls
+python3 tools/tervlap-epuletek.py forras/kivonat/epuletek.json forras/kivonat/leltar.json \
+        --app data/epuletek.json forras/oe-* forras/oe_*
 ```
 
 ```
@@ -835,7 +863,7 @@ sem látszik rajta első ránézésre:
   épületadat-táblája (2025.08.21), a „HELYISÉG SZÁMA KARI NYILVÁNT." oszlop;
   a `tools/tervtar-ajtoszam.py` állítja elő, csak a térképen szereplő
   helyiségekre (most 112 pár; a nyilvántartás minden számozott helyisége a
-  térképen van, és mind a 24 órarendi terem párt kapott). A táblát magát ne tedd a repóba: belső anyag.
+  térképen van, és mind a 24 órarendi terem párt kapott). A tábla a `forras/`-ban van: belső anyag, a publikált csomagba nem kerül bele.
   Ami a nyilvántartásban ellentmondásos (ugyanaz a szám két helyiségen,
   folyosón teremszám), az kimarad, az eszköz kiírja. Ahol van pár, a térkép
   felirata, a kereső és az adatlap címe az ajtószám, az adatlapon ott a
@@ -881,6 +909,20 @@ azt a régi gyorsítótár nem ismeri, így a hálózatról jön.
 
 Push a `main`-re → `deploy-pages.yml` → GitHub Pages. Kézzel:
 Actions → Deploy to GitHub Pages → Run workflow.
+
+**A repó privát, a Pages site NEM az.** Ez a kettő független, és könnyű
+összekeverni: ami bekerül a Pages artifactba, azt bárki letöltheti az oldal
+URL-jéről, akkor is, ha a repóhoz nincs hozzáférése. A workflow ezért a
+feltöltés előtt kidobja a `forras/`-t — ott van a Tervtár összes belső
+anyaga (101 fájl, 95 MB) és a belőlük készült leltár. **Ami a `data/` alá
+kerül, az nyilvános**; a `forras/` alatti nem. Új adatfájlnál ez a kérdés
+dönt, nem a repó láthatósága.
+
+**A privátra állítás kikapcsolta a Pages-t** (ingyenes csomagban privát
+repóból nem publikálható), és az oldal 404-et adott mindkét címen. Ha a
+teremkeresőnek élnie kell, a Pages-t újra be kell kapcsolni egy olyan
+csomagon, ami privát repóból is publikál — vagy a publikálandó részt külön,
+publikus repóba kell tenni.
 
 **Ha egy deploy elszáll, az EGÉSZ workflow-t indítsd újra, ne csak a bukott
 job-ot.** A feltöltés lépés az első próbán már sikerülhetett, és a retry egy

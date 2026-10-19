@@ -1,0 +1,771 @@
+{
+ "generated": "2026-10-19",
+ "osszes": {
+  "epulet": 39,
+  "helyiseg": 4643,
+  "terulet": 105203.68,
+  "navigalhato": 28
+ },
+ "telephelyek": {
+  "Székesfehérvár 8000": 7,
+  "Budapest 1034": 7,
+  "Budapest 1081": 6,
+  "Budapest 1084": 6,
+  "Budapest 1146": 3,
+  "Nagymaros 2626": 2,
+  "Budapest 1065": 1
+ },
+ "epuletek": {
+  "BA": {
+   "kod": "BA",
+   "nev": "BA épület",
+   "tervlap_cimke": "F-A-B",
+   "leiro_nev": null,
+   "telephely": "Budapest 1081",
+   "cim": "Budapest, 1081, Népszínház utca 8",
+   "helyiseg": 70,
+   "szint": 6,
+   "terulet": 2015.87,
+   "ajtoszam": 63,
+   "dokumentum": {
+    "terv": "oe_bf-ba-bb_tervtari_alaprajzok_2026_0108.pdf",
+    "funk": "oe_bf-ba-bb_funkcio_alaprajzok_2026_0108.pdf",
+    "xls": "oe-ba-bb-bf_tervtar_epuletadatok_2025_0818.xls",
+    "hely": "oe_h09_bf-ba-bb_helyszinrajz.pdf"
+   },
+   "tervlap_oldal": 8
+  },
+  "BB": {
+   "kod": "BB",
+   "nev": "BB épület",
+   "tervlap_cimke": "F-A-B",
+   "leiro_nev": null,
+   "telephely": "Budapest 1081",
+   "cim": "Budapest, 1081, Népszínház utca 8",
+   "helyiseg": 168,
+   "szint": 7,
+   "terulet": 3529.7,
+   "ajtoszam": 125,
+   "dokumentum": {
+    "terv": "oe_bf-ba-bb_tervtari_alaprajzok_2026_0108.pdf",
+    "funk": "oe_bf-ba-bb_funkcio_alaprajzok_2026_0108.pdf",
+    "xls": "oe-ba-bb-bf_tervtar_epuletadatok_2025_0818.xls",
+    "hely": "oe_h09_bf-ba-bb_helyszinrajz.pdf"
+   },
+   "tervlap_oldal": 8
+  },
+  "BC": {
+   "kod": "BC",
+   "nev": "BC épület",
+   "tervlap_cimke": "C",
+   "leiro_nev": null,
+   "telephely": "Budapest 1081",
+   "cim": "Budapest, 1081, Csokonai utca 3",
+   "helyiseg": 0,
+   "szint": 0,
+   "terulet": 0,
+   "ajtoszam": 0,
+   "dokumentum": {
+    "terv": "oe_bc_tervtari_alaprajzok_2026_0108.pdf",
+    "funk": "oe_bc_funkcio_alaprajzok_2026_0108.pdf",
+    "xls": null,
+    "hely": null
+   },
+   "tervlap_oldal": 8
+  },
+  "BD": {
+   "kod": "BD",
+   "nev": "BD épület",
+   "tervlap_cimke": "D",
+   "leiro_nev": null,
+   "telephely": "Budapest 1081",
+   "cim": "Budapest, 1081, Csokonai utca 6",
+   "helyiseg": 75,
+   "szint": 2,
+   "terulet": 1028.03,
+   "ajtoszam": 30,
+   "dokumentum": {
+    "terv": "oe-bd_tervtari_alaprajzok_2026_0108.pdf",
+    "funk": "oe-bd_funkcio_alaprajzok_2026_0108.pdf",
+    "xls": "oe-bd_tervtar_epuletadatok_2025_0512.xls",
+    "hely": null
+   },
+   "tervlap_oldal": 2
+  },
+  "BF": {
+   "kod": "BF",
+   "nev": "BF épület",
+   "tervlap_cimke": "F-A-B",
+   "leiro_nev": null,
+   "telephely": "Budapest 1081",
+   "cim": "Budapest, 1081, Népszínház utca 8",
+   "helyiseg": 412,
+   "szint": 7,
+   "terulet": 10863.58,
+   "ajtoszam": 315,
+   "dokumentum": {
+    "terv": "oe_bf-ba-bb_tervtari_alaprajzok_2026_0108.pdf",
+    "funk": "oe_bf-ba-bb_funkcio_alaprajzok_2026_0108.pdf",
+    "xls": "oe-ba-bb-bf_tervtar_epuletadatok_2025_0818.xls",
+    "hely": "oe_h09_bf-ba-bb_helyszinrajz.pdf"
+   },
+   "tervlap_oldal": 8
+  },
+  "FA": {
+   "kod": "FA",
+   "nev": "FA épület",
+   "tervlap_cimke": null,
+   "leiro_nev": null,
+   "telephely": null,
+   "cim": null,
+   "helyiseg": 0,
+   "szint": 0,
+   "terulet": 0,
+   "ajtoszam": 0,
+   "dokumentum": {
+    "terv": null,
+    "funk": null,
+    "xls": null,
+    "hely": "oe_h13_fa-fb_helyszinrajz.pdf"
+   },
+   "tervlap_oldal": null
+  },
+  "FB": {
+   "kod": "FB",
+   "nev": "FB épület",
+   "tervlap_cimke": null,
+   "leiro_nev": null,
+   "telephely": null,
+   "cim": null,
+   "helyiseg": 0,
+   "szint": 0,
+   "terulet": 0,
+   "ajtoszam": 0,
+   "dokumentum": {
+    "terv": null,
+    "funk": null,
+    "xls": null,
+    "hely": "oe_h13_fa-fb_helyszinrajz.pdf"
+   },
+   "tervlap_oldal": null
+  },
+  "FC": {
+   "kod": "FC",
+   "nev": "FC épület",
+   "tervlap_cimke": "FB",
+   "leiro_nev": null,
+   "telephely": "Székesfehérvár 8000",
+   "cim": "Székesfehérvár, 8000, Budai út 43",
+   "helyiseg": 47,
+   "szint": 3,
+   "terulet": 1937.18,
+   "ajtoszam": 0,
+   "dokumentum": {
+    "terv": "oe_fc_tervtari_alaprajzok_2026_0526.pdf",
+    "funk": "oe_fc_funkcio_alaprajzok_2026_0526.pdf",
+    "xls": "oe_fc_tervtar_epuletadatok_2026_0526.xlsx",
+    "hely": null
+   },
+   "tervlap_oldal": 3
+  },
+  "FF": {
+   "kod": "FF",
+   "nev": "FF épület",
+   "tervlap_cimke": "FF",
+   "leiro_nev": null,
+   "telephely": "Székesfehérvár 8000",
+   "cim": "Székesfehérvár, 8000, Budai út 45",
+   "helyiseg": 80,
+   "szint": 4,
+   "terulet": 1409.61,
+   "ajtoszam": 0,
+   "dokumentum": {
+    "terv": "oe-ff_tervtari_alaprajzok_2026_0202.pdf",
+    "funk": "oe-ff_funkcio_alaprajzok_2026_0202.pdf",
+    "xls": "oe-ff_tervtar_epuletadatok_2025_0618.xls",
+    "hely": "oe_h12_fk-ff_helyszinrajz.pdf"
+   },
+   "tervlap_oldal": 4
+  },
+  "FG": {
+   "kod": "FG",
+   "nev": "FG épület",
+   "tervlap_cimke": "FG",
+   "leiro_nev": null,
+   "telephely": "Székesfehérvár 8000",
+   "cim": "Székesfehérvár, 8000, Pirosalma utca 1-3",
+   "helyiseg": 172,
+   "szint": 5,
+   "terulet": 4705.87,
+   "ajtoszam": 0,
+   "dokumentum": {
+    "terv": "oe_fg_tervtari_alaprajzok_2026_0205.pdf",
+    "funk": "oe_fg_funkcio_alaprajzok_2026_0205.pdf",
+    "xls": "oe_fg_tervtar_epuletadatok_2026_0205.xlsx",
+    "hely": "oe_h14_fg-kg_helyszinrajz.pdf"
+   },
+   "tervlap_oldal": 5
+  },
+  "FK": {
+   "kod": "FK",
+   "nev": "FK épület",
+   "tervlap_cimke": "FK",
+   "leiro_nev": null,
+   "telephely": "Székesfehérvár 8000",
+   "cim": "Székesfehérvár, 8000, Budai út 45",
+   "helyiseg": 95,
+   "szint": 3,
+   "terulet": 2848.43,
+   "ajtoszam": 0,
+   "dokumentum": {
+    "terv": "oe-fk_tervtari_alaprajzok_2026_0202.pdf",
+    "funk": "oe-fk_funkcio_alaprajzok_2026_0202.pdf",
+    "xls": "oe-fk_tervtar_epuletadatok_2023_0327.xls",
+    "hely": "oe_h12_fk-ff_helyszinrajz.pdf"
+   },
+   "tervlap_oldal": 3
+  },
+  "FS": {
+   "kod": "FS",
+   "nev": "FS épület",
+   "tervlap_cimke": "FA",
+   "leiro_nev": null,
+   "telephely": "Székesfehérvár 8000",
+   "cim": "Székesfehérvár, 8000, Budai út 43",
+   "helyiseg": 127,
+   "szint": 3,
+   "terulet": 2123.91,
+   "ajtoszam": 0,
+   "dokumentum": {
+    "terv": "oe_fs_tervtari_alaprajz_2026_0526.pdf",
+    "funk": "oe_fs_funkcio_alaprajz_2026_0526.pdf",
+    "xls": "oe_fs_tervtar_epuletadatok_2026_0526.xlsx",
+    "hely": null
+   },
+   "tervlap_oldal": 3
+  },
+  "KB": {
+   "kod": "KB",
+   "nev": "KB épület",
+   "tervlap_cimke": "KB",
+   "leiro_nev": null,
+   "telephely": "Budapest 1034",
+   "cim": "Budapest, 1034, Bécsi út 104",
+   "helyiseg": 519,
+   "szint": 8,
+   "terulet": 8271.72,
+   "ajtoszam": 220,
+   "dokumentum": {
+    "terv": "oe_kb_tervtari_alaprajzok_2025_0731.pdf",
+    "funk": "oe_kb_funkcio_alaprajzok_2025_0731.pdf",
+    "xls": null,
+    "hely": "oe_h05_kb_helyszinrajz_1.pdf"
+   },
+   "tervlap_oldal": 8
+  },
+  "KD": {
+   "kod": "KD",
+   "nev": "KD épület",
+   "tervlap_cimke": "KD",
+   "leiro_nev": [
+    "TANÜGYI ÉPÜLET"
+   ],
+   "telephely": "Budapest 1034",
+   "cim": "Budapest, 1034, Doberdó út 6/A",
+   "helyiseg": 280,
+   "szint": 11,
+   "terulet": 4432.47,
+   "ajtoszam": 102,
+   "dokumentum": {
+    "terv": "oe_kd_tervtari_alaprajzok_2024_0110.pdf",
+    "funk": "oe_kd_funkcio_alaprajzok_2024_0110.pdf",
+    "xls": "oe_tervtar_kd_doberdo_u_kak_kollegium_2025_0821.xls",
+    "hely": "oe_h02_od-kd_helyszinrajz_1.pdf"
+   },
+   "tervlap_oldal": 11
+  },
+  "KG": {
+   "kod": "KG",
+   "nev": "KG épület",
+   "tervlap_cimke": "KG",
+   "leiro_nev": null,
+   "telephely": "Székesfehérvár 8000",
+   "cim": "Székesfehérvár, 8000, Gyümölcs utca 10",
+   "helyiseg": 0,
+   "szint": 0,
+   "terulet": 0,
+   "ajtoszam": 0,
+   "dokumentum": {
+    "terv": "oe_kg_tervtari_alaprajzok_2024_0118.pdf",
+    "funk": "oe_kg_funkcio_alaprajzok_2024_0118.pdf",
+    "xls": null,
+    "hely": "oe_h14_fg-kg_helyszinrajz.pdf"
+   },
+   "tervlap_oldal": 3
+  },
+  "KH": {
+   "kod": "KH",
+   "nev": "KH épület",
+   "tervlap_cimke": "KH",
+   "leiro_nev": null,
+   "telephely": "Székesfehérvár 8000",
+   "cim": "Székesfehérvár, 8000, Hosszúséta tér 8",
+   "helyiseg": 219,
+   "szint": 4,
+   "terulet": 2763.69,
+   "ajtoszam": 0,
+   "dokumentum": {
+    "terv": "oe_kh_tervtari_alaprajzok_2024_0116.pdf",
+    "funk": "oe_kh_funkcio_alaprajzok_2024_0116.pdf",
+    "xls": "oe_tervtar_kh_hosszuseta_ter_geo_kollegium.xls",
+    "hely": "oe_h15_kh_helyszinrajz.pdf"
+   },
+   "tervlap_oldal": 4
+  },
+  "KM": {
+   "kod": "KM",
+   "nev": "KM épület",
+   "tervlap_cimke": null,
+   "leiro_nev": null,
+   "telephely": null,
+   "cim": null,
+   "helyiseg": 0,
+   "szint": 0,
+   "terulet": 0,
+   "ajtoszam": 0,
+   "dokumentum": {
+    "terv": null,
+    "funk": null,
+    "xls": null,
+    "hely": "oe_h18_km_helyszinrajz.pdf"
+   },
+   "tervlap_oldal": null
+  },
+  "KP": {
+   "kod": "KP",
+   "nev": "KP épület",
+   "tervlap_cimke": "KP",
+   "leiro_nev": null,
+   "telephely": "Budapest 1065",
+   "cim": "Budapest, 1065, Podmaniczky u 8",
+   "helyiseg": 135,
+   "szint": 6,
+   "terulet": 1991.14,
+   "ajtoszam": 135,
+   "dokumentum": {
+    "terv": "oe_kp_tervtari_alaprajzok_2025_0714.pdf",
+    "funk": "oe_kp_funkcio_alaprajzok_2025_0714.pdf",
+    "xls": "oe_tervtar_kp_podmaniczky_u_bgk_kollegium_2025_0821.xls",
+    "hely": "oe_h19_kp_helyszinrajz.pdf"
+   },
+   "tervlap_oldal": 6
+  },
+  "KT": {
+   "kod": "KT",
+   "nev": "KT épület",
+   "tervlap_cimke": "KT",
+   "leiro_nev": null,
+   "telephely": "Budapest 1084",
+   "cim": "Budapest, 1084, Tavaszmező utca 7-15",
+   "helyiseg": 521,
+   "szint": 7,
+   "terulet": 7091.14,
+   "ajtoszam": 0,
+   "dokumentum": {
+    "terv": "oe_kt_tervtari_alaprajzok_2025_0708.pdf",
+    "funk": "oe_kt_funkcio_alaprajzok_2025_0708.pdf",
+    "xls": "oe_tervtar_kt_tavaszmezo_u_hotelkukacbmf_kollegium_2025_0822.xls",
+    "hely": null
+   },
+   "tervlap_oldal": 7
+  },
+  "NA": {
+   "kod": "NA",
+   "nev": "NA épület",
+   "tervlap_cimke": null,
+   "leiro_nev": [
+    "SZÁLLÁS ÉPÜLET"
+   ],
+   "telephely": "Nagymaros 2626",
+   "cim": "Nagymaros, 2626, Váci út 141",
+   "helyiseg": 0,
+   "szint": 0,
+   "terulet": 0,
+   "ajtoszam": 0,
+   "dokumentum": {
+    "terv": "oe-na_tervtari_alaprajzok_2024_0304.pdf",
+    "funk": "oe-na_funkcio_alaprajzok_2024_0304.pdf",
+    "xls": "oe-na_tervtar_epuletadatok_nagymaros_2023_0413.xls",
+    "hely": null
+   },
+   "tervlap_oldal": 3
+  },
+  "NB": {
+   "kod": "NB",
+   "nev": "NB épület",
+   "tervlap_cimke": null,
+   "leiro_nev": null,
+   "telephely": "Nagymaros 2626",
+   "cim": "Nagymaros, 2626, Váci út 139",
+   "helyiseg": 0,
+   "szint": 0,
+   "terulet": 0,
+   "ajtoszam": 0,
+   "dokumentum": {
+    "terv": "oe-nb_tervtari_alaprajzok_2024_0731.pdf",
+    "funk": "oe-nb_funkcio_alaprajzok_2024_0731.pdf",
+    "xls": null,
+    "hely": null
+   },
+   "tervlap_oldal": 2
+  },
+  "OA": {
+   "kod": "OA",
+   "nev": "OA épület",
+   "tervlap_cimke": "OA",
+   "leiro_nev": null,
+   "telephely": "Budapest 1034",
+   "cim": "Budapest, 1034, Bécsi út 96/b",
+   "helyiseg": 223,
+   "szint": 7,
+   "terulet": 9440.22,
+   "ajtoszam": 115,
+   "dokumentum": {
+    "terv": "oe-oa_tervtari_alaprajzok_2026_0109.pdf",
+    "funk": "oe-oa_funkcio_alaprajzok_2026_0109.pdf",
+    "xls": "oe-oa_tervtar_epuletadatok_2025_0822.xls",
+    "hely": "oe_h01_oa-oc_helyszinrajz_1.pdf"
+   },
+   "tervlap_oldal": 7
+  },
+  "OB": {
+   "kod": "OB",
+   "nev": "OB épület",
+   "tervlap_cimke": "OB",
+   "leiro_nev": null,
+   "telephely": "Budapest 1034",
+   "cim": "Budapest, 1034, Szőlő utca 2-4",
+   "helyiseg": 61,
+   "szint": 3,
+   "terulet": 1863.31,
+   "ajtoszam": 0,
+   "dokumentum": {
+    "terv": "oe_ob_tervtari_alaprajzok_2026_0109.pdf",
+    "funk": "oe_ob_funkcio_alaprajzok_2026_0109.pdf",
+    "xls": "oe-ob_tervtar_epuletadatok_2023_0417.xls",
+    "hely": "oe_h03_ob_helyszinrajz.pdf"
+   },
+   "tervlap_oldal": 4
+  },
+  "OC": {
+   "kod": "OC",
+   "nev": "OC épület",
+   "tervlap_cimke": "OC",
+   "leiro_nev": null,
+   "telephely": "Budapest 1034",
+   "cim": "Budapest, 1034, Bécsi út 94-96",
+   "helyiseg": 159,
+   "szint": 6,
+   "terulet": 4125.88,
+   "ajtoszam": 2,
+   "dokumentum": {
+    "terv": "oe-oc_tervtari_alaprajz_2026_0109.pdf",
+    "funk": "oe-oc_funkcio_alaprajz_2025_0730.pdf",
+    "xls": "oe-oc_tervtar_epuletadatok_2025_0822.xls",
+    "hely": "oe_h01_oa-oc_helyszinrajz_1.pdf"
+   },
+   "tervlap_oldal": 6
+  },
+  "OD": {
+   "kod": "OD",
+   "nev": "OD épület",
+   "tervlap_cimke": "OD",
+   "leiro_nev": null,
+   "telephely": "Budapest 1034",
+   "cim": "Budapest, 1034, Doberdó út 6",
+   "helyiseg": 231,
+   "szint": 9,
+   "terulet": 6760.63,
+   "ajtoszam": 223,
+   "dokumentum": {
+    "terv": "oe-od_tervtari_alaprajzok_2026_0109.pdf",
+    "funk": "oe-od_funkcio_alaprajzok_2026_0109.pdf",
+    "xls": "oe-od_tervtar_epuletadatok_2025_0825.xls",
+    "hely": "oe_h02_od-kd_helyszinrajz_1.pdf"
+   },
+   "tervlap_oldal": 9
+  },
+  "OM": {
+   "kod": "OM",
+   "nev": "OM épület",
+   "tervlap_cimke": "OM",
+   "leiro_nev": [
+    "IRODAÉPÜLET"
+   ],
+   "telephely": "Budapest 1034",
+   "cim": "Budapest, 1034, Bécsi út 122",
+   "helyiseg": 132,
+   "szint": 6,
+   "terulet": 4345.55,
+   "ajtoszam": 0,
+   "dokumentum": {
+    "terv": "oe-om_tervtari_alaprajzok_2026_0512.pdf",
+    "funk": "oe-om_funkcio_alaprajzok_2026_0512.pdf",
+    "xls": "oe-om_tervtar_epuletadatok_2023_0418.xls",
+    "hely": "oe_h04_om_helyszinrajz.pdf"
+   },
+   "tervlap_oldal": 13
+  },
+  "SA": {
+   "kod": "SA",
+   "nev": "SA épület",
+   "tervlap_cimke": null,
+   "leiro_nev": null,
+   "telephely": null,
+   "cim": null,
+   "helyiseg": 0,
+   "szint": 0,
+   "terulet": 0,
+   "ajtoszam": 0,
+   "dokumentum": {
+    "terv": null,
+    "funk": null,
+    "xls": null,
+    "hely": "oe_h16_sa_helyszinrajz.pdf"
+   },
+   "tervlap_oldal": null
+  },
+  "SB": {
+   "kod": "SB",
+   "nev": "SB épület",
+   "tervlap_cimke": null,
+   "leiro_nev": null,
+   "telephely": null,
+   "cim": null,
+   "helyiseg": 0,
+   "szint": 0,
+   "terulet": 0,
+   "ajtoszam": 0,
+   "dokumentum": {
+    "terv": null,
+    "funk": null,
+    "xls": null,
+    "hely": "oe_h17_sb-sc_helyszinrajz.pdf"
+   },
+   "tervlap_oldal": null
+  },
+  "SC": {
+   "kod": "SC",
+   "nev": "SC épület",
+   "tervlap_cimke": null,
+   "leiro_nev": null,
+   "telephely": null,
+   "cim": null,
+   "helyiseg": 0,
+   "szint": 0,
+   "terulet": 0,
+   "ajtoszam": 0,
+   "dokumentum": {
+    "terv": null,
+    "funk": null,
+    "xls": null,
+    "hely": "oe_h17_sb-sc_helyszinrajz.pdf"
+   },
+   "tervlap_oldal": null
+  },
+  "TA": {
+   "kod": "TA",
+   "nev": "TA épület",
+   "tervlap_cimke": "TA-TC",
+   "leiro_nev": null,
+   "telephely": "Budapest 1084",
+   "cim": "Budapest, 1084, Tavaszmező utca 17",
+   "helyiseg": 185,
+   "szint": 5,
+   "terulet": 5835.16,
+   "ajtoszam": 12,
+   "dokumentum": {
+    "terv": "oe-ta-tc_tervtari_alaprajzok_2026_0106.pdf",
+    "funk": "oe-ta-tc_funkcio_alaprajzok_2026_0106.pdf",
+    "xls": "oe-ta-tc_tervtar_epuletadatok_2025_0716.xls",
+    "hely": "oe_h06_ta-tc-tt-tn_helyszinrajz.pdf"
+   },
+   "tervlap_oldal": 8
+  },
+  "TB": {
+   "kod": "TB",
+   "nev": "TB épület",
+   "tervlap_cimke": "B",
+   "leiro_nev": null,
+   "telephely": "Budapest 1081",
+   "cim": "Budapest, 1081, Tavaszmező utca 15",
+   "helyiseg": 115,
+   "szint": 5,
+   "terulet": 3229.64,
+   "ajtoszam": 0,
+   "dokumentum": {
+    "terv": "oe-tb_tervtari_alaprajzok_2026_0106.pdf",
+    "funk": "oe-tb_funkcio_alaprajzok_2026_0106.pdf",
+    "xls": "oe-tb_tervtar_epuletadatok_2025_0717.xls",
+    "hely": null
+   },
+   "tervlap_oldal": 5
+  },
+  "TC": {
+   "kod": "TC",
+   "nev": "TC épület",
+   "tervlap_cimke": "TA-TC",
+   "leiro_nev": null,
+   "telephely": "Budapest 1084",
+   "cim": "Budapest, 1084, Tavaszmező utca 17",
+   "helyiseg": 117,
+   "szint": 6,
+   "terulet": 1728.48,
+   "ajtoszam": 0,
+   "dokumentum": {
+    "terv": "oe-ta-tc_tervtari_alaprajzok_2026_0106.pdf",
+    "funk": "oe-ta-tc_funkcio_alaprajzok_2026_0106.pdf",
+    "xls": "oe-ta-tc_tervtar_epuletadatok_2025_0716.xls",
+    "hely": "oe_h06_ta-tc-tt-tn_helyszinrajz.pdf"
+   },
+   "tervlap_oldal": 8
+  },
+  "TG": {
+   "kod": "TG",
+   "nev": "TG épület",
+   "tervlap_cimke": "TG",
+   "leiro_nev": null,
+   "telephely": "Budapest 1084",
+   "cim": "Budapest, 1084, Tavaszmező utca 14-18",
+   "helyiseg": 98,
+   "szint": 5,
+   "terulet": 3377.82,
+   "ajtoszam": 0,
+   "dokumentum": {
+    "terv": "oe-tg_tervtari_alaprajzok_2026_0106.pdf",
+    "funk": "oe-tg_funkcio_alaprajzok_2026_0106.pdf",
+    "xls": "oe-tg_tervtar_epuletadatok_2025_0708.xls",
+    "hely": "oe_h08_tg_helyszinrajz.pdf"
+   },
+   "tervlap_oldal": 5
+  },
+  "TN": {
+   "kod": "TN",
+   "nev": "TN épület",
+   "tervlap_cimke": "TT-TN",
+   "leiro_nev": null,
+   "telephely": "Budapest 1084",
+   "cim": "Budapest, 1084, Tavaszmező utca 17",
+   "helyiseg": 8,
+   "szint": 1,
+   "terulet": 101.82,
+   "ajtoszam": 0,
+   "dokumentum": {
+    "terv": "oe-tt-tn_tervtari_alaprajz_2026_0106.pdf",
+    "funk": "oe-tt-tn_funkcio_alaprajz_2026_0106.pdf",
+    "xls": "oe-tn_tervtar_epuletadatok_2024_0115.xls",
+    "hely": "oe_h06_ta-tc-tt-tn_helyszinrajz.pdf"
+   },
+   "tervlap_oldal": 2
+  },
+  "TT": {
+   "kod": "TT",
+   "nev": "TT épület",
+   "tervlap_cimke": "TT-TN",
+   "leiro_nev": null,
+   "telephely": "Budapest 1084",
+   "cim": "Budapest, 1084, Tavaszmező utca 17",
+   "helyiseg": 19,
+   "szint": 1,
+   "terulet": 417.29,
+   "ajtoszam": 0,
+   "dokumentum": {
+    "terv": "oe-tt-tn_tervtari_alaprajz_2026_0106.pdf",
+    "funk": "oe-tt-tn_funkcio_alaprajz_2026_0106.pdf",
+    "xls": "oe-tt_tervtar_epuletadatok_2024_0115.xls",
+    "hely": "oe_h06_ta-tc-tt-tn_helyszinrajz.pdf"
+   },
+   "tervlap_oldal": 2
+  },
+  "UV": {
+   "kod": "UV",
+   "nev": "UV épület",
+   "tervlap_cimke": null,
+   "leiro_nev": null,
+   "telephely": null,
+   "cim": null,
+   "helyiseg": 9,
+   "szint": 2,
+   "terulet": 101.66,
+   "ajtoszam": 0,
+   "dokumentum": {
+    "terv": null,
+    "funk": null,
+    "xls": null,
+    "hely": null
+   },
+   "tervlap_oldal": null
+  },
+  "YA": {
+   "kod": "YA",
+   "nev": "YA épület",
+   "tervlap_cimke": "A",
+   "leiro_nev": [
+    "AKTUÁLIS A ÉPÜLET"
+   ],
+   "telephely": "Budapest 1146",
+   "cim": "Budapest, 1146, Thököly út 74",
+   "helyiseg": 179,
+   "szint": 6,
+   "terulet": 5395.3,
+   "ajtoszam": 49,
+   "dokumentum": {
+    "terv": "oe-ya_tervtari_alaprajz_2026_0106.pdf",
+    "funk": "oe-ya-yb_funkcio_alaprajz_2026_0106.pdf",
+    "xls": "oe-ya-yb_tervtar_epuletadatok_2025_0616.xls",
+    "hely": "oe_h10_ya-yb_helyszinrajz.pdf"
+   },
+   "tervlap_oldal": 8
+  },
+  "YB": {
+   "kod": "YB",
+   "nev": "YB épület",
+   "tervlap_cimke": "B",
+   "leiro_nev": [
+    "AKTUÁLIS B ÉPÜLET"
+   ],
+   "telephely": "Budapest 1146",
+   "cim": "Budapest, 1146, Thököly út 74",
+   "helyiseg": 119,
+   "szint": 7,
+   "terulet": 2322.41,
+   "ajtoszam": 11,
+   "dokumentum": {
+    "terv": "oe-yb_tervtari_alaprajz_2026_0106.pdf",
+    "funk": "oe-ya-yb_funkcio_alaprajz_2026_0106.pdf",
+    "xls": "oe-ya-yb_tervtar_epuletadatok_2025_0616.xls",
+    "hely": "oe_h10_ya-yb_helyszinrajz.pdf"
+   },
+   "tervlap_oldal": 7
+  },
+  "YC": {
+   "kod": "YC",
+   "nev": "YC épület",
+   "tervlap_cimke": "YC",
+   "leiro_nev": null,
+   "telephely": "Budapest 1146",
+   "cim": "Budapest, 1146, Thököly út 67",
+   "helyiseg": 68,
+   "szint": 4,
+   "terulet": 1146.17,
+   "ajtoszam": 1,
+   "dokumentum": {
+    "terv": "oe_yc_tervtari_alaprajzok_2026_0108.pdf",
+    "funk": "oe_yc_funkcio_alaprajzok_2026_0108.pdf",
+    "xls": "oe-yc_tervtar_epuletadatok_2026_0305.xlsx",
+    "hely": "oe_h11_yc_helyszinrajz.pdf"
+   },
+   "tervlap_oldal": 4
+  }
+ }
+}

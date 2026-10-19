@@ -28,14 +28,15 @@ Amit a fejbélyegzőről tudni kell:
   (Óbuda), a 1081/1084-es Tavaszmező–Népszínház (Józsefváros), a 1146-os
   Thököly úti campus, Székesfehérvár és Nagymaros külön telephely.
 
-Belső anyag: a tervlapok nem kerülhetnek a repóba. Ez a nyilvántartás
-viszont csak azt tartalmazza, ami egy épületről kívülről is tudható (név,
-cím, szintek és helyiségek száma) — a helyiséglista nem.
+Belső anyag: a tervlapok a `forras/`-ban vannak, amit a deploy kidob a Pages-re
+publikált csomagból. Ez a nyilvántartás viszont mehet a `data/` alá, mert csak
+azt tartalmazza, ami egy épületről kívülről is tudható (név, cím, szintek és
+helyiségek száma) — a helyiséglista nem.
 
 A kimenet kettő:
 
 - a teljes nyilvántartás (első argumentum) a belső munkához: benne van, melyik
-  forrásfájlból jött mi, tehát nem a repóba való;
+  forrásfájlból jött mi, tehát a `forras/kivonat/`-ba való, nem a `data/`-ba;
 - a `--app <út>` az appnak szánt, szűkített változat: csak az, ami egy
   épületről kívülről is tudható (kód, név, telephely, cím, szintek és
   helyiségek száma, terület), a belső fájlnevek nélkül. Ez mehet a `data/`-ba.
@@ -103,22 +104,29 @@ def fejbelyegzo(p):
     return cim, cimke, leirok[:3], oldal
 
 
-def app_valtozat(out):
+#: az index.html-be beégetett épület: ennek az adata hálózat nélkül is megvan
+BEEGETVE = {"OA"}
+
+
+def app_valtozat(out, app_ut):
     """Az appnak szánt, szűkített nyilvántartás: belső fájlnév nélkül.
 
-    A `navigalhato` azt jelenti, hogy a geometria BENNE VAN az appban — most
-    egyedül az OA ilyen, az a beégetett `D`. A `terv` csak annyit mond, hogy
-    van tervlap, amiből egyszer kinyerhető; a kettő nem ugyanaz, és a
-    felületen sem szabad összemosni, mert a hallgató hiába kattintana.
+    A `navigalhato` azt jelenti, hogy az app ADATA kész az épületről — nem azt,
+    hogy van tervlap. A kettőt a felületen sem szabad összemosni: tervlapja 32
+    épületnek van, megnyitni egyelőre egyet lehet. Egy épület akkor
+    navigálható, ha vagy beégetve van (OA), vagy ott a `data/epuletek/<kód>.json`
+    — így az új épület bekapcsolásához elég a fájlját letenni és ezt újrafuttatni,
+    nem kell itt listát szerkeszteni.
     """
-    BENNE = {"OA"}
+    mappa = os.path.join(os.path.dirname(os.path.abspath(app_ut)), "epuletek")
     ki = {}
     for kod, e in out["epuletek"].items():
+        van = kod in BEEGETVE or os.path.exists(os.path.join(mappa, kod.lower() + ".json"))
         ki[kod] = {"kod": kod, "nev": e["nev"], "telephely": e["telephely"],
                    "cim": e["cim"], "szint": e["szint"], "helyiseg": e["helyiseg"],
                    "terulet": e["terulet"], "ajtoszam": e["ajtoszam"],
                    "terv": bool(e["dokumentum"]["terv"]),
-                   "navigalhato": kod in BENNE}
+                   "navigalhato": van}
     return {"generated": out["generated"], "osszes": out["osszes"],
             "telephelyek": out["telephelyek"], "epuletek": ki}
 
@@ -200,7 +208,7 @@ def main(kimenet, leltar_ut, fajlok, app_ut=None):
         json.dump(out, fh, ensure_ascii=False, indent=1)
     if app_ut:
         with open(app_ut, "w", encoding="utf-8") as fh:
-            json.dump(app_valtozat(out), fh, ensure_ascii=False, indent=1)
+            json.dump(app_valtozat(out, app_ut), fh, ensure_ascii=False, indent=1)
 
     def p(*a):
         print(*a, file=sys.stderr)

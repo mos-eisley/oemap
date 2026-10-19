@@ -50,14 +50,16 @@ run("épületválasztó", async ({ t, ctx, base }) => {
   t("a Bécsi úti telephely is ott van",
     L.telephely.some(s => /1034/.test(s)), L.telephely.join(" | "));
 
-  // ez a lényeg: alaprajz = megnyitható, a többi csak adatlap
-  t.eq("egyedül az OA nyitható meg", L.nyithato, ["OA"]);
-  t.eq("és az van megjelölve mostaniként", L.itt, ["OA"]);
-  t("a másik 38 sor tiltott", L.tiltott === 38, L.tiltott + " tiltott");
+  // ez a lényeg: akinek kész az adata, az megnyitható, a többi csak adatlap
+  t.eq("az OA és az OD nyitható meg", L.nyithato, ["OA", "OD"]);
+  t.eq("és az OA van megjelölve mostaniként", L.itt, ["OA"]);
+  t("a maradék 37 sor tiltott", L.tiltott === 37, L.tiltott + " tiltott");
 
   t("az OA sora az „itt vagy”-ot mondja", /itt vagy/.test(L.szoveg.OA || ""), L.szoveg.OA);
-  t("az OD sora az alaprajz hiányát mondja",
-    /alaprajz még nincs/.test(L.szoveg.OD || ""), L.szoveg.OD);
+  t("az OD soráról lekerült az „alaprajz még nincs”",
+    !/alaprajz még nincs/.test(L.szoveg.OD || ""), L.szoveg.OD);
+  t("akinek nincs adata, annál ott marad (OC)",
+    /alaprajz még nincs/.test(L.szoveg.OC || ""), L.szoveg.OC);
 
   // a Tervtár adatai: cím, szint, helyiség — ezért érdemes kiírni a sort
   t("az OD sorában ott a címe és a méretei",
@@ -81,22 +83,43 @@ run("épületválasztó", async ({ t, ctx, base }) => {
   await p.click("#langEn"); await p.waitForTimeout(250);
   L = await lista(p);
   t("angolul is a saját szövegét adja",
-    /no floor plan yet/.test(L.szoveg.OD || ""), L.szoveg.OD);
+    /no floor plan yet/.test(L.szoveg.OC || ""), L.szoveg.OC);
   await p.click("#langHu"); await p.waitForTimeout(200);
   await p.close();
 
   /* Egy másik épület helyiségkódjára mutató link eddig csendben eltűnt: az
      applyUrl() elhagyta az ismeretlen kódot, és a hallgató ugyanezt az
-     OA-alaprajzot látta, minden jelzés nélkül. */
-  const p2 = await open(ctx, base + "#OD20E01");
+     alaprajzot látta, minden jelzés nélkül. Amelyik épület nem nyitható meg,
+     ott legalább megnevezzük. */
+  const p2 = await open(ctx, base + "#OC20E01");
   const L2 = await lista(p2);
-  t("másik épület kódjára mutató link megnyitja a listát", L2.nyitva);
+  t("nem megnyitható épület kódjára mutató link megnyitja a listát", L2.nyitva);
   t("és megmondja, melyik épületé a kód",
-    /OD épület/.test(L2.uzenet), L2.uzenet || "(nincs üzenet)");
+    /OC épület/.test(L2.uzenet), L2.uzenet || "(nincs üzenet)");
   t("a saját alaprajz közben megmarad",
     (await p2.evaluate(() => document.querySelectorAll(".floor").length)) > 0);
   t("nincs JS hiba a linkes úton", p2.jsErrors.length === 0, p2.jsErrors.join(" | "));
   await p2.close();
+
+  /* Megnyitható épület kódjára mutató link viszont ÉRVÉNYESÜL: a falra
+     ragasztott QR-kód a másik épületben is odavisz, ahová mutat. */
+  const p3b = await open(ctx, base + "#OD20E01", { settle: 1800 });
+  const Lb = await p3b.evaluate(() => ({
+    epulet: (Object.keys(ROOM)[0] || "").slice(0, 2),
+    sel: S.sel, level: S.level, nev: document.getElementById("epvNev").textContent.trim(),
+    hash: location.hash, alcim: document.getElementById("sub").textContent.trim()
+  }));
+  t("megnyitható épület kódja átvált arra az épületre", Lb.epulet === "OD", Lb.epulet);
+  t("és a linkben megadott termet ki is választja", Lb.sel === "OD20E01", String(Lb.sel));
+  t("a terem szintjére ugrik", Lb.level === 3, "szint " + Lb.level);
+  t("a fejléc az OD-t mondja", /OD/.test(Lb.nev), Lb.nev);
+  t("a cím megmarad", /OD20E01/.test(Lb.hash), Lb.hash);
+  /* A fejléc alcíme az OA-nál beégetett szöveg volt: a Doberdó úton állva a
+     Bécsi utat hirdette. */
+  t("az alcím az új épület címét mondja, nem az OA-ét",
+    /Doberdó/.test(Lb.alcim) && !/Bécsi/.test(Lb.alcim), Lb.alcim);
+  t("nincs JS hiba az átváltó linken", p3b.jsErrors.length === 0, p3b.jsErrors.join(" | "));
+  await p3b.close();
 
   /* Épületváltás. Valódi második épület geometriája még nincs, ezért a mérce
      maga az OA adata, MÁS KÓD ALATT kiszolgálva: ha a rács, a járhatósági

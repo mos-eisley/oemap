@@ -35,9 +35,10 @@ itt `1.17a`, ott `1.17`. A betű nélküli alak a Neptun alakja, és annak a
 felülírása (`NEPTUN_ALAK`) oda tartozik, ahol a Neptun-adat is van — egy
 leltárnak azt kell írnia, ami a nyilvántartásban áll.
 
-Belső anyag: a táblák nem kerülhetnek a repóba, és a belőlük készült leltár
-is az egész egyetem helyiséglistája — mielőtt bárhová felkerül, el kell dönteni,
-hogy nyilvános-e.
+Belső anyag. A repó privát, ezért a táblák a `forras/`-ban, a leltár a
+`forras/kivonat/`-ban van — de a Pages site NEM privát, ezért a deploy a
+`forras/`-t kidobja a publikált csomagból. A `data/` alá SEMMI nem kerülhet
+belőlük közvetlenül: ami oda megy, az nyilvános URL-en letölthető.
 
 Használat:  python3 tools/tervtar-leltar.py <leltar.json> <tabla.xls|xlsx> [...]
             (pip install xlrd openpyxl — a régi .xls és az új .xlsx miatt)

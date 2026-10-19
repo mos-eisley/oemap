@@ -35,15 +35,20 @@ utca, Tavaszmező utca, Thököly út, Székesfehérvár, Nagymaros), mindegyikn
 címe, a szintek és a helyiségek száma, az alapterülete — az Egyetemi Tervtár
 adataiból.
 
-**Alaprajz egyelőre az OA épülethez van.** A többi épület sora adatlap: látszik,
-hogy létezik és hol van, de nem nyitható meg, mert nincs mit megnyitni. Ez
-szándékosan van így kiírva: ha az épület ki sem látszana, azt hihetnéd, nincs
-is ilyen; ha megnyithatónak látszana, hiába kattintanál rá.
+**Megnyitni egyelőre az OA és az OD épületet lehet.** A többi épület sora
+adatlap: látszik, hogy létezik és hol van, de nem nyitható meg, mert nincs mit
+megnyitni. Ez szándékosan van így kiírva: ha az épület ki sem látszana, azt
+hihetnéd, nincs is ilyen; ha megnyithatónak látszana, hiába kattintanál rá.
 
-Amelyik épületnek elkészül az adata, az a listából **megnyithatóvá válik** — az
-app átvált rá (alaprajz, szintválasztó, kereső, útvonaltervezés), és ugyanúgy
-működik, mint az OA. Az OA adata beégetve marad, így arra hálózat nélkül is
-vissza lehet váltani.
+A megnyitható épületre az app **átvált** — alaprajz, szintválasztó, kereső,
+útvonaltervezés —, és egy másik épület termére mutató link (`…#OD20E01`) is
+odavisz: átvált arra az épületre, és kiválasztja a termet. Az OA adata beégetve
+marad, így arra hálózat nélkül is vissza lehet váltani.
+
+Az OD alaprajza a tervlapokból gépi úton készült, ajtóadat nélkül: a 229
+helyiségből **215-höz van útvonal** a portától. Ami kimarad, az a −2. szint
+(önálló, lépcsővel nem kötött pincerész) és egy földszinti tömb (rajztermek,
+raktárak, öltöző) — ezekhez a bejáratot a tervlap nem adta meg.
 
 Ha egy link vagy QR-kód egy másik épület helyiségére mutat (`…#OD20E01`), az
 app megnyitja a listát, és megnevezi, melyik épületé a kód — korábban az ilyen
