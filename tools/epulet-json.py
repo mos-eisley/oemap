@@ -50,14 +50,44 @@ MARGO = 0.3                     # a sokszögek és a keret közti sáv
 KOZL_TAG = 0.35                 # a közlekedő tágítása az ajtónyílásba
 MAG_TAV = 1.5                   # ennyin belül ugyanaz a függőleges mag (m)
 
-# a nyilvántartás funkciói -> az app CATS kulcsai (lásd a fejlécet)
+# A nyilvántartás funkciói -> az app CATS kulcsai. Az egész egyetemen 21
+# különböző funkciónév van, és ebből 11 nem szerepel a CATS-ban: a tábláknak
+# nincs közös szótáruk, épületenként más az írásmód. Ami itt áll, az mind
+# ugyanannak a kategóriának a másik írásmódja — a zárójeles szám az, hány
+# helyiséget érint az egyetemen.
+#
+# **A `KÖZELEKDŐK` elírás, és drága.** 225 helyiségnél ez áll `KÖZLEKEDŐK`
+# helyett, és mivel a járhatósági maszk a közlekedőkből épül, enélkül az
+# FK-ban 95-ből 2, a KT-ben 486-ból 2, az OC-ben 158-ból 20 helyiséghez volt
+# csak út. A `tervtar-leltar.py` is ismeri ezt az elírást.
 KAT = {
-    "IRODA": "IRODÁK",
-    "LABOR-MŰHELY": "LABOR",
-    "VIZESBLOKK": "VIZES HELYISÉGEK",
-    "ELŐADÓ-SZEMINÁRIUM": "ELŐADÓ - SZEMINÁRIUM",
-    "RAKTÁR-TÁROLÓ": "RAKTÁROZÁS/TÁROLÁS",
-    "SPORT+ÖLTÖZŐK": "SPORT - ÖLTÖZŐK",
+    "VIZESBLOKK": "VIZES HELYISÉGEK",          # 894
+    "IRODA": "IRODÁK",                         # 787
+    "RAKTÁR-TÁROLÓ": "RAKTÁROZÁS/TÁROLÁS",     # 382
+    "LABOR-MŰHELY": "LABOR",                   # 260
+    "KÖZELEKDŐK": "KÖZLEKEDŐK",                # 225 — elírás a táblákban
+    "ELŐADÓ-SZEMINÁRIUM": "ELŐADÓ - SZEMINÁRIUM",   # 187
+    "SPORT+ÖLTÖZŐK": "SPORT - ÖLTÖZŐK",        # 42
+    "KÖZÖSSÉGI TEREK (1)": "KÖZÖSSÉGI TEREK",  # 2
+}
+# Amit NEM fordítunk, mert nincs megfelelője: `SZOBA` (440, kollégiumi
+# lakószoba), `FOGYASZTÓVÉDELEM` (82), `PARKOLÓ` (4). Ezek valódi, új
+# kategóriák, és meglévőre erőltetni őket félrevezető volna. Az épületadat
+# `cats` mezejébe kerülnek, saját színnel: az app a `CATS[cat] || D.cats[cat]`
+# sorrendet nézi (index.html), tehát az épület a saját kategóriáit hozhatja.
+#
+# **A `cats` mezőt nem elhagyni!** Üresen hagyva a `D.cats[cat]` kifejezés
+# `undefined`-on indexel, és KIVÉTELT dob — az `epuletAllit()` félbemarad, a
+# szintválasztó az előző épületé marad, az épület neve sem frissül. Nem
+# „szín nélkül rajzolódik ki”, hanem elszáll: a KT-n `PARKOLÓ`, a KH-n
+# `SZOBA`, az OC-n egy funkció nélküli helyiség (`null`) akasztotta meg.
+#
+# A színek a meglévő tervtári kulcs hangulatához igazodnak, de NEM onnan
+# valók — az építészekkel jóváhagyatandók.
+UJ_CATS = {
+    "SZOBA": "#e8cdb5",             # kollégiumi lakószoba
+    "FOGYASZTÓVÉDELEM": "#c9a9b4",  # külsős szervezet, a KÜLSŐS SZOLGÁLTATÁS rokona
+    "PARKOLÓ": "#aab4bd",
 }
 KOZLEKEDO = {"KÖZLEKEDŐK", "ELŐTEREK", "KÖZÖSSÉGI TEREK"}
 # az app CATS táblájának kulcsai (index.html); ami nem ezek közül való, azt az
@@ -88,9 +118,33 @@ SZINTNEV = [
 ROMAI = ["", "I.", "II.", "III.", "IV.", "V.", "VI.", "VII.", "VIII."]
 
 
+def szintcimke(sz, lapnev):
+    """(rövid, hosszú) felirat a szint SZÁMÁBÓL — a leltár már kiolvasta a
+    munkalap nevéből, és negyvenféle írásmódot ismer. Csak ahol az sem tudta
+    (`TETŐTÉR`, `UDVAR SZINT`, `1-2 felszint`: 4643-ból 252 helyiség), ott
+    esünk vissza magára a munkalap nevére. Korábban itt egy saját, szűkebb
+    névlista volt, és egész lapokat dobott el: az FS 99 kivágott helyiségéből
+    21 maradt, az OB 60-ából 29."""
+    if sz is None:
+        n = re.sub(r"^MENNYIS[ÉE]GEK[_ ]*", "", lapnev or "", flags=re.I)
+        n = n.replace("_", " ").strip() or "?"
+        return n[:3].upper(), n[:1].upper() + n[1:].lower()
+    if sz == 0.5:
+        return "FE", "Félemelet"
+    if sz != int(sz):
+        return str(sz), f"{sz}. szint"
+    i = int(sz)
+    if i <= -2: return f"P{-i}", f"Pince {i}"
+    if i == -1: return "A", "Alagsor"
+    if i == 0: return "F", "Földszint"
+    if i < len(ROMAI): return ROMAI[i].rstrip("."), f"{ROMAI[i]} emelet"
+    return str(i), f"{i}. emelet"
+
+
 def szintrend(lapnev):
-    """(rendezési kulcs, rövid név, hosszú név) a munkalap nevéből."""
-    n = lapnev.upper().replace("_", " ")
+    """(rendezési kulcs, rövid név, hosszú név) a munkalap nevéből. Tartalék:
+    a leltár szintszáma az elsődleges, lásd `szintcimke()`."""
+    n = (lapnev or "").upper().replace("_", " ")
     for mint, rov, nev in SZINTNEV:
         if re.search(mint, n):
             k = {"Pince -2": -2, "Pince -1": -1, "Alagsor": -1, "Pince": -1,
@@ -147,31 +201,50 @@ def magparositas(lapmagok, lapszint):
     return magok
 
 
-def main(geoj, leltarj, kij, kod, nev=None, cim=None, jelentes=None, maszk_mod="kozlekedo"):
+def main(geoj, leltarj, kij, kod, nev=None, cim=None, jelentes=None,
+         maszk_mod="kozlekedo", tag=None):
     mod = maszk_mod
+    global KOZL_TAG
+    if tag: KOZL_TAG = float(tag)
     geo = json.load(io.open(geoj, encoding="utf-8"))
     lel = json.load(io.open(leltarj, encoding="utf-8"))
     NY = {h["kod"]: h for h in lel["epuletek"][kod]["helyisegek"]}
 
-    # --- szintek: a lapokhoz tartozó munkalapnevekből
+    # --- szintek: a lap helyiségeinek leltárbeli szintszáma dönt (modus), a
+    # munkalap neve csak feliratnak kell. Egy lap EGY szint (az OD felső
+    # lapjain két kódszint is van — féllépcsővel eltolt szárny —, de az
+    # ugyanaz a lap, és a térkép formátuma is egy szintet ismer).
     lapszint, lapinfo = {}, {}
     for lp, g in geo.items():
         nevek = collections.Counter(h["lap_neve"] for h in g["helyisegek"] if h.get("lap_neve"))
-        if not nevek:
-            print(f"  lap {lp}: nincs munkalapnév, kimarad"); continue
-        ln = nevek.most_common(1)[0][0]
-        sr = szintrend(ln)
-        if sr is None:
-            print(f"  lap {lp}: a munkalap neve nem ad szintet ({ln!r}), kimarad"); continue
-        lapinfo[lp] = (sr, ln)
-    rend = sorted(lapinfo, key=lambda lp: lapinfo[lp][0][0])
+        szamok = collections.Counter(NY[h["kod"]]["szint"] for h in g["helyisegek"]
+                                     if h["kod"] in NY and NY[h["kod"]].get("szint") is not None)
+        lapinfo[lp] = (szamok.most_common(1)[0][0] if szamok else None,
+                       nevek.most_common(1)[0][0] if nevek else "")
+    # Amelyik lapnak nincs szintszáma, azt a PDF LAPSORRENDJE teszi a helyére:
+    # a tervlapok alulról fölfelé sorakoznak, így a szomszédos ismert szintek
+    # közé esik. Enélkül a `TETŐTÉR` vagy az `UDVAR SZINT` lapja kimaradna.
+    lapsor = sorted(geo, key=int)
+    kulcs = {}
+    for i, lp in enumerate(lapsor):
+        sz = lapinfo[lp][0]
+        if sz is not None:
+            kulcs[lp] = float(sz); continue
+        elo = next((lapinfo[q][0] for q in reversed(lapsor[:i]) if lapinfo[q][0] is not None), None)
+        kov = next((lapinfo[q][0] for q in lapsor[i + 1:] if lapinfo[q][0] is not None), None)
+        kulcs[lp] = ((elo + kov) / 2 if elo is not None and kov is not None
+                     else elo + 0.5 if elo is not None
+                     else kov - 0.5 if kov is not None else float(i))
+    rend = sorted(lapsor, key=lambda lp: (kulcs[lp], int(lp)))
     levels = []
-    for idx, lp in enumerate(rend):
-        (kulcs, rov, lnev), ln = lapinfo[lp]
-        # az app szintsorszáma: egész, a sorrendet követi (a félemelet is egy
-        # fok, ahogy az OA-nál); a 0 a földszint
-        levels.append({"lap": lp, "kulcs": kulcs, "short": rov, "name": lnev, "munkalap": ln})
-    nulla = next((i for i, L in enumerate(levels) if L["kulcs"] == 0), 0)
+    for lp in rend:
+        sz, ln = lapinfo[lp]
+        rov, lnev = szintcimke(sz, ln)
+        levels.append({"lap": lp, "kulcs": kulcs[lp], "short": rov, "name": lnev,
+                       "munkalap": ln, "leltar_szint": sz})
+    # az app szintsorszáma egész, a sorrendet követi (a félemelet is egy fok,
+    # ahogy az OA-nál); a 0 a földszint, ha van
+    nulla = next((i for i, L in enumerate(levels) if L["leltar_szint"] == 0), 0)
     for i, L in enumerate(levels):
         L["level"] = i - nulla
         lapszint[L["lap"]] = L["level"]
@@ -182,9 +255,16 @@ def main(geoj, leltarj, kij, kod, nev=None, cim=None, jelentes=None, maszk_mod="
         for h in geo[L["lap"]]["helyisegek"]:
             ny = NY.get(h["kod"], {})
             fn = h.get("funkcio") or ny.get("funkcio")
-            cat = KAT.get(fn, fn)
-            if cat not in CATS:
+            # Üres sztring, ha a nyilvántartás nem mond funkciót — `None` NEM
+            # mehet: az app keresője `norm(r.cat)`-ot hív (a nevet `||""`-gyel
+            # védi, a kategóriát nem), és egy null kategórián a keresés
+            # elszáll. Üres kategóriával a helyiség az alapértelmezett szürkét
+            # kapja, ami igaz is: a tábla nem tudja, mi ez.
+            cat = KAT.get(fn, fn) or ""
+            if cat and cat not in CATS:
                 ismeretlen_kat[fn] += 1
+            elif not cat:
+                ismeretlen_kat["(nincs funkció a táblában)"] += 1
             rooms.append({"id": nid, "level": L["level"], "code": h["kod"],
                           "name": h.get("nev") or ny.get("nev"), "cat": cat,
                           "poly": h["poly"], "cx": h["cx"], "cy": h["cy"],
@@ -276,23 +356,34 @@ def main(geoj, leltarj, kij, kod, nev=None, cim=None, jelentes=None, maszk_mod="
                "forras": "rajz" if rajzi else ("tábla" if tablas else "tábla/lift")}
         (lifts if liftnev and not rajzi else stairs).append(rek)
     stairs.sort(key=lambda s: -len(s["pts"])); lifts.sort(key=lambda s: -len(s["pts"]))
+    # a helyiség nélküli szintek a falakból és a maszkokból is kimaradnak
+    elo = {r["level"] for r in rooms}
+    walls = {k: v for k, v in walls.items() if int(k) in elo}
+    masks = {k: v for k, v in masks.items() if int(k) in elo}
     D = {
         "meta": {"building": nev or f"{kod} épület",
                  "address": cim or "", "source": os.path.basename(geoj),
                  "w": W, "h": H},
+        # Üres szint nem kerül be: egy közös tervlapon (BF/BB/BA, TA/TC) van
+        # olyan lap, amelyen csak a MÁSIK épület helyiségei állnak — annak
+        # ehhez az épülethez nincs szintje, és a szintválasztóban sem volna mit
+        # mutatnia.
         "levels": [{"level": L["level"], "short": L["short"], "name": L["name"],
-                    "code": sorted({r["code"][2:4] for r in rooms
-                                    if r["level"] == L["level"]})[0]} for L in levels],
-        "cats": {}, "rooms": rooms, "walls": walls,
+                    "code": sorted(kodjai)[0]}
+                   for L in levels
+                   for kodjai in [{r["code"][2:4] for r in rooms
+                                   if r["level"] == L["level"]}] if kodjai],
+        # az épület SAJÁT kategóriaszínei: amit az app CATS-a nem ismer
+        "cats": {c: UJ_CATS[c] for c in
+                 sorted({r["cat"] for r in rooms if r["cat"] and r["cat"] not in CATS})
+                 if c in UJ_CATS},
+        "rooms": rooms, "walls": walls,
         "grid": {"res": RES, "w": GW, "h": GH}, "masks": masks,
         "stairs": [{"id": i, "pts": s["pts"]} for i, s in enumerate(stairs)],
         "lifts": [{"id": f"LIFT{i+1}", "code": s["pts"][0][3][4:], "pts": s["pts"]}
                   for i, s in enumerate(lifts)],
         "flights": [],
     }
-    # a cats az OA tábláját követi; ami nincs benne, azt az app szín nélkül
-    # rajzolná — a jelentés kiírja, hogy látszódjon
-    del D["cats"]
 
     def tiszta(o):
         if isinstance(o, float): return int(o) if o == int(o) else round(o, 4)
@@ -337,7 +428,7 @@ def main(geoj, leltarj, kij, kod, nev=None, cim=None, jelentes=None, maszk_mod="
 if __name__ == "__main__":
     av = sys.argv[1:]
     kw = {}
-    for f in ("--kod", "--nev", "--cim", "--jelentes", "--maszk"):
+    for f in ("--kod", "--nev", "--cim", "--jelentes", "--maszk", "--tag"):
         if f in av:
             i = av.index(f); kw["maszk_mod" if f == "--maszk" else f[2:]] = av[i + 1]; del av[i:i + 2]
     if len(av) != 3 or "kod" not in kw:

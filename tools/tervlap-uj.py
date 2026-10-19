@@ -63,6 +63,7 @@ _spec.loader.exec_module(sz)
 PT = 0.0352778                  # 1 pt méterben 1:100-as léptéknél (72 dpi, 2,54 cm)
 LEPTEKEK = [50, 100, 200, 250, 500]
 DY = 70                         # a pecsét alatt ennyi pt-ig keressük a területet
+FAL_SAV = 0.7                   # eddig a szürkéig falanyag a FAL rétegen
 
 
 class Elotag(tuple):
@@ -102,7 +103,7 @@ def falrect(pg, szurke):
     """A falkitöltések befoglalója: ez a rajz, a tőle jobbra álló a tábla."""
     rs = [dr["rect"] for dr in pg.get_drawings()
           if dr.get("layer") in sz.FAL and dr.get("fill") and dr["type"] in ("f", "fs")
-          and abs(dr["fill"][0] - szurke) < 0.02]
+          and dr["fill"][0] <= FAL_SAV]     # ugyanaz a szabály, mint a falaknál
     if not rs:
         return None
     return (min(r.x0 for r in rs), min(r.y0 for r in rs),
@@ -246,8 +247,21 @@ def magok(pg, tabla_x, s, R, t):
     return sorted(out, key=lambda m: -m["w"] * m["h"])
 
 
-def lap_elemei(pg, szurke, tabla_x):
-    """falak (a kiolvasott szürke), akadályok (falak + ablak/üvegfal)"""
+def lap_elemei(pg, szurke, tabla_x, mind=True):
+    """falak, akadályok (falak + ablak/üvegfal).
+
+    `mind=True`: a FAL rétegek MINDEN nem világos kitöltése fal (szürke
+    ≤ FAL_SAV), nem csak a leggyakoribb árnyalaté. Egy lapon ugyanis több
+    falszürke is lehet (más anyag: vasbeton, tégla, szigetelés), és csak a
+    dominánsat véve a többi falban lyuk marad, amin a helyiségek
+    összefolynak. Ez volt a legdrágább hibám; mérve, a ±3%-on belüli
+    helyiségek aránya (és a hiba mediánja):
+
+        TG   5% → 82%   (medián 60,4% → 0,4%),  kivágva 65 → 94 / 97
+        FC  15% → 67%   (medián 15,5% → 0,8%),  kivágva 31 → 46 / 47
+        KB  27% → 94%   (medián  9,6% → 0,4%),  kivágva 377 → 502 / 519
+
+    `mind=False` a régi viselkedés, összehasonlításra."""
     falak, akadaly = [], []
     for dr in pg.get_drawings():
         if dr["rect"].x0 > tabla_x:
@@ -255,7 +269,7 @@ def lap_elemei(pg, szurke, tabla_x):
         lay, f = dr.get("layer"), dr.get("fill")
         if lay in sz.FAL and f and dr["type"] in ("f", "fs"):
             polys = [Polygon(u).buffer(0) for u in sz.utak(dr) if len(u) >= 3]
-            if abs(f[0] - szurke) < 0.02:
+            if (f[0] <= FAL_SAV) if mind else (abs(f[0] - szurke) < 0.02):
                 falak += polys
                 akadaly += polys
             elif min(f) > 0.7:                  # ablak a falban: a szabad teret elvágja
@@ -271,11 +285,26 @@ def lap_elemei(pg, szurke, tabla_x):
 
 
 # ------------------------------------------------------------------ nyilvántartás
-def nyilvantartas(xls, pre):
-    """Az épületadat-tábla helyiségei: név, funkció, alapterület, munkalap."""
+def nyilvantartas(forras, pre):
+    """Az épületadat-tábla helyiségei: név, funkció, alapterület, munkalap.
+
+    A forrás lehet a nyers `.xls`, vagy a `tervtar-leltar.py` `leltar.json`-ja.
+    Több épületnél a leltár a jobb: ott a helyiségek már KÓD szerint vannak
+    épületbe sorolva, nem fájlnév szerint — a KB táblájának a fájlneve például
+    `…_kd_becsi_ut_…`, a kódjai viszont KB-sek, és fájlnév szerint párosítva a
+    KB a KD tábláját kapná meg.
+    """
+    if forras.lower().endswith(".json"):
+        d = json.load(open(forras, encoding="utf-8"))
+        ep = (d.get("epuletek") or {}).get(pre)
+        if not ep:
+            return {}
+        return {h["kod"]: {"nev": h.get("nev"), "funkcio": h.get("funkcio"),
+                           "terulet": h.get("terulet"), "lap": h.get("lap")}
+                for h in ep["helyisegek"]}
     out = {}
     kre = re.compile(rf"{pre}[A-Z0-9]{{5}}")
-    for sh in xlrd.open_workbook(xls).sheets():
+    for sh in xlrd.open_workbook(forras).sheets():
         fej = None
         for r in range(sh.nrows):
             row = [str(c.value).strip() for c in sh.row(r)]
@@ -323,9 +352,12 @@ def main(pdf, xls, jelentes, pre=None, geo=None):
              "szintjegyek": dict(collections.Counter(p["kod"][2:4] for p in pec)),
              "_pec": pec, "_pg": pg, "_szurke": szur, "_tabla_x": tabla_x}
         lapok.append(L)
+        # a lépték laponként hiányozhat (nincs méretezés-réteg vagy méretszöveg
+        # a lapon); ilyenkor a lapok mediánja ugrik be, lásd lejjebb
+        lep = f"{s_pt:.6f} m/pt ({npar} pár)" if s_pt else f"— (nincs mérhető, {npar} pár)"
         print(f"  lap {L['lap']}: pecsét {L['pecset']:3d} (területtel {L['terulettel']:3d}), "
-              f"szürke {szur}, szög {a0:+.1f}° ({ra:.0%} tengely), lépték "
-              f"{s_pt:.6f} m/pt ({npar} pár), szintek {L['szintjegyek']}")
+              f"szürke {szur}, szög {a0:+.1f}° ({ra:.0%} tengely), lépték {lep}, "
+              f"szintek {L['szintjegyek']}")
 
     # Lépték: a MÉRT értéket használjuk, laponként. A névleges lépték csak
     # kiírva szerepel — rászabályozni HIBA: az OA lapjai 1:125-ben vannak
@@ -351,6 +383,12 @@ def main(pdf, xls, jelentes, pre=None, geo=None):
     hat = [unary_union([sz.athelyez(g, L["leptek_m_pt"] or s_med, np.eye(2), np.zeros(2))
                         for g in L["_falak_pdf"]]).bounds
            for L in lapok if L.get("_falak_pdf")]
+    if not hat:
+        # egyetlen lapon sincs falkitöltés: a BD lapjain nincs rétegnév, a
+        # KD-n a falak fehérrel vannak kitöltve, nem szürkével — egyik lapról
+        # sem lehet szabad teret számolni
+        sys.exit(f"{pre}: egyetlen lapon sincs falkitöltés a FAL rétegeken — "
+                 f"ebből a tervlapból nem lehet geometriát kinyerni")
     t_kozos = np.array([0.3 - min(b[0] for b in hat), 0.3 - min(b[1] for b in hat)])
 
     eredmeny, geoout = [], {}

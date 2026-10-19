@@ -50,16 +50,28 @@ run("épületválasztó", async ({ t, ctx, base }) => {
   t("a Bécsi úti telephely is ott van",
     L.telephely.some(s => /1034/.test(s)), L.telephely.join(" | "));
 
-  // ez a lényeg: akinek kész az adata, az megnyitható, a többi csak adatlap
-  t.eq("az OA és az OD nyitható meg", L.nyithato, ["OA", "OD"]);
+  /* Ez a lényeg: akinek kész az adata, az megnyitható, a többi csak adatlap.
+     A listát nem írjuk be kézzel — az épületek száma nő, ahogy a geometriájuk
+     elkészül —, hanem a nyilvántartáshoz mérjük: a felület pontosan azt
+     mutassa megnyithatónak, amit az adat annak mond. */
+  const reg = JSON.parse(require("fs").readFileSync(
+    require("path").join(__dirname, "..", "data", "epuletek.json"), "utf8"));
+  const navReg = Object.values(reg.epuletek).filter(e => e.navigalhato)
+    .map(e => e.kod).sort();
+  // a lista telephely szerint csoportosít, nem ábécé szerint: a halmaz számít
+  t.eq("pontosan a nyilvántartás szerinti épületek nyithatók meg",
+    L.nyithato.slice().sort(), navReg);
   t.eq("és az OA van megjelölve mostaniként", L.itt, ["OA"]);
-  t("a maradék 37 sor tiltott", L.tiltott === 37, L.tiltott + " tiltott");
+  t("a többi sor tiltott", L.tiltott === L.db - navReg.length,
+    `${L.tiltott} tiltott, ${L.db} sorból ${navReg.length} nyitható`);
 
   t("az OA sora az „itt vagy”-ot mondja", /itt vagy/.test(L.szoveg.OA || ""), L.szoveg.OA);
   t("az OD soráról lekerült az „alaprajz még nincs”",
     !/alaprajz még nincs/.test(L.szoveg.OD || ""), L.szoveg.OD);
-  t("akinek nincs adata, annál ott marad (OC)",
-    /alaprajz még nincs/.test(L.szoveg.OC || ""), L.szoveg.OC);
+  /* SA-nak csak helyszínrajza van, alaprajza sosem lesz ezekből a forrásokból:
+     ezért biztos mérce arra, hogy a „nincs alaprajz” állapot kiíródik. */
+  t("akinek nincs adata, annál ott marad (SA)",
+    /alaprajz még nincs/.test(L.szoveg.SA || ""), L.szoveg.SA);
 
   // a Tervtár adatai: cím, szint, helyiség — ezért érdemes kiírni a sort
   t("az OD sorában ott a címe és a méretei",
@@ -83,7 +95,7 @@ run("épületválasztó", async ({ t, ctx, base }) => {
   await p.click("#langEn"); await p.waitForTimeout(250);
   L = await lista(p);
   t("angolul is a saját szövegét adja",
-    /no floor plan yet/.test(L.szoveg.OC || ""), L.szoveg.OC);
+    /no floor plan yet/.test(L.szoveg.SA || ""), L.szoveg.SA);
   await p.click("#langHu"); await p.waitForTimeout(200);
   await p.close();
 
@@ -91,11 +103,11 @@ run("épületválasztó", async ({ t, ctx, base }) => {
      applyUrl() elhagyta az ismeretlen kódot, és a hallgató ugyanezt az
      alaprajzot látta, minden jelzés nélkül. Amelyik épület nem nyitható meg,
      ott legalább megnevezzük. */
-  const p2 = await open(ctx, base + "#OC20E01");
+  const p2 = await open(ctx, base + "#SA00F01");
   const L2 = await lista(p2);
   t("nem megnyitható épület kódjára mutató link megnyitja a listát", L2.nyitva);
   t("és megmondja, melyik épületé a kód",
-    /OC épület/.test(L2.uzenet), L2.uzenet || "(nincs üzenet)");
+    /SA épület/.test(L2.uzenet), L2.uzenet || "(nincs üzenet)");
   t("a saját alaprajz közben megmarad",
     (await p2.evaluate(() => document.querySelectorAll(".floor").length)) > 0);
   t("nincs JS hiba a linkes úton", p2.jsErrors.length === 0, p2.jsErrors.join(" | "));

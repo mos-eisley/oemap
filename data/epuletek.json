@@ -131,7 +131,7 @@
    "ajtoszam": 0,
    "kar": "Alba Regia Műszaki Kar",
    "terv": true,
-   "navigalhato": false
+   "navigalhato": true
   },
   "FG": {
    "kod": "FG",
@@ -157,7 +157,7 @@
    "ajtoszam": 0,
    "kar": "Alba Regia Műszaki Kar",
    "terv": true,
-   "navigalhato": false
+   "navigalhato": true
   },
   "FS": {
    "kod": "FS",
@@ -222,7 +222,7 @@
    "ajtoszam": 0,
    "kar": null,
    "terv": true,
-   "navigalhato": false
+   "navigalhato": true
   },
   "KM": {
    "kod": "KM",
@@ -261,7 +261,7 @@
    "ajtoszam": 0,
    "kar": null,
    "terv": true,
-   "navigalhato": false
+   "navigalhato": true
   },
   "NA": {
    "kod": "NA",
@@ -326,7 +326,7 @@
    "ajtoszam": 2,
    "kar": "Kandó Kálmán Villamosmérnöki Kar",
    "terv": true,
-   "navigalhato": false
+   "navigalhato": true
   },
   "OD": {
    "kod": "OD",

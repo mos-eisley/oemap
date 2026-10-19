@@ -970,6 +970,10 @@ MÁSODIK `github-pages` artifactot hoz létre — a `deploy-pages` ilyenkor
 
 ## Ami nyitott
 
+Az egyetem-szintű bővítés állása, a már megszületett döntések és a következő
+lépések: [docs/ATADAS.md](docs/ATADAS.md). Ha az épületek adatán dolgozol,
+azzal kezdd.
+
 Lásd [docs/NYITOTT-KERDESEK.md](docs/NYITOTT-KERDESEK.md) — öt pont vár
 külső információra; valódi funkcióhiányt közülük a más karok hiányzó órarendje
 okoz.
