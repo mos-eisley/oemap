@@ -14,7 +14,7 @@ fájl — nincs build lépés, nincs függőség, nincs csomagkezelő.
 | `icons/` | Alkalmazásikonok (a Metropolisszal generálva) |
 | `manifest.webmanifest` | PWA leíró — telepíthetőség |
 | `sw.js` | Service worker — offline működés |
-| `data/` | Foglalható termek és foglaltságuk (generált) |
+| `data/` | Foglalható termek és foglaltságuk, valamint az egyetem épület-nyilvántartása (generált) |
 | `tools/` | Az adatot előállító szkriptek és a QR-ív generátora |
 | `tests/` | Böngészős regressziós tesztek (`npm test`) |
 | `meres.html` | Telefonos mérőlap: az Épület nézet mozdulatainak képkockaideje egy valódi telefonon |
@@ -26,6 +26,28 @@ fájl — nincs build lépés, nincs függőség, nincs csomagkezelő.
 **Nincs külső hivatkozás.** A betűtípusok a `fonts/` mappából jönnek, minden más
 — a teremadatok, az alaprajz geometriája, az útvonalkeresés — az `index.html`-en
 belül van. Így az oldal külső szolgáltató nélkül, offline is működik.
+
+## Az egyetem épületei
+
+A fejlécben az épület neve egyben választógomb: alatta az egyetem **mind a 39
+épülete**, hét telephelyre csoportosítva (Bécsi út, Doberdó út, Népszínház
+utca, Tavaszmező utca, Thököly út, Székesfehérvár, Nagymaros), mindegyiknél a
+címe, a szintek és a helyiségek száma, az alapterülete — az Egyetemi Tervtár
+adataiból.
+
+**Alaprajz egyelőre az OA épülethez van.** A többi épület sora adatlap: látszik,
+hogy létezik és hol van, de nem nyitható meg, mert nincs mit megnyitni. Ez
+szándékosan van így kiírva: ha az épület ki sem látszana, azt hihetnéd, nincs
+is ilyen; ha megnyithatónak látszana, hiába kattintanál rá.
+
+Amelyik épületnek elkészül az adata, az a listából **megnyithatóvá válik** — az
+app átvált rá (alaprajz, szintválasztó, kereső, útvonaltervezés), és ugyanúgy
+működik, mint az OA. Az OA adata beégetve marad, így arra hálózat nélkül is
+vissza lehet váltani.
+
+Ha egy link vagy QR-kód egy másik épület helyiségére mutat (`…#OD20E01`), az
+app megnyitja a listát, és megnevezi, melyik épületé a kód — korábban az ilyen
+cím csendben ugyanezt az OA-alaprajzot hozta be.
 
 ## Nézetek
 
@@ -363,7 +385,7 @@ python3 -m http.server 8000
 
 ```
 npm install     # playwright
-npm test        # mind a 21 tesztfájl
+npm test        # mind a 23 tesztfájl
 ```
 
 A tesztek maguk indítanak szervert és böngészőt szabad porton, így nem kell

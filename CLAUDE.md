@@ -19,7 +19,7 @@ A projekt meetingjén ez a kettő lett kimondva, és minden vitás kérdést ez 
 
 ## Felépítés
 
-`index.html` (~410 KB, tömörítve ~113 KB) **maga a teljes alkalmazás** — HTML, CSS és JS egy
+`index.html` (~420 KB, tömörítve ~115 KB) **maga a teljes alkalmazás** — HTML, CSS és JS egy
 fájlban, build lépés és futásidejű függőség nélkül. Ez szándékos: a
 GitHub Pages statikusan szolgálja ki, és offline is működik. Az egyetlen külső
 fájl a `fonts/`, az `icons/`, a `data/` és a `sw.js`. A `meres.html` nem az app
@@ -40,11 +40,63 @@ A beépített `const D = {...}` tartalmazza az épületet:
 Az `S` objektum az egész futásidejű állapot (nyelv, téma, nézet, szint,
 honnan/hova, útvonal, forgatás, panelállás). Aki ezt megérti, érti az appot.
 
+**A `D` EGY épület, az egyetemnek viszont 39 van.** A `data/epuletek.json`
+(12 KB, `tools/tervlap-epuletek.py`) a nyilvántartás mind a 39-ről: név, cím,
+telephely, szintek és helyiségek száma, terület. A fejléc épületneve maga a
+választógomb, a lista telephely szerint csoportosít — és **nem mossa össze a
+„van alaprajza” és a „létezik” állapotot**: amelyik épületnek nincs geometriája
+az appban, az adatlapként látszik, megnyitás nélkül (`navigalhato`). Ha ki sem
+írnánk, a hallgató azt hihetné, nincs is ilyen épület; ha megnyithatónak
+látszana, hiába kattintana.
+
+A nyilvántartás a `/data/` ágon hálózat-először jön, tehát **meg sem érkezhet**
+(offline első indulás). Ezért a fejlécben a gomb mellett ott a statikus
+épületnév is: az egyik vagy a másik látszik, és nyilvántartás nélkül az app
+pontosan úgy viselkedik, mint azelőtt. A `tests/epuletek.js` ezt az ágat
+szándékosan letiltott kéréssel is méri.
+
+**Az épületváltás a `D`-ből számolt EGÉSZ állapotot újraépíti.** Betöltéskor
+tizenkilenc modulszintű érték épül fel a `D`-ből, és váltáskor mindegyiket
+újra kell építeni — öt függvény teszi, ugyanabban a sorrendben, ahogy
+betöltéskor is lefut (`epuletGeo`, `epuletStart`, `epuletRacs`, `epuletRcell`,
+`epuletPortal`), és ugyanezeket hívja az `epuletAllit()`:
+
+| függvény | mit épít újra |
+| --- | --- |
+| `epuletGeo` | `LV`/`LVI`, `GW`/`GH`/`RES`/`CELLS`, `PW`/`PH`, `BB`, `OFFX`/`OFFY`, `ROOM` |
+| `epuletStart` | `START` — a porta, a `PORTA` táblából (épületenként kézzel felvéve) |
+| `epuletRacs` | `MASK`, `CELLLIST`, `CLEAR` — a járhatóság |
+| `epuletRcell` | `RCELL` — melyik cellákon kapcsolódik a helyiség az úthálózatra |
+| `epuletPortal` | `LIFTS`, `PORTAL`, `PORTAL_LIFT`, `STAIRXY`, `LIFT_LEVELS` |
+
+Két dolog, amit itt el lehet rontani:
+
+- **A gráf és a gyorsítótárak tárolói `const`-ok, és HELYBEN ürülnek.** A
+  Dijkstra és a mosdóválasztó modulszinten kapta meg a `PORTAL`-t
+  (`portals||PORTAL`); egy újrakötött `Map`-et a régi hivatkozások nem
+  látnának meg, és a keresés csendben a RÉGI épület gráfján futna, egy
+  látszólag hibátlan útvonalat adva egy másik házból. Ugyanez igaz a `MASK`,
+  `CELLLIST`, `CLEAR` és `RCELL` tárolókra.
+- **Az `epuletAllit()` ugyanazt a sorrendet futtatja, mint az indulás**
+  (`buildFloors` → `placeTags` → `applyLang` → `recompute` → `fit`), hogy ne
+  legyen külön, csak váltáskor futó kódút, amit a tesztek nem őriznek.
+
+A váltás mércéje a `tests/epuletek.js`-ben az OA adata MÁS KÓD ALATT
+kiszolgálva: ha minden helyesen épül újra, az átnevezett épületben méterre
+ugyanaz az útvonal jön ki. Egy ottmaradt gyorsítótár ezen azonnal elbukik.
+
+**Hiányos adattal nem váltunk** (`epuletKesz()`): kell `meta`, `levels`,
+`rooms`, `grid`, `masks`, `walls`, `stairs`, és a `PORTA`-ban egy porta. Falak
+nélkül a Dijkstra mindenen átmenne, lépcső nélkül a szintek nem érnének össze,
+porta nélkül a gyorsgombok rossz helyről indítanának — ilyenkor az épület
+marad adatlap, és a lista megmondja, hogy nem érhető el. **Ezért a `navigalhato`
+nem azt jelenti, hogy van tervlap**, hanem hogy az app adata kész.
+
 ## Kipróbálás
 
 ```
 npm install          # playwright (a böngésző a képen már megvan)
-npm test             # mind a 22 tesztfájl
+npm test             # mind a 23 tesztfájl
 node tests/run.js url share     # csak egy-kettő
 ```
 
@@ -77,6 +129,7 @@ hagytak egy hibás kódot.
 | `tests/totem.js` | totem mód: egy perc tétlenség után alaphelyzet, tíz másodperccel előtte szól, gesztus közben soha, naponta újratölt — a Playwright órájával, percekig várás nélkül; a link végére, a # után írt `?totem` is bekapcsolja — **élesben bejelentett: „nem működik az alaphelyzet"** |
 | `tests/kuld.js` | telefonra küldés: a QR-kódot a képernyőképből olvassa vissza (jsQR), a csendzónát és a sérült kódot külön méri, sötét témában is; a beolvasott link telefonon ugyanazt az útvonalat nyitja meg, lifttel; a totemről `?totem` nélkül |
 | `tests/meres.js` | a telefonos mérőlap (`meres.html`) végigfut a valódi appon |
+| `tests/epuletek.js` | épületválasztó és **épületváltás**: mind a 39 épület bent van, de csak az nyitható meg, aminek kész az adata; a Tervtár adatai a soron; más épület kódjára mutató link megnevezi az épületet, nem tűnik el csendben; a váltás mércéje az OA adata más kód alatt — **méterre ugyanaz az útvonal**; hiányos adattal nem vált; **nyilvántartás nélkül** (letiltott kérés) a gomb el sem jelenik meg, és az app elindul |
 
 ## Amit érdemes tudni, mielőtt hozzányúlsz
 
@@ -664,6 +717,8 @@ ingatlan.uni-obuda.hu/termek (mentett lapok) --parse-rooms.py--> data/rooms.json
 Neptun kurzusórarend-export (xlsx)           --parse-neptun.py--> /tmp/neptun.json
                          rooms.json + neptun.json --build-termek.py--> data/termek.json
 Tervtár OA épületadatok (xls)          --tervtar-ajtoszam.py--> az index.html NEPTUN táblája
+Tervtár épületadatok, mind (xls/xlsx)     --tervtar-leltar.py--> leltár: 29 épület, 4643 helyiség (belső)
+    a leltár + a tervlapok fejbélyegzője --tervlap-epuletek.py--> data/epuletek.json (39 épület)
 Tervtár OA alaprajzok (PDF) + épületadatok --tervlap-szarny.py--> D: a hiányzó szárny
 OE-OA.ifc (Archicad-export, 2023)            --ifc-ajtok.py--> D: doors, via
 OE-OA.ifc                                  --ifc-lepcsok.py--> D: flights
@@ -699,6 +754,51 @@ PDF, az xls és az IFC belső anyag, egyik se kerüljön a repóba. A szárnyró
   jóval nagyobb részét fedik. A szobák alakja (lyuk, csúcsszám) nem számít
   (±7%). Valódi telefonon mérendő (erre van a `meres.html`); ha ott is
   akad, a nem aktív szintek rajzán kell faragni, nem a szárnyon.
+
+**Az egész egyetem a Tervtárból.** A `tervtar-leltar.py` mind a 26 épületadat-
+táblát beolvassa (29 épület, 4643 helyiség, 105 204 m²), a `tervlap-epuletek.py`
+ebből és a tervlapok fejbélyegzőjéből állítja elő a `data/epuletek.json`-t.
+Amit a forrásokról tudni kell, mert egyik sem látszik első ránézésre:
+
+- **Három fájlnév-család van**, és az épületkód nem mindig a második helyen áll:
+  `oe-ba-bb-bf_…` (kötőjeles, több épület egy táblában), `oe_fc_…` (aláhúzós),
+  és a kollégiumoké `oe_tervtar_kd_becsi_ut_…`, ahol a harmadik. Egy lazább
+  minta a „tervtar" szóból olvas ki „TE" épületet.
+- **Két táblaformátum**: 22 régi `.xls` és 4 `.xlsx` (FC, FG, FS, YC). A
+  `tervtar-ajtoszam.py` csak `xlrd`-t használ, az újakat nem nyitja meg.
+- **A kitöltetlen tábla sablonszöveget tartalmaz** (`<Lakás neve>`, `<Hely>`),
+  nem adatot — ezért szűr a `<` jelre minden olvasó.
+- **A kódregex nem lehet laza.** Az OA összesítő lapján az „ALAGSOR" szó
+  beleillik egy `[A-Z]{2}[A-Z0-9]{5}` mintába, és ebből egy nem létező „AL"
+  épület született. A helyes alak: két betű, szint, betű, kettő.
+- **Egy tábla olvashatatlan**: a `…kh_gyumolcs_u_lebenyi_kollegium.xls` az
+  xlrd-t a saját szövegtáblájával akasztja meg (a corruption-toleráns mód sem
+  viszi át). Excelből `.xlsx`-ként újramentve beolvasható; addig kimarad, és a
+  jelentés kiírja.
+- **Ajtószám kevesebb van, mint helyiség.** 1403 ajtószám-alakú értékből 118
+  közlekedőn áll, 326 pedig több helyiségen is szerepel: 956 a használható, és
+  a 29 épületből 15-ben egy sincs. A BF és az OD ütközései (116 és 108)
+  gyanúsak, valószínűleg tábla-szerkezeti okból — ellenőrizendő.
+- **Minden tervlapon két cím van.** Az épületé `Város, 1234, utca` alakú, a
+  tervezőé postai sorrendben, nagybetűs várossal (`1146 BUDAPEST Thököly út
+  74.`). Stringre kiszűrni nem lehet: a Thököly úti campus épületei valóban ott
+  vannak. A formátum választja el őket.
+- **Az `UV` és az `NA` ugyanaz az épület** (nagymarosi szállás): a tervlapja
+  `oe-na_…`, a táblájában viszont minden kód `UV…`. Az `FC` tervlapja „FB
+  ÉPÜLET"-et, az `FS`-é „FA ÉPÜLET"-et címkéz — ez a kettő valódi ütközés, a
+  többi eltérés csak annyi, hogy a lap campuson belül „A ÉPÜLET"-nek hívja azt,
+  ami kódban YA.
+- A `HASZNÁLÓ` oszlop kimarad a leltárból: most mindenhol üres, de ha egyszer
+  személynév kerül bele, annak nincs helye egy továbbadott listában.
+- **A leltár maga nem a repóba való** (1,2 MB, az egész egyetem helyiséglistája
+  a Tervtár belső anyagából); a `data/epuletek.json` igen, mert abban csak az
+  van, ami egy épületről kívülről is tudható.
+
+```
+python3 tools/tervtar-leltar.py /tmp/leltar.json oe-*epuletadatok*.xls* oe_tervtar_*kollegium*.xls
+python3 tools/tervlap-epuletek.py /tmp/epuletek.json /tmp/leltar.json \
+        --app data/epuletek.json oe-* oe_*
+```
 
 ```
 python3 tools/parse-neptun.py 2026-27-1-NIK-kurzus-orarend-adatok-v1.xlsx /tmp/neptun.json
