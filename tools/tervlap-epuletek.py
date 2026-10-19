@@ -56,6 +56,49 @@ LEIRO = re.compile(r"\b([A-ZÁÉÍÓÖŐÚÜŰ]{4,}(?:\s+[A-ZÁÉÍÓÖŐÚÜŰ]
 TIPUS = (("tervtari_alaprajz", "terv"), ("funkcio_alaprajz", "funk"),
          ("tervtar_epuletadatok", "xls"), ("helyszinrajz", "hely"))
 
+# A kart használó kar neve a FUNKCIÓ szerinti lap fejbélyegzőjében áll, 2-3
+# sorba tördelve („NEUMANN JÁNOS" / „INFORMATIKAI KAR"), és sehol máshol nem
+# szerepel: a tervtári lapon és a táblában sincs benne. Kollégiumnál,
+# irodaépületnél és a nagymarosi telephelyen nincs kar — ez nem hiba.
+KAR_SOR = re.compile(r"\bKAR\b", re.I)
+KAR_ZAJ = re.compile(r"ÓBUDAI EGYETEM|^OE$|TERVLAP|MÉRETARÁNY|RAJZSZÁM|DÁTUM|KARI", re.I)
+# magyar kötőszavak, amik a névben kicsik maradnak
+KIS = {"és", "a", "az"}
+
+
+def cimkes(s):
+    """A csupa nagybetűs fejbélyegző-szöveg olvasható alakja."""
+    ki = []
+    for w in s.split():
+        a = w.capitalize() if w.isupper() else w
+        ki.append(a.lower() if a.lower() in KIS else a)
+    return " ".join(ki)
+
+
+def kar_a_funkciolapon(p):
+    """A használó kar a funkció szerinti alaprajz fejbélyegzőjéből, vagy None."""
+    import pymupdf
+    d = pymupdf.open(p)
+    try:
+        sorok = [re.sub(r"\s+", " ", s).strip() for s in d[0].get_text().splitlines()]
+    finally:
+        d.close()
+    sorok = [s for s in sorok if s]
+    for i, s in enumerate(sorok):
+        if not KAR_SOR.search(s) or KAR_ZAJ.search(s):
+            continue
+        # a név visszafelé épül: legfeljebb két sor, amíg zajba nem ütközünk
+        resz = [s]
+        for j in (i - 1, i - 2):
+            if j < 0 or KAR_ZAJ.search(sorok[j]) or KAR_SOR.search(sorok[j]):
+                break
+            if not sorok[j].isupper() or len(sorok[j]) < 3:
+                break
+            resz.insert(0, sorok[j])
+        # néhány lapon az intézmény rövidítése a név elé csúszik („OE KANDÓ…")
+        return re.sub(r"^Oe\s+", "", cimkes(" ".join(resz)))
+    return None
+
 
 def tipus(n):
     for kulcs, rov in TIPUS:
@@ -125,6 +168,7 @@ def app_valtozat(out, app_ut):
         ki[kod] = {"kod": kod, "nev": e["nev"], "telephely": e["telephely"],
                    "cim": e["cim"], "szint": e["szint"], "helyiseg": e["helyiseg"],
                    "terulet": e["terulet"], "ajtoszam": e["ajtoszam"],
+                   "kar": e.get("kar"),
                    "terv": bool(e["dokumentum"]["terv"]),
                    "navigalhato": van}
     return {"generated": out["generated"], "osszes": out["osszes"],
@@ -146,6 +190,28 @@ def main(kimenet, leltar_ut, fajlok, app_ut=None):
             continue
         for ep in eps:
             dok[ep][t] = os.path.basename(p)
+
+    # 2b) a használó kar a funkció szerinti lapról (máshol nem szerepel)
+    karok = {}
+    for p in fajlok:
+        n = os.path.basename(p).lower()
+        if tipus(n) != "funk" or not n.endswith(".pdf"):
+            continue
+        try:
+            k = kar_a_funkciolapon(p)
+        except Exception as e:
+            jelentes["olvashatatlan"].append(f"{os.path.basename(p)}: {type(e).__name__}")
+            continue
+        if k:
+            for ep in epuletek_a_nevbol(n):
+                karok[ep] = k
+    # ugyanaz a kar két írásmóddal: a forrásban van elírás, nem mi javítjuk
+    alak = collections.defaultdict(set)
+    for k in set(karok.values()):
+        alak[re.sub(r"[^a-záéíóöőúüű]", "", k.lower())[:18]].add(k)
+    for v in alak.values():
+        if len(v) > 1:
+            jelentes["kar_ketfele"].append(" / ".join(sorted(v)))
 
     # 2) a tervtári alaprajzok fejbélyegzője: név és cím
     fej = {}
@@ -172,6 +238,7 @@ def main(kimenet, leltar_ut, fajlok, app_ut=None):
         ki[ep] = {
             "kod": ep,
             "nev": f"{ep} épület",
+            "kar": karok.get(ep),
             "tervlap_cimke": f.get("cimke"),
             "leiro_nev": f.get("leirok") or None,
             "telephely": (f"{cim.get('telepules')} {cim.get('psz')}"
@@ -227,6 +294,7 @@ def main(kimenet, leltar_ut, fajlok, app_ut=None):
                        ("nincs_cim", "a fejbélyegzőn nincs épületcím"),
                        ("leltarban_van_tervlap_nincs", "van leltára, de tervlapja nincs"),
                        ("tervlap_van_leltarban_nincs", "van tervlapja, de leltára nincs"),
+                       ("kar_ketfele", "ugyanaz a kar két írásmóddal (elírás a forrásban)"),
                        ("olvashatatlan", "olvashatatlan tervlap"),
                        ("nem_sorolhato", "nem sorolható be fájl")):
         if jelentes[kulcs]:

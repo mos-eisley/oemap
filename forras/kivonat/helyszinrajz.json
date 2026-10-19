@@ -1,0 +1,586 @@
+{
+ "generated": "2026-10-19",
+ "megjegyzes": "A koordináta a lap bal felső sarkától mért méter, és csak egy lapon belül összehasonlítható. A pont a felirat helye, nem az épület körvonala.",
+ "lapok": [
+  {
+   "fajl": "oe_h01_oa-oc_helyszinrajz_1.pdf",
+   "meretarany": 200,
+   "lap_mm": [
+    1189,
+    841
+   ],
+   "fed_m": [
+    237.8,
+    168.2
+   ],
+   "epuletek": {
+    "OA": {
+     "x": 130.9,
+     "y": 85.3
+    },
+    "OC": {
+     "x": 168.4,
+     "y": 115.4
+    },
+    "OD": {
+     "x": 80.5,
+     "y": 128.0
+    },
+    "KD": {
+     "x": 24.7,
+     "y": 94.6
+    }
+   }
+  },
+  {
+   "fajl": "oe_h02_od-kd_helyszinrajz.pdf",
+   "meretarany": 200,
+   "lap_mm": [
+    1189,
+    841
+   ],
+   "fed_m": [
+    237.8,
+    168.2
+   ],
+   "epuletek": {
+    "OA": {
+     "x": 169.6,
+     "y": 37.4
+    },
+    "OC": {
+     "x": 207.3,
+     "y": 67.3
+    },
+    "OD": {
+     "x": 112.1,
+     "y": 89.5
+    },
+    "KD": {
+     "x": 63.5,
+     "y": 47.3
+    }
+   }
+  },
+  {
+   "fajl": "oe_h03_ob_helyszinrajz.pdf",
+   "meretarany": 200,
+   "lap_mm": [
+    420,
+    297
+   ],
+   "fed_m": [
+    84.0,
+    59.4
+   ],
+   "epuletek": {
+    "OB": {
+     "x": 32.4,
+     "y": 25.9
+    }
+   }
+  },
+  {
+   "fajl": "oe_h04_om_helyszinrajz.pdf",
+   "meretarany": 200,
+   "lap_mm": [
+    1189,
+    841
+   ],
+   "fed_m": [
+    237.8,
+    168.2
+   ],
+   "epuletek": {
+    "OM": {
+     "x": 189.2,
+     "y": 77.9
+    }
+   }
+  },
+  {
+   "fajl": "oe_h05_kb_helyszinrajz.pdf",
+   "meretarany": 200,
+   "lap_mm": [
+    594,
+    420
+   ],
+   "fed_m": [
+    118.8,
+    84.0
+   ],
+   "epuletek": {
+    "KB": {
+     "x": 60.4,
+     "y": 46.4
+    }
+   }
+  },
+  {
+   "fajl": "oe_h06_ta-tc-tt-tn_helyszinrajz.pdf",
+   "meretarany": 200,
+   "lap_mm": [
+    1189,
+    841
+   ],
+   "fed_m": [
+    237.8,
+    168.2
+   ],
+   "epuletek": {
+    "TG": {
+     "x": 92.5,
+     "y": 29.6
+    },
+    "TA": {
+     "x": 99.8,
+     "y": 55.7
+    },
+    "TB": {
+     "x": 73.2,
+     "y": 69.1
+    },
+    "KT": {
+     "x": 20.0,
+     "y": 96.0
+    },
+    "TC": {
+     "x": 150.3,
+     "y": 55.2
+    },
+    "TT": {
+     "x": 160.8,
+     "y": 79.4
+    },
+    "TN": {
+     "x": 136.2,
+     "y": 99.7
+    }
+   }
+  },
+  {
+   "fajl": "oe_h08_tg_helyszinrajz.pdf",
+   "meretarany": 200,
+   "lap_mm": [
+    594,
+    420
+   ],
+   "fed_m": [
+    118.8,
+    84.0
+   ],
+   "epuletek": {
+    "TG": {
+     "x": 79.5,
+     "y": 49.1
+    }
+   }
+  },
+  {
+   "fajl": "oe_h09_bf-ba-bb_helyszinrajz.pdf",
+   "meretarany": 200,
+   "lap_mm": [
+    1189,
+    841
+   ],
+   "fed_m": [
+    237.8,
+    168.2
+   ],
+   "epuletek": {
+    "BB": {
+     "x": 34.1,
+     "y": 96.8
+    },
+    "BF": {
+     "x": 84.1,
+     "y": 136.5
+    },
+    "BA": {
+     "x": 106.3,
+     "y": 92.8
+    },
+    "BC": {
+     "x": 86.1,
+     "y": 44.5
+    },
+    "BD": {
+     "x": 116.9,
+     "y": 60.0
+    }
+   }
+  },
+  {
+   "fajl": "oe_h10_ya-yb_helyszinrajz.pdf",
+   "meretarany": 200,
+   "lap_mm": [
+    841,
+    594
+   ],
+   "fed_m": [
+    168.2,
+    118.8
+   ],
+   "epuletek": {
+    "YA": {
+     "x": 75.8,
+     "y": 69.1
+    },
+    "YB": {
+     "x": 50.3,
+     "y": 57.0
+    }
+   }
+  },
+  {
+   "fajl": "oe_h11_yc_helyszinrajz.pdf",
+   "meretarany": 200,
+   "lap_mm": [
+    594,
+    420
+   ],
+   "fed_m": [
+    118.8,
+    84.0
+   ],
+   "epuletek": {
+    "YC": {
+     "x": 43.6,
+     "y": 35.6
+    }
+   }
+  },
+  {
+   "fajl": "oe_h12_fk-ff_helyszinrajz.pdf",
+   "meretarany": 200,
+   "lap_mm": [
+    1189,
+    841
+   ],
+   "fed_m": [
+    237.8,
+    168.2
+   ],
+   "epuletek": {
+    "FF": {
+     "x": 86.8,
+     "y": 84.1
+    },
+    "FK": {
+     "x": 164.5,
+     "y": 119.4
+    }
+   }
+  },
+  {
+   "fajl": "oe_h13_fa-fb_helyszinrajz.pdf",
+   "meretarany": 200,
+   "lap_mm": [
+    841,
+    594
+   ],
+   "fed_m": [
+    168.2,
+    118.8
+   ],
+   "epuletek": {
+    "FA": {
+     "x": 69.6,
+     "y": 39.6
+    },
+    "FB": {
+     "x": 91.3,
+     "y": 87.7
+    }
+   }
+  },
+  {
+   "fajl": "oe_h14_fg-kg_helyszinrajz.pdf",
+   "meretarany": 200,
+   "lap_mm": [
+    841,
+    594
+   ],
+   "fed_m": [
+    168.2,
+    118.8
+   ],
+   "epuletek": {
+    "FG": {
+     "x": 88.5,
+     "y": 47.8
+    },
+    "KG": {
+     "x": 44.5,
+     "y": 66.1
+    }
+   }
+  },
+  {
+   "fajl": "oe_h15_kh_helyszinrajz.pdf",
+   "meretarany": 200,
+   "lap_mm": [
+    594,
+    420
+   ],
+   "fed_m": [
+    118.8,
+    84.0
+   ],
+   "epuletek": {
+    "KH": {
+     "x": 55.9,
+     "y": 34.9
+    }
+   }
+  },
+  {
+   "fajl": "oe_h16_sa_helyszinrajz.pdf",
+   "meretarany": 200,
+   "lap_mm": [
+    420,
+    297
+   ],
+   "fed_m": [
+    84.0,
+    59.4
+   ],
+   "epuletek": {
+    "SA": {
+     "x": 57.9,
+     "y": 31.5
+    }
+   }
+  },
+  {
+   "fajl": "oe_h17_sb-sc_helyszinrajz.pdf",
+   "meretarany": 200,
+   "lap_mm": [
+    841,
+    594
+   ],
+   "fed_m": [
+    168.2,
+    118.8
+   ],
+   "epuletek": {
+    "SB": {
+     "x": 59.0,
+     "y": 37.6
+    },
+    "SC": {
+     "x": 83.7,
+     "y": 38.6
+    }
+   }
+  },
+  {
+   "fajl": "oe_h18_km_helyszinrajz.pdf",
+   "meretarany": 200,
+   "lap_mm": [
+    594,
+    420
+   ],
+   "fed_m": [
+    118.8,
+    84.0
+   ],
+   "epuletek": {
+    "KM": {
+     "x": 65.8,
+     "y": 42.2
+    }
+   }
+  },
+  {
+   "fajl": "oe_h19_kp_helyszinrajz.pdf",
+   "meretarany": 200,
+   "lap_mm": [
+    420,
+    297
+   ],
+   "fed_m": [
+    84.0,
+    59.4
+   ],
+   "epuletek": {
+    "KP": {
+     "x": 52.2,
+     "y": 39.1
+    }
+   }
+  }
+ ],
+ "epuletek": {
+  "OA": {
+   "lap": "oe_h01_oa-oc_helyszinrajz_1.pdf",
+   "x_m": 130.9,
+   "y_m": 85.3
+  },
+  "OC": {
+   "lap": "oe_h01_oa-oc_helyszinrajz_1.pdf",
+   "x_m": 168.4,
+   "y_m": 115.4
+  },
+  "OD": {
+   "lap": "oe_h01_oa-oc_helyszinrajz_1.pdf",
+   "x_m": 80.5,
+   "y_m": 128.0
+  },
+  "KD": {
+   "lap": "oe_h01_oa-oc_helyszinrajz_1.pdf",
+   "x_m": 24.7,
+   "y_m": 94.6
+  },
+  "OB": {
+   "lap": "oe_h03_ob_helyszinrajz.pdf",
+   "x_m": 32.4,
+   "y_m": 25.9
+  },
+  "OM": {
+   "lap": "oe_h04_om_helyszinrajz.pdf",
+   "x_m": 189.2,
+   "y_m": 77.9
+  },
+  "KB": {
+   "lap": "oe_h05_kb_helyszinrajz.pdf",
+   "x_m": 60.4,
+   "y_m": 46.4
+  },
+  "TG": {
+   "lap": "oe_h06_ta-tc-tt-tn_helyszinrajz.pdf",
+   "x_m": 92.5,
+   "y_m": 29.6
+  },
+  "TA": {
+   "lap": "oe_h06_ta-tc-tt-tn_helyszinrajz.pdf",
+   "x_m": 99.8,
+   "y_m": 55.7
+  },
+  "TB": {
+   "lap": "oe_h06_ta-tc-tt-tn_helyszinrajz.pdf",
+   "x_m": 73.2,
+   "y_m": 69.1
+  },
+  "KT": {
+   "lap": "oe_h06_ta-tc-tt-tn_helyszinrajz.pdf",
+   "x_m": 20.0,
+   "y_m": 96.0
+  },
+  "TC": {
+   "lap": "oe_h06_ta-tc-tt-tn_helyszinrajz.pdf",
+   "x_m": 150.3,
+   "y_m": 55.2
+  },
+  "TT": {
+   "lap": "oe_h06_ta-tc-tt-tn_helyszinrajz.pdf",
+   "x_m": 160.8,
+   "y_m": 79.4
+  },
+  "TN": {
+   "lap": "oe_h06_ta-tc-tt-tn_helyszinrajz.pdf",
+   "x_m": 136.2,
+   "y_m": 99.7
+  },
+  "BB": {
+   "lap": "oe_h09_bf-ba-bb_helyszinrajz.pdf",
+   "x_m": 34.1,
+   "y_m": 96.8
+  },
+  "BF": {
+   "lap": "oe_h09_bf-ba-bb_helyszinrajz.pdf",
+   "x_m": 84.1,
+   "y_m": 136.5
+  },
+  "BA": {
+   "lap": "oe_h09_bf-ba-bb_helyszinrajz.pdf",
+   "x_m": 106.3,
+   "y_m": 92.8
+  },
+  "BC": {
+   "lap": "oe_h09_bf-ba-bb_helyszinrajz.pdf",
+   "x_m": 86.1,
+   "y_m": 44.5
+  },
+  "BD": {
+   "lap": "oe_h09_bf-ba-bb_helyszinrajz.pdf",
+   "x_m": 116.9,
+   "y_m": 60.0
+  },
+  "YA": {
+   "lap": "oe_h10_ya-yb_helyszinrajz.pdf",
+   "x_m": 75.8,
+   "y_m": 69.1
+  },
+  "YB": {
+   "lap": "oe_h10_ya-yb_helyszinrajz.pdf",
+   "x_m": 50.3,
+   "y_m": 57.0
+  },
+  "YC": {
+   "lap": "oe_h11_yc_helyszinrajz.pdf",
+   "x_m": 43.6,
+   "y_m": 35.6
+  },
+  "FF": {
+   "lap": "oe_h12_fk-ff_helyszinrajz.pdf",
+   "x_m": 86.8,
+   "y_m": 84.1
+  },
+  "FK": {
+   "lap": "oe_h12_fk-ff_helyszinrajz.pdf",
+   "x_m": 164.5,
+   "y_m": 119.4
+  },
+  "FA": {
+   "lap": "oe_h13_fa-fb_helyszinrajz.pdf",
+   "x_m": 69.6,
+   "y_m": 39.6
+  },
+  "FB": {
+   "lap": "oe_h13_fa-fb_helyszinrajz.pdf",
+   "x_m": 91.3,
+   "y_m": 87.7
+  },
+  "FG": {
+   "lap": "oe_h14_fg-kg_helyszinrajz.pdf",
+   "x_m": 88.5,
+   "y_m": 47.8
+  },
+  "KG": {
+   "lap": "oe_h14_fg-kg_helyszinrajz.pdf",
+   "x_m": 44.5,
+   "y_m": 66.1
+  },
+  "KH": {
+   "lap": "oe_h15_kh_helyszinrajz.pdf",
+   "x_m": 55.9,
+   "y_m": 34.9
+  },
+  "SA": {
+   "lap": "oe_h16_sa_helyszinrajz.pdf",
+   "x_m": 57.9,
+   "y_m": 31.5
+  },
+  "SB": {
+   "lap": "oe_h17_sb-sc_helyszinrajz.pdf",
+   "x_m": 59.0,
+   "y_m": 37.6
+  },
+  "SC": {
+   "lap": "oe_h17_sb-sc_helyszinrajz.pdf",
+   "x_m": 83.7,
+   "y_m": 38.6
+  },
+  "KM": {
+   "lap": "oe_h18_km_helyszinrajz.pdf",
+   "x_m": 65.8,
+   "y_m": 42.2
+  },
+  "KP": {
+   "lap": "oe_h19_kp_helyszinrajz.pdf",
+   "x_m": 52.2,
+   "y_m": 39.1
+  }
+ }
+}

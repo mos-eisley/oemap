@@ -19,6 +19,7 @@
   "BA": {
    "kod": "BA",
    "nev": "BA épület",
+   "kar": "Bánki Donát Gépész és Biztonságtecnikai Mérnöki Kar",
    "tervlap_cimke": "F-A-B",
    "leiro_nev": null,
    "telephely": "Budapest 1081",
@@ -38,6 +39,7 @@
   "BB": {
    "kod": "BB",
    "nev": "BB épület",
+   "kar": "Bánki Donát Gépész és Biztonságtecnikai Mérnöki Kar",
    "tervlap_cimke": "F-A-B",
    "leiro_nev": null,
    "telephely": "Budapest 1081",
@@ -57,6 +59,7 @@
   "BC": {
    "kod": "BC",
    "nev": "BC épület",
+   "kar": "Bánki Donát Gépész és Biztonságtechnikai Mérnöki Kar",
    "tervlap_cimke": "C",
    "leiro_nev": null,
    "telephely": "Budapest 1081",
@@ -76,6 +79,7 @@
   "BD": {
    "kod": "BD",
    "nev": "BD épület",
+   "kar": "Bánki Donát Gépész és Biztonságtechnikai Mérnöki Kar",
    "tervlap_cimke": "D",
    "leiro_nev": null,
    "telephely": "Budapest 1081",
@@ -95,6 +99,7 @@
   "BF": {
    "kod": "BF",
    "nev": "BF épület",
+   "kar": "Bánki Donát Gépész és Biztonságtecnikai Mérnöki Kar",
    "tervlap_cimke": "F-A-B",
    "leiro_nev": null,
    "telephely": "Budapest 1081",
@@ -114,6 +119,7 @@
   "FA": {
    "kod": "FA",
    "nev": "FA épület",
+   "kar": null,
    "tervlap_cimke": null,
    "leiro_nev": null,
    "telephely": null,
@@ -133,6 +139,7 @@
   "FB": {
    "kod": "FB",
    "nev": "FB épület",
+   "kar": null,
    "tervlap_cimke": null,
    "leiro_nev": null,
    "telephely": null,
@@ -152,6 +159,7 @@
   "FC": {
    "kod": "FC",
    "nev": "FC épület",
+   "kar": "Alba Regia Műszaki Kar",
    "tervlap_cimke": "FB",
    "leiro_nev": null,
    "telephely": "Székesfehérvár 8000",
@@ -171,6 +179,7 @@
   "FF": {
    "kod": "FF",
    "nev": "FF épület",
+   "kar": "Alba Regia Műszaki Kar",
    "tervlap_cimke": "FF",
    "leiro_nev": null,
    "telephely": "Székesfehérvár 8000",
@@ -190,6 +199,7 @@
   "FG": {
    "kod": "FG",
    "nev": "FG épület",
+   "kar": "Geoinformatikai Kar",
    "tervlap_cimke": "FG",
    "leiro_nev": null,
    "telephely": "Székesfehérvár 8000",
@@ -209,6 +219,7 @@
   "FK": {
    "kod": "FK",
    "nev": "FK épület",
+   "kar": "Alba Regia Műszaki Kar",
    "tervlap_cimke": "FK",
    "leiro_nev": null,
    "telephely": "Székesfehérvár 8000",
@@ -228,6 +239,7 @@
   "FS": {
    "kod": "FS",
    "nev": "FS épület",
+   "kar": "Alba Regia Műszaki Kar",
    "tervlap_cimke": "FA",
    "leiro_nev": null,
    "telephely": "Székesfehérvár 8000",
@@ -247,6 +259,7 @@
   "KB": {
    "kod": "KB",
    "nev": "KB épület",
+   "kar": null,
    "tervlap_cimke": "KB",
    "leiro_nev": null,
    "telephely": "Budapest 1034",
@@ -266,6 +279,7 @@
   "KD": {
    "kod": "KD",
    "nev": "KD épület",
+   "kar": null,
    "tervlap_cimke": "KD",
    "leiro_nev": [
     "TANÜGYI ÉPÜLET"
@@ -287,6 +301,7 @@
   "KG": {
    "kod": "KG",
    "nev": "KG épület",
+   "kar": null,
    "tervlap_cimke": "KG",
    "leiro_nev": null,
    "telephely": "Székesfehérvár 8000",
@@ -306,6 +321,7 @@
   "KH": {
    "kod": "KH",
    "nev": "KH épület",
+   "kar": null,
    "tervlap_cimke": "KH",
    "leiro_nev": null,
    "telephely": "Székesfehérvár 8000",
@@ -325,6 +341,7 @@
   "KM": {
    "kod": "KM",
    "nev": "KM épület",
+   "kar": null,
    "tervlap_cimke": null,
    "leiro_nev": null,
    "telephely": null,
@@ -344,6 +361,7 @@
   "KP": {
    "kod": "KP",
    "nev": "KP épület",
+   "kar": null,
    "tervlap_cimke": "KP",
    "leiro_nev": null,
    "telephely": "Budapest 1065",
@@ -363,6 +381,7 @@
   "KT": {
    "kod": "KT",
    "nev": "KT épület",
+   "kar": null,
    "tervlap_cimke": "KT",
    "leiro_nev": null,
    "telephely": "Budapest 1084",
@@ -382,6 +401,7 @@
   "NA": {
    "kod": "NA",
    "nev": "NA épület",
+   "kar": null,
    "tervlap_cimke": null,
    "leiro_nev": [
     "SZÁLLÁS ÉPÜLET"
@@ -403,6 +423,7 @@
   "NB": {
    "kod": "NB",
    "nev": "NB épület",
+   "kar": null,
    "tervlap_cimke": null,
    "leiro_nev": null,
    "telephely": "Nagymaros 2626",
@@ -422,6 +443,7 @@
   "OA": {
    "kod": "OA",
    "nev": "OA épület",
+   "kar": "Neumann János Informatikai Kar",
    "tervlap_cimke": "OA",
    "leiro_nev": null,
    "telephely": "Budapest 1034",
@@ -441,6 +463,7 @@
   "OB": {
    "kod": "OB",
    "nev": "OB épület",
+   "kar": "Kandó Kálmán Villamosmérnöki Kar",
    "tervlap_cimke": "OB",
    "leiro_nev": null,
    "telephely": "Budapest 1034",
@@ -460,6 +483,7 @@
   "OC": {
    "kod": "OC",
    "nev": "OC épület",
+   "kar": "Kandó Kálmán Villamosmérnöki Kar",
    "tervlap_cimke": "OC",
    "leiro_nev": null,
    "telephely": "Budapest 1034",
@@ -479,6 +503,7 @@
   "OD": {
    "kod": "OD",
    "nev": "OD épület",
+   "kar": "Rejtő Sándor Könnyűipari és Környezetmérnöki Kar",
    "tervlap_cimke": "OD",
    "leiro_nev": null,
    "telephely": "Budapest 1034",
@@ -498,6 +523,7 @@
   "OM": {
    "kod": "OM",
    "nev": "OM épület",
+   "kar": null,
    "tervlap_cimke": "OM",
    "leiro_nev": [
     "IRODAÉPÜLET"
@@ -519,6 +545,7 @@
   "SA": {
    "kod": "SA",
    "nev": "SA épület",
+   "kar": null,
    "tervlap_cimke": null,
    "leiro_nev": null,
    "telephely": null,
@@ -538,6 +565,7 @@
   "SB": {
    "kod": "SB",
    "nev": "SB épület",
+   "kar": null,
    "tervlap_cimke": null,
    "leiro_nev": null,
    "telephely": null,
@@ -557,6 +585,7 @@
   "SC": {
    "kod": "SC",
    "nev": "SC épület",
+   "kar": null,
    "tervlap_cimke": null,
    "leiro_nev": null,
    "telephely": null,
@@ -576,6 +605,7 @@
   "TA": {
    "kod": "TA",
    "nev": "TA épület",
+   "kar": "Keleti Károly Gazdasági Kar",
    "tervlap_cimke": "TA-TC",
    "leiro_nev": null,
    "telephely": "Budapest 1084",
@@ -595,6 +625,7 @@
   "TB": {
    "kod": "TB",
    "nev": "TB épület",
+   "kar": "Kandó Kálmán Villamosmérnöki Kar",
    "tervlap_cimke": "B",
    "leiro_nev": null,
    "telephely": "Budapest 1081",
@@ -614,6 +645,7 @@
   "TC": {
    "kod": "TC",
    "nev": "TC épület",
+   "kar": "Keleti Károly Gazdasági Kar",
    "tervlap_cimke": "TA-TC",
    "leiro_nev": null,
    "telephely": "Budapest 1084",
@@ -633,6 +665,7 @@
   "TG": {
    "kod": "TG",
    "nev": "TG épület",
+   "kar": "Keleti Károly Gazdasági Kar",
    "tervlap_cimke": "TG",
    "leiro_nev": null,
    "telephely": "Budapest 1084",
@@ -652,6 +685,7 @@
   "TN": {
    "kod": "TN",
    "nev": "TN épület",
+   "kar": null,
    "tervlap_cimke": "TT-TN",
    "leiro_nev": null,
    "telephely": "Budapest 1084",
@@ -671,6 +705,7 @@
   "TT": {
    "kod": "TT",
    "nev": "TT épület",
+   "kar": null,
    "tervlap_cimke": "TT-TN",
    "leiro_nev": null,
    "telephely": "Budapest 1084",
@@ -690,6 +725,7 @@
   "UV": {
    "kod": "UV",
    "nev": "UV épület",
+   "kar": null,
    "tervlap_cimke": null,
    "leiro_nev": null,
    "telephely": null,
@@ -709,6 +745,7 @@
   "YA": {
    "kod": "YA",
    "nev": "YA épület",
+   "kar": "Ybl Miklós Építéstudományi Kar",
    "tervlap_cimke": "A",
    "leiro_nev": [
     "AKTUÁLIS A ÉPÜLET"
@@ -730,6 +767,7 @@
   "YB": {
    "kod": "YB",
    "nev": "YB épület",
+   "kar": "Ybl Miklós Építéstudományi Kar",
    "tervlap_cimke": "B",
    "leiro_nev": [
     "AKTUÁLIS B ÉPÜLET"
@@ -751,6 +789,7 @@
   "YC": {
    "kod": "YC",
    "nev": "YC épület",
+   "kar": "Ybl Miklós Építéstudományi Kar",
    "tervlap_cimke": "YC",
    "leiro_nev": null,
    "telephely": "Budapest 1146",

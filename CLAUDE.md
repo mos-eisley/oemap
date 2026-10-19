@@ -743,6 +743,9 @@ Neptun kurzusórarend-export (xlsx)           --parse-neptun.py--> /tmp/neptun.j
 Tervtár OA épületadatok (xls)          --tervtar-ajtoszam.py--> az index.html NEPTUN táblája
 Tervtár épületadatok, mind (xls/xlsx)     --tervtar-leltar.py--> leltár: 29 épület, 4643 helyiség (belső)
     a leltár + a tervlapok fejbélyegzője --tervlap-epuletek.py--> data/epuletek.json (39 épület)
+Tervtár helyszínrajzok (PDF)              --helyszinrajz.py--> melyik épület hol áll (belső)
+Tervtár tervtári alaprajz (PDF) + tábla     --tervlap-uj.py--> helyiség-sokszögek
+    a sokszögek + a tábla                 --epulet-json.py--> data/epuletek/<kód>.json
 Tervtár OA alaprajzok (PDF) + épületadatok --tervlap-szarny.py--> D: a hiányzó szárny
 OE-OA.ifc (Archicad-export, 2023)            --ifc-ajtok.py--> D: doors, via
 OE-OA.ifc                                  --ifc-lepcsok.py--> D: flights
@@ -816,6 +819,25 @@ Amit a forrásokról tudni kell, mert egyik sem látszik első ránézésre:
   ami kódban YA.
 - A `HASZNÁLÓ` oszlop kimarad a leltárból: most mindenhol üres, de ha egyszer
   személynév kerül bele, annak nincs helye egy továbbadott listában.
+- **A használó kart csak a FUNKCIÓ szerinti lap tudja.** A tervtári lapon és a
+  táblában sincs benne; a funkció lap fejbélyegzőjében áll, 2-3 sorba tördelve
+  („NEUMANN JÁNOS" / „INFORMATIKAI KAR"), és a `tervlap-epuletek.py` onnan
+  szedi (`kar`, 21 épületnél van). Ellenőrzésnek ott az OA: a kinyert név
+  bájtra az `I18N`-ben beégetett „Neumann János Informatikai Kar". Kollégiumnál,
+  irodaépületnél és Nagymaroson nincs kar — ez nem hiba. A forrásban van egy
+  elírás (a `bf-ba-bb` lapon „Biztonságtecnikai", a `bc` lapon helyesen); az
+  eszköz jelenti, de NEM javítja.
+- **Egyébként a funkció lap ugyanazt tudja, mint a tervtári**: ugyanazok a
+  helyiségkódok (nulla eltérés mindkét irányban), kisebb lapon, harmadannyi
+  vonallal. Geometriát tehát a tervtári lapból érdemes kinyerni.
+- **A helyszínrajzokból a felirat HELYE jön ki, nem a körvonal**
+  (`helyszinrajz.py`): egy lapon 170–230 ezer vektorelem van, abból a körvonalat
+  kiválasztani ugyanakkora munka, mint egy alaprajz. A „melyik épület merre
+  van" kérdésre a felirat helye elég: 18 lapról 34 épület, méterben, a lap bal
+  felső sarkától — és csak egy lapon belül összehasonlítható. Ellenőrzésnek ott
+  van, hogy a `h01` és a `h02` ugyanarról a négy épületről szól, más origóval,
+  és az OA–OC távolság mindkettőn 48,1 m. Nyolc épületnek (BC, FA, FB, KG, KM,
+  SA, SB, SC) ez az EGYETLEN adata.
 - **A leltár a `forras/kivonat/`-ban van, nem a `data/`-ban** (1,1 MB, az egész
   egyetem helyiséglistája a Tervtár belső anyagából): a `forras/` kimarad a
   Pages-re publikált csomagból, a `data/` nem. A `data/epuletek.json` azért

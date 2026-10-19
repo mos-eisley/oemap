@@ -118,6 +118,10 @@ run("épületválasztó", async ({ t, ctx, base }) => {
      Bécsi utat hirdette. */
   t("az alcím az új épület címét mondja, nem az OA-ét",
     /Doberdó/.test(Lb.alcim) && !/Bécsi/.test(Lb.alcim), Lb.alcim);
+  /* A kart a funkció szerinti tervlap fejbélyegzőjéből nyerjük ki; az OD-é a
+     Rejtő Sándor kar, nem a NIK. Máshol ez az adat nincs meg. */
+  t("és a használó kart is, a sajátját",
+    /Rejtő/.test(Lb.alcim) && !/Neumann/.test(Lb.alcim), Lb.alcim);
   t("nincs JS hiba az átváltó linken", p3b.jsErrors.length === 0, p3b.jsErrors.join(" | "));
   await p3b.close();
 

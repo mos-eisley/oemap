@@ -947,10 +947,27 @@ epuletGeo(D);
    bekötni — ezért az `epuletKesz()` a portát is megköveteli attól az épülettől,
    amire váltani lehet. Kitalálni nem szabad: egy rossz porta minden útvonalat
    rossz helyről indítana. */
-/* Az OD-é ugyanaz a minta, mint az OA-é: „PORTA" nevű, DOLGOZÓI TERÜLETEK
-   kategóriájú helyiség a bejáratnál, a SZÉLFOGÓ (OD00FK1) és az ELŐCSARNOK
-   (OD00FK2) mellett — nem következtetés, hanem a tervlap saját felirata. */
-const PORTA={OA:"OAX1A02", OD:"OD00F01"};
+/* Épületenként a tervlap saját felirata dönt, nem méret vagy elhelyezkedés:
+   ahol van „PORTA" nevű helyiség, az (az OA-é és az OD-é is ilyen, mindkettő
+   DOLGOZÓI TERÜLETEK, a szélfogó mellett). Ahol nincs porta, ott a bejárati
+   tér: ELŐCSARNOK, AULA vagy SZÉLFOGÓ, ebben a sorrendben — csarnokból egy van
+   épületenként, szélfogóból több is lehet, és a csarnokból bármelyik bejárat
+   felől működik az útvonal.
+
+   A földszint alatti szint is számít: az OA portája maga is az alagsorban van
+   (`OAX1A02`), és a BD-é ugyanígy (`BDX1P17`).
+
+   Öt épületnek NINCS portája, és ez szándékos: a BB-ben, a TC-ben, a TN-ben és
+   a TT-ben egyetlen bejárat-szerű helyiség sincs a nyilvántartásban (a BB a
+   BF–BA–BB, a TC a TA–TC komplexum része: vélhetően a szomszéd épületen át
+   lehet bemenni, ami épületek közti útvonal lenne), az YB egyetlen szélfogója
+   pedig a IV. emeleten, a könyvtárban van — az nem bejárat. Kitalálni nem
+   szabad: ezek adatlapok maradnak, amíg valaki helyben meg nem nézi. */
+const PORTA={
+  OA:"OAX1A02", OD:"OD00F01", BA:"BA00F01", BD:"BDX1P17", BF:"BF00F22", FC:"FC00FK1",
+  FF:"FF00FK1", FG:"FG00F01", FK:"FK00F01", FS:"FS00FK1", KB:"KB00F01", KD:"KD00FK1",
+  KH:"KH00F02", KP:"KP00F05", KT:"KT00F22", OB:"OB00FK1", OC:"OC00F25", OM:"OM00FK2",
+  TA:"TA00F17", TB:"TB00F23", TG:"TG00F01", YA:"YA00F19", YC:"YC00F01"};
 let START=null;
 function epuletStart(d){
   START=PORTA[((d.rooms.find(r=>r.code)||{}).code||"").slice(0,2)]||null;
@@ -2841,8 +2858,12 @@ function applyLang(){
   /* Az alcím az OA-nál a lefordított `sub` (kar + cím, ahogy a megrendelő
      kérte); másik épületnél a saját adata, különben a Doberdó úton állva a
      Bécsi utat hirdetné. */
+  /* A kart a funkció szerinti tervlap fejbélyegzője adja (a nyilvántartásban
+     `kar`); sem a tervtári lapon, sem a táblában nincs benne. Kollégiumnál és
+     irodaépületnél nincs kar — ott csak a cím áll. */
   $("sub").textContent = D===D_OA ? t.sub
-    : [D.meta.faculty,D.meta.address].filter(Boolean).join(" · ");
+    : [(EPULETEK && (EPULETEK.epuletek[epItt()]||{}).kar) || D.meta.faculty,
+       D.meta.address].filter(Boolean).join(" · ");
   $("q").placeholder=t.ph;
   /* Az épületlista a nyelvvel együtt újraépül (szintek, „alaprajz még nincs”,
      az ezres csoportosítás is más). A nyilvántartás előtt még nincs mit. */
@@ -3220,7 +3241,11 @@ const EP_KELL=["meta","levels","rooms","grid","masks","walls","stairs"];
 function epuletKesz(d){
   if(!d || EP_KELL.some(k=>!d[k])) return false;
   if(!d.levels.length || !d.rooms.length) return false;
-  return !!PORTA[((d.rooms.find(r=>r.code)||{}).code||"").slice(0,2)];
+  const p=PORTA[((d.rooms.find(r=>r.code)||{}).code||"").slice(0,2)];
+  /* A portának a BETÖLTÖTT adatban is meg kell lennie: a táblában szerepelhet
+     olyan helyiség, amit a tervlapról nem sikerült kivágni, és akkor az
+     útvonalak néma csendben a szint legnagyobb helyiségéből indulnának. */
+  return !!p && d.rooms.some(r=>r.code===p);
 }
 
 /* A váltás ugyanazt a sorrendet futtatja, mint az indulás (lásd a „start”
