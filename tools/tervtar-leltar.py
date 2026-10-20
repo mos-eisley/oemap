@@ -22,8 +22,10 @@ A táblákról, mert egyik sem látszik első ránézésre:
 - **Ugyanaz a kód kétszer is szerepel egy lapon** (15 helyen, a TA
   földszintjén ötször). Leltárban ezt jelenteni kell, nem összevonni: a
   dupla sor vagy elírás, vagy két külön helyiség azonos jellel.
-- **A `HASZNÁLÓ` oszlop kimarad.** Most mindenhol üres, de ha egyszer
-  személynév kerül bele, annak nincs helye egy továbbadott leltárban.
+- **A `HASZNÁLÓ` oszlop kimarad.** Hét táblában van benne tartalom (az
+  YA-YB-ben, az OD-ben és az FG-ben a legtöbb, egységek és termek nevei), és
+  ha egyszer személynév kerül bele, annak nincs helye egy továbbadott
+  leltárban.
 - Egy tábla (`...kh_gyumolcs_u_lebenyi_kollegium.xls`) az xlrd-t megakasztja
   a saját szövegtáblájával. Nem hal el tőle a futás: a fájl kimarad, és a
   jelentés végén ott áll. Excelből .xlsx-ként újramentve beolvasható.
@@ -36,8 +38,9 @@ felülírása (`NEPTUN_ALAK`) oda tartozik, ahol a Neptun-adat is van — egy
 leltárnak azt kell írnia, ami a nyilvántartásban áll.
 
 Belső anyag. A repó privát, ezért a táblák a `forras/`-ban, a leltár a
-`forras/kivonat/`-ban van — de a Pages site NEM privát, ezért a deploy a
-`forras/`-t kidobja a publikált csomagból. A `data/` alá SEMMI nem kerülhet
+`forras/kivonat/`-ban van — de a Pages site NEM privát, ezért a deploy csak
+engedélylistás fájlokat publikál (`tools/pages-csomag.js`), a `forras/`
+nincs köztük. A `data/` alá SEMMI nem kerülhet
 belőlük közvetlenül: ami oda megy, az nyilvános URL-en letölthető.
 
 Használat:  python3 tools/tervtar-leltar.py <leltar.json> <tabla.xls|xlsx> [...]

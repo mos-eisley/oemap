@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A helyiségek ajtajai az épület IFC-modelljéből a térkép adatába.
 
-A térkép (index.html, `const D`) a helyiséget a hozzá legközelebbi járható
+A térkép (index.html, a `D = {…}` literál) a helyiséget a hozzá legközelebbi járható
 (folyosó-) cellához köti, 6 m-en belül — nem az ajtajához. Emiatt az útvonal
 nem az ajtónál ér véget; ahol a legközelebbi folyosó nem az, amelyikre az ajtó
 nyílik, ott rossz az útvonal; és ahova csak egy másik helyiségen át lehet
@@ -169,7 +169,7 @@ def halozat(D, GW, GH):
 
 def main(ifc, html):
     src = open(html, encoding="utf-8").read()
-    i0 = src.index("const D = ") + len("const D = ")
+    i0 = re.search(r"\b(?:const|let) D = ", src).end()   # 7b0b987 óta `let D` (épületváltás)
     D, i1 = json.JSONDecoder().raw_decode(src, i0)
     f = ifcopenshell.open(ifc)
     S = G.settings(); S.set(S.USE_WORLD_COORDS, True)

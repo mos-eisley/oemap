@@ -156,7 +156,7 @@ def app_valtozat(out, app_ut):
 
     A `navigalhato` azt jelenti, hogy az app ADATA kész az épületről — nem azt,
     hogy van tervlap. A kettőt a felületen sem szabad összemosni: tervlapja 32
-    épületnek van, megnyitni egyelőre egyet lehet. Egy épület akkor
+    épületnek van, megnyitni ennél jóval kevesebbet lehet. Egy épület akkor
     navigálható, ha vagy beégetve van (OA), vagy ott a `data/epuletek/<kód>.json`
     — így az új épület bekapcsolásához elég a fájlját letenni és ezt újrafuttatni,
     nem kell itt listát szerkeszteni.

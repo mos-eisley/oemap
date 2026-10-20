@@ -3,7 +3,8 @@
 Interaktív teremkereső és útvonaltervező az OA épülethez. Egyetlen, önálló HTML
 fájl — nincs build lépés, nincs függőség, nincs csomagkezelő.
 
-**Élő oldal:** https://mayydayy99.github.io/oemap/
+**Élő oldal:** https://oemap.maydayprod.app/ — most nem él: a repó privát,
+és ezzel a GitHub Pages kikapcsolt (lásd a CLAUDE.md „Deploy” szakaszát).
 
 ## Felépítés
 
@@ -14,29 +15,30 @@ fájl — nincs build lépés, nincs függőség, nincs csomagkezelő.
 | `icons/` | Alkalmazásikonok (a Metropolisszal generálva) |
 | `manifest.webmanifest` | PWA leíró — telepíthetőség |
 | `sw.js` | Service worker — offline működés |
-| `data/` | Foglalható termek és foglaltságuk, valamint az egyetem épület-nyilvántartása (generált) |
+| `data/` | Foglalható termek és foglaltságuk, az egyetem épület-nyilvántartása és a többi megnyitható épület alaprajza (`data/epuletek/`) — mind generált |
 | `tools/` | Az adatot előállító szkriptek és a QR-ív generátora |
 | `tests/` | Böngészős regressziós tesztek (`npm test`) |
 | `meres.html` | Telefonos mérőlap: az Épület nézet mozdulatainak képkockaideje egy valódi telefonon |
 | `CLAUDE.md` | Fejlesztői jegyzet — ezt olvasd, mielőtt hozzányúlsz |
 | `docs/` | Nyitott kérdések, amik külső információra várnak |
 | `.github/workflows/deploy-pages.yml` | Automatikus deploy GitHub Pages-re |
-| `.nojekyll` | Kikapcsolja a Jekyll feldolgozást |
+| `.nojekyll` | Az Actions-ös deploy mellett fölösleges (az nem futtat Jekyllt), és a csomagba sem kerül bele |
 
-**Nincs külső hivatkozás.** A betűtípusok a `fonts/` mappából jönnek, minden más
-— a teremadatok, az alaprajz geometriája, az útvonalkeresés — az `index.html`-en
-belül van. Így az oldal külső szolgáltató nélkül, offline is működik.
+**Nincs külső hivatkozás.** Az OA alaprajza és az útvonalkeresés az
+`index.html`-en belül van, a betűtípusok a `fonts/`, a teremadat és a többi
+épület alaprajza a `data/` mappából jön — mind ugyanarról a címről. Így az
+oldal külső szolgáltató nélkül működik, és offline is: az OA mindig, a többi
+épület akkor, ha egyszer már megnyitottad.
 
 ## Az egyetem épületei
 
 A fejlécben az épület neve egyben választógomb: alatta az egyetem **mind a 39
-épülete**, hét telephelyre csoportosítva (Bécsi út, Doberdó út, Népszínház
-utca, Tavaszmező utca, Thököly út, Székesfehérvár, Nagymaros), mindegyiknél a
-címe, a szintek és a helyiségek száma, az alapterülete — az Egyetemi Tervtár
-adataiból.
+épülete**, a cím irányítószáma szerint csoportosítva (például Budapest 1034: a
+Bécsi út és a Doberdó út), a cím nélküliek a végén, mindegyiknél a címe, a
+szintek és a helyiségek száma, az alapterülete — az Egyetemi Tervtár adataiból.
 
-**Megnyitni egyelőre az OA és az OD épületet lehet.** A többi épület sora
-adatlap: látszik, hogy létezik és hol van, de nem nyitható meg, mert nincs mit
+**Megnyitni azt az épületet lehet, amelyiknek kész az alaprajza** (most hetet:
+OA, OC, OD, FF, FK, KH, KT). A többi épület sora adatlap: látszik, hogy létezik és hol van, de nem nyitható meg, mert nincs mit
 megnyitni. Ez szándékosan van így kiírva: ha az épület ki sem látszana, azt
 hihetnéd, nincs is ilyen; ha megnyithatónak látszana, hiába kattintanál rá.
 
@@ -45,14 +47,19 @@ A megnyitható épületre az app **átvált** — alaprajz, szintválasztó, ker
 odavisz: átvált arra az épületre, és kiválasztja a termet. Az OA adata beégetve
 marad, így arra hálózat nélkül is vissza lehet váltani.
 
-Az OD alaprajza a tervlapokból gépi úton készült, ajtóadat nélkül: a 229
-helyiségből **215-höz van útvonal** a portától. Ami kimarad, az a −2. szint
-(önálló, lépcsővel nem kötött pincerész) és egy földszinti tömb (rajztermek,
-raktárak, öltöző) — ezekhez a bejáratot a tervlap nem adta meg.
+Az OA-n kívüli alaprajzok a tervlapokból gépi úton készültek, ajtóadat és lift
+nélkül: az útvonal a helyiséghez legközelebbi folyosópontnál ér véget, és
+lépcső nélküli útvonalat ott még nem tudunk ajánlani. Az OD 229 helyiségéből
+**215-höz van útvonal** a portától; ami kimarad, az a −2. szint, kilenc
+földszinti helyiség (rajztermek, raktárak, öltöző) — ezeknél a kinyert járható
+terület hiányos (a lépcső vége és egy földszinti térrész kimaradt róla) —, és
+egy előadóterem meg egy iroda, amelyeket az app egy leszakadt folyosódarabhoz
+köt. A részletek a CLAUDE.md-ben. A foglalható termek
+órarendi adata csak az OA-é, ezért más épületben ez a gomb nincs kint.
 
-Ha egy link vagy QR-kód egy másik épület helyiségére mutat (`…#OD20E01`), az
-app megnyitja a listát, és megnevezi, melyik épületé a kód — korábban az ilyen
-cím csendben ugyanezt az OA-alaprajzot hozta be.
+Ha egy link vagy QR-kód egy még nem megnyitható épület helyiségére mutat
+(például `…#BA00F01`), az app megnyitja a listát, és megnevezi, melyik épületé
+a kód — korábban az ilyen cím csendben ugyanezt az OA-alaprajzot hozta be.
 
 ## Nézetek
 
@@ -231,12 +238,12 @@ Telefonon nincs ilyen gomb: ott a megosztás gomb ugyanezt tudja.
 Egy e-totemen az app a saját helyéről indul, és magától visszaáll:
 
 ```
-https://mayydayy99.github.io/oemap/?totem#from=OA00FK1
+https://oemap.maydayprod.app/?totem#from=OA00FK1
 ```
 
 A `from` a totem helye. Induláskor egy felirat jelzi, hogy totem módban fut —
 ha nem jelenik meg, a cím nem kért totem módot. A `totem` a link végére, a `#`
-után írva is működik (`…/oemap/#from=OA00FK1?totem`), az app a szokásos alakra
+után írva is működik (`…/#from=OA00FK1?totem`), az app a szokásos alakra
 igazítja. Egy perc tétlenség után minden visszaáll (az indulás, magyar nyelv,
 alaprajz, cél nélkül); tíz másodperccel előtte szól, és egy érintés
 megállítja. Mozdulat közben soha nem áll vissza. Naponta egyszer újratölt, hogy
@@ -246,8 +253,11 @@ nem totem mód: a telefonon nem áll vissza semmi.
 A totemen a teljes linket a böngésző kioszk módjában nyisd meg, ne a telepített
 appot: az a kezdőlapjáról indul, `?totem` nélkül.
 
-Ismeretlen kódot a link csendben elhagy: az app elindul, csak épp kiválasztás
-nélkül. A panelben a megosztás gomb a pillanatnyi állapot linkjét adja —
+Ha a kód ebben az épületben nem létezik (elírás, például `#OA99X99`), a link
+elhagyja: az app elindul, csak épp kiválasztás nélkül. Egy megnyitható másik
+épület kódjánál átvált arra az épületre (lásd „Az egyetem épületei”); egy még
+nem megnyitható épület kódjánál, vagy ha a kód egyik ismert épülethez sem
+tartozik, megnyílik az épületlista, és megmondja, miért nem nyílt meg. A panelben a megosztás gomb a pillanatnyi állapot linkjét adja —
 `navigator.share`-rel, ahol van, különben vágólapra.
 
 ## „Itt vagyok" QR-kódok
@@ -259,10 +269,10 @@ honnan indul. Se engedélykérés, se hálózat — a telepített PWA offline is
 elindul.
 
 ```
-python3 tools/make-qr.py https://mayydayy99.github.io/oemap/ qr.html
+python3 tools/make-qr.py https://oemap.maydayprod.app/ qr.html
 ```
 
-Nyomtatható A4-es ív lesz belőle, szintenként csoportosítva: 41 kód a
+Nyomtatható A4-es ív lesz belőle, szintenként csoportosítva: 46 kód a
 közlekedőkre, előterekbe és közösségi terekre. Egy-egy szintre szűkíthető a
 szintszámok megadásával (`... qr.html 0 1`).
 
@@ -318,7 +328,7 @@ F04), ezért ahol nincs ajtószám, a térképen a teljes tervlapi kód áll
 (`OA00F04`), nem egy teremszámnak látszó rövid kód.
 
 **Párosító mód.** Ha egy pár hiányzik vagy vitatott, az épületet ismerő ember
-megadhatja az appban: `https://mayydayy99.github.io/oemap/?parosit`.
+megadhatja az appban: `https://oemap.maydayprod.app/?parosit`.
 Kattints egy teremre, válaszd ki a Neptun-nevét; a panel alján a **Lista
 másolása** a párokat `F01 = OA00F11` alakban adja, ezt kell a `NEPTUN`
 táblába írni. Addig a helyben megadott párok csak ebben a módban, azon az
@@ -348,9 +358,18 @@ IBM Plex Mono: SIL Open Font License); a licencfájlok a `fonts/` mappában vann
 
 ## Deploy
 
-A `deploy-pages.yml` workflow minden pusholásnál lefut, és a repó tartalmát
-kirakja GitHub Pages-re. Kézzel is indítható: **Actions → Deploy to GitHub Pages
-→ Run workflow**.
+A `deploy-pages.yml` workflow minden `main`-re pusholásnál lefut, a
+`tools/pages-csomag.js`-sel összeállítja a publikált csomagot, és azt rakja ki
+GitHub Pages-re. **A csomag engedélylista**: csak az app futásidejű fájljai
+kerülnek bele (az `index.html`, a service worker, a manifest, a mérőlap, a
+betűk, az ikonok és a `data/`), a CLAUDE.md, a `docs/`, a `tools/`, a `tests/`
+és a `forras/` nem — a repó privát, a Pages oldal viszont nem az. Új
+futásidejű fájlt a listára fel kell venni, különben élesben 404-et kap. Kézzel
+is indítható: **Actions → Deploy to GitHub Pages → Run workflow**.
+
+**Most nem él:** a repó privátra állításával a Pages kikapcsolt (lásd a
+CLAUDE.md „Deploy” részét). Amíg vissza nem kapcsolják, minden deploy a
+*Setup Pages* lépésnél bukik.
 
 ### Egyszeri beállítás — ezt kézzel kell megtenni
 
@@ -390,7 +409,7 @@ python3 -m http.server 8000
 
 ```
 npm install     # playwright
-npm test        # mind a 23 tesztfájl
+npm test        # mind a 25 tesztfájl
 ```
 
 A tesztek maguk indítanak szervert és böngészőt szabad porton, így nem kell

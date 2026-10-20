@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A térképről hiányzó helyiségek pótlása a tervtári alaprajz PDF-jéből.
 
-A térkép adata (index.html, `const D`) egy korábbi generátorból jött, és a
+A térkép adata (index.html, a `D = {…}` literál) egy korábbi generátorból jött, és a
 keretével levágta a felső szárny északkeleti végét: minden szinten hiányzott
 41 helyiség, köztük 10 órarendi terem (F05, F06, 1.13 …), és a keret szélén
 átnyúló folyosók is. Ez az eszköz a tervtári alaprajzból (Archicad-PDF,
@@ -35,8 +35,9 @@ Használat:
   python3 tools/tervlap-szarny.py <oe-oa_tervtari_alaprajzok.pdf> \\
           <oe-oa_tervtar_epuletadatok.xls> index.html [jelentés.json]
   (pip install pymupdf numpy scipy shapely xlrd)
-A PDF és az xls belső anyag (a Tervtár a vezetői körnek szól): ne tedd a
-repóba.
+A PDF és az xls belső anyag (a Tervtár a vezetői körnek szól): a privát repó
+forras/ könyvtárában van, a Pages-re publikált csomagba nem kerül be
+(tools/pages-csomag.js). Máshova ne tedd.
 """
 import sys, re, json, math, base64, collections
 import numpy as np
@@ -531,7 +532,7 @@ def nyilvantartas(xls):
 # ------------------------------------------------------------------ fő
 def main(pdf, xls, html, jelentes=None):
     src = open(html, encoding="utf-8").read()
-    i0 = src.index("const D = ") + len("const D = ")
+    i0 = re.search(r"\b(?:const|let) D = ", src).end()   # 7b0b987 óta `let D` (épületváltás)
     D, i1 = json.JSONDecoder().raw_decode(src, i0)
     NY = nyilvantartas(xls)
     RES, GW, GH = D["grid"]["res"], D["grid"]["w"], D["grid"]["h"]

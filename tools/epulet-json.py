@@ -29,13 +29,23 @@ Amit a formátumról tudni kell, mert egyik sem látszik magától:
   szinten ugyanott megvan, az egy mag. A magot befoglaló helyiség kódja megy
   a `pts`-be — az app ezt csak a lépés feliratához használja
   („Lépcsőház …”), és a közlekedő kódja ott igaz is.
-- **A `levels[].code` mezőt az app nem olvassa** (csak `level`, `short`,
-  `name`), ami jól jön: az OD felső lapjain két szintjegy is van (`10` és
-  `15`), mert a szárny féllépcsővel el van csúsztatva.
+- **A `levels[].code` mező a szint legkisebb helyiségkód-szintjegye**, és az
+  app csak tartaléknak olvassa: a szint fajtája és emeletszáma elsősorban a
+  `name`-ből jön (`szintAdatL()`), a kód csak az ismeretlen nevű szintnél
+  (pl. „Udvar szint”) dönt. A kód nem mindig emelet: az OD felső lapjain két
+  szintjegy is van (`10` és `15`), mert a szárny féllépcsővel el van
+  csúsztatva, a KD félemeletéé 15, a BA, BB és YB földszintjéé 10, a TA közös
+  lapján pedig a név a TC emeletét mondja. Ha egy szinten a név és a kód
+  mást mond, vagy a sor nem nő alulról felfelé, az app nem nyitja meg az
+  épületet (`epuletKesz()`, `szintekRendben()`): ma ezért nem nyílna meg a
+  BA, BB, BF, YB, KD és TA. A javítás itt kell: a szint fajtáját és
+  emeletszámát egyértelműen kell kiírni.
 
 Használat:
   python3 tools/epulet-json.py <geo.json> <leltar.json> <ki.json> --kod OD \\
-          [--nev "OD épület"] [--cim "..."] [--jelentes jelentes.json]
+          [--nev "OD épület"] [--cim "..."] [--forras "..."] [--jelentes jelentes.json]
+A --forras a jelmagyarázat forrássora (alapból: a Tervtár, gépi kinyerés);
+a köztes geometriafájl neve nem való oda, a hallgató azt látja.
 A tervlap és a tábla belső anyag; a kimenet helyiséglistát tartalmaz, úgy
 kezelendő, mint a leltár.
 """
@@ -201,8 +211,11 @@ def magparositas(lapmagok, lapszint):
     return magok
 
 
+FORRAS = "ÓE Egyetemi Tervtár – tervtári alaprajz és épületadatok (gépi kinyerés)"
+
+
 def main(geoj, leltarj, kij, kod, nev=None, cim=None, jelentes=None,
-         maszk_mod="kozlekedo", tag=None):
+         maszk_mod="kozlekedo", tag=None, forras=None):
     mod = maszk_mod
     global KOZL_TAG
     if tag: KOZL_TAG = float(tag)
@@ -362,7 +375,7 @@ def main(geoj, leltarj, kij, kod, nev=None, cim=None, jelentes=None,
     masks = {k: v for k, v in masks.items() if int(k) in elo}
     D = {
         "meta": {"building": nev or f"{kod} épület",
-                 "address": cim or "", "source": os.path.basename(geoj),
+                 "address": cim or "", "source": forras or FORRAS,
                  "w": W, "h": H},
         # Üres szint nem kerül be: egy közös tervlapon (BF/BB/BA, TA/TC) van
         # olyan lap, amelyen csak a MÁSIK épület helyiségei állnak — annak
@@ -428,7 +441,7 @@ def main(geoj, leltarj, kij, kod, nev=None, cim=None, jelentes=None,
 if __name__ == "__main__":
     av = sys.argv[1:]
     kw = {}
-    for f in ("--kod", "--nev", "--cim", "--jelentes", "--maszk", "--tag"):
+    for f in ("--kod", "--nev", "--cim", "--jelentes", "--maszk", "--tag", "--forras"):
         if f in av:
             i = av.index(f); kw["maszk_mod" if f == "--maszk" else f[2:]] = av[i + 1]; del av[i:i + 2]
     if len(av) != 3 or "kod" not in kw:

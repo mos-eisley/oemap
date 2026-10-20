@@ -20,7 +20,7 @@ PLACES = {"KÖZLEKEDŐK", "ELŐTEREK", "KÖZÖSSÉGI TEREK"}
 
 def load_rooms(index_html):
     src = pathlib.Path(index_html).read_text(encoding="utf-8")
-    D = json.loads(re.search(r"const D\s*=\s*(\{.*?\});\s*\n", src, re.S).group(1))
+    D = json.loads(re.search(r"(?:const|let) D\s*=\s*(\{.*?\});\s*\n", src, re.S).group(1))
     return D
 
 
