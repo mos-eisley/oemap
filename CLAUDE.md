@@ -1,7 +1,9 @@
 # OA Épület Teremkereső — fejlesztői jegyzet
 
 Teremkereső és útvonaltervező az Óbudai Egyetem OA épületéhez (Neumann János
-Informatikai Kar, Bécsi út 96/b). **Élő oldal:** https://mayydayy99.github.io/oemap/
+Informatikai Kar, Bécsi út 96/b). **Élő oldal:** https://oemap.maydayprod.app/ — most
+nem él: a repó privát, és ezzel a Pages kikapcsolt (lásd „Deploy”). A régi
+`mayydayy99.github.io/oemap/` cím ebből a repóból már nem szolgálható ki.
 
 A felhasználói dokumentáció a [README.md](README.md)-ben van. Ez a fájl azt
 gyűjti össze, amit egy új munkamenetnek tudnia kell, mielőtt hozzányúl.
@@ -19,13 +21,14 @@ A projekt meetingjén ez a kettő lett kimondva, és minden vitás kérdést ez 
 
 ## Felépítés
 
-`index.html` (~420 KB, tömörítve ~115 KB) **maga a teljes alkalmazás** — HTML, CSS és JS egy
+`index.html` (~430 KB, tömörítve ~120 KB) **maga a teljes alkalmazás** — HTML, CSS és JS egy
 fájlban, build lépés és futásidejű függőség nélkül. Ez szándékos: a
 GitHub Pages statikusan szolgálja ki, és offline is működik. Az egyetlen külső
 fájl a `fonts/`, az `icons/`, a `data/` és a `sw.js`. A `meres.html` nem az app
 része: telefonos mérőlap (lásd „Körbejárás közben rejtett felső szintek”).
 
-A beépített `const D = {...}` tartalmazza az épületet:
+A beégetett `let D = {...}` az OA épület (a `D_OA` is ezt őrzi); épületváltáskor az
+`epuletAllit()` köti újra egy másik épület adatára (lásd lejjebb). Egy épület adata:
 
 | kulcs | mi | méret |
 | --- | --- | --- |
@@ -38,7 +41,8 @@ A beépített `const D = {...}` tartalmazza az épületet:
 | `flights` | lépcsőkarok az induló szintjükön (a fokok körvonala és a járásvonal); csak rajz, az útvonal a `stairs`-en fut | 38 |
 
 Az `S` objektum az egész futásidejű állapot (nyelv, téma, nézet, szint,
-honnan/hova, útvonal, forgatás, panelállás). Aki ezt megérti, érti az appot.
+honnan/hova, útvonal, forgatás, panelállás). Aki ezt megérti, érti az appot. Az
+aktuális épület nem az `S`-ben van, hanem a `D`-ben és a `ROOM`-ban (`epItt()`).
 
 **A `D` EGY épület, az egyetemnek viszont 39 van.** A `data/epuletek.json`
 (12 KB, `tools/tervlap-epuletek.py`) a nyilvántartás mind a 39-ről: név, cím,
@@ -58,7 +62,7 @@ pontosan úgy viselkedik, mint azelőtt. A `tests/epuletek.js` ezt az ágat
 szándékosan letiltott kéréssel is méri.
 
 **Az épületváltás a `D`-ből számolt EGÉSZ állapotot újraépíti.** Betöltéskor
-tizenkilenc modulszintű érték épül fel a `D`-ből, és váltáskor mindegyiket
+huszonkét modulszintű érték épül fel a `D`-ből, és váltáskor mindegyiket
 újra kell építeni — öt függvény teszi, ugyanabban a sorrendben, ahogy
 betöltéskor is lefut (`epuletGeo`, `epuletStart`, `epuletRacs`, `epuletRcell`,
 `epuletPortal`), és ugyanezeket hívja az `epuletAllit()`:
@@ -73,53 +77,163 @@ betöltéskor is lefut (`epuletGeo`, `epuletStart`, `epuletRacs`, `epuletRcell`,
 
 Két dolog, amit itt el lehet rontani:
 
-- **A gráf és a gyorsítótárak tárolói `const`-ok, és HELYBEN ürülnek.** A
-  Dijkstra és a mosdóválasztó modulszinten kapta meg a `PORTAL`-t
-  (`portals||PORTAL`); egy újrakötött `Map`-et a régi hivatkozások nem
-  látnának meg, és a keresés csendben a RÉGI épület gráfján futna, egy
-  látszólag hibátlan útvonalat adva egy másik házból. Ugyanez igaz a `MASK`,
-  `CELLLIST`, `CLEAR` és `RCELL` tárolókra.
+- **A gráf és a gyorsítótárak (`PORTAL`, `MASK`, `CELLLIST`, `CLEAR`, `RCELL`)
+  váltáskor HELYBEN ürülnek, egyetlen régi bejegyzés sem maradhat bennük.** Ha
+  bármelyik kimarad, a keresés csendben a RÉGI épület rácsán vagy élein fut, és
+  egy látszólag hibátlan útvonalat ad egy másik házból. (Korábban itt az állt,
+  hogy egy újrakötött `Map`-et „a régi hivatkozások nem látnának meg” — ilyen
+  modulszinten elkapott hivatkozás nincs, mindegyik híváskor frissen olvasódik;
+  a helyben ürítés a régi bejegyzések miatt kell.)
 - **Az `epuletAllit()` ugyanazt a sorrendet futtatja, mint az indulás**
   (`buildFloors` → `placeTags` → `applyLang` → `recompute` → `fit`), hogy ne
   legyen külön, csak váltáskor futó kódút, amit a tesztek nem őriznek.
 
-A váltás mércéje a `tests/epuletek.js`-ben az OA adata MÁS KÓD ALATT
-kiszolgálva: ha minden helyesen épül újra, az átnevezett épületben méterre
-ugyanaz az útvonal jön ki. Egy ottmaradt gyorsítótár ezen azonnal elbukik.
+A váltás mércéje a `tests/epuletek.js`-ben **valódi épületeken mért aranyérték**,
+épületenként négy szám a portától: hány kódolt helyiséghez nincs út (OA 3, FF
+3, FK 13, KH 18, KT 11, OC 6, OD 14), az elérhetők útvonalainak összhossza
+méterre, és a lépcsős meg a liftes gráf élszáma. Pontos egyezést kér, mint a
+`tests/eler.js` kivétellistája — ha egy adatjavítás bekötött egy helyiséget,
+vagy új épület nyílik meg, ott kell átírni. Az élszám a `D.stairs`-ből
+képlettel nem jön ki: az OD-ben három lépcsőpont 7 m-nél messzebb esik a
+járható maszktól, a `nodesOf()` kiejti őket, és így a −2. szint lépcsője meg
+a földszint–félemelet közti 2-es lépcső nem kerül a gráfba (lásd lejjebb) —
+ezért az is mért érték. Mellette **tisztaság**: OA → OD és a hétszintes OA IV.
+emeletéről a háromszintes FK-ra váltva egyetlen tárolóban sem maradhat régi
+bejegyzés. A teszt maga üríti a tárolókat, és maga hívja újra az öt építő
+függvényt ugyanarra az adatra; ha az eredmény eltér, valamelyik ürítő ciklus
+hiányzik (a lustán töltött `CLEAR`-é is). A szintdobozok (`FLOOR`) pontosan
+az új épület szintjei, és mind a lapon — korábban a `buildFloors()` nem
+ürítette, és a régi épület magasabb szintjeinek (a DOM-ból már kivett)
+dobozai bent maradtak. Amit ez nem fog meg: egy építő elavult bemenetét (ha
+pl. a `LIFTS` újrakötése maradna ki) — arra az aranyérték a háló. Továbbá: OD → KT → OD
+ugyanazt méri, az OA hálózat nélkül is visszajön, és az `epuletKesz()` a valódi
+OD-adaton, egyenként egy-egy hiányzó elemmel nem kész. (Egy „friss OD-betöltés”
+nem mérce: az app mindig a beégetett OA-val indul, a más épületre mutató link
+is váltással nyitja meg az OD-t.) **Korábban** az OA
+adata volt a mérce más kód alatt: ugyanaz a rács, ugyanazok a cellák, ezért
+egy ottmaradt gyorsítótár is ugyanazt az útvonalat adta — a teszt akkor is
+zöld volt, ha váltáskor a rács, a helyiség-cellák és a gráf egyáltalán nem
+épült újra (élesben ettől a többi épületben a helyiségek 0–1%-a lett volna
+elérhető). Átnevezett adattal mérni nem lehet.
 
-**Hiányos adattal nem váltunk** (`epuletKesz()`): kell `meta`, `levels`,
+**Hiányos vagy ellentmondó adattal nem váltunk** (`epuletKesz()`): a szintek
+nevéből és kódjából alulról felfelé növő emeletsornak kell kijönnie (lásd a
+szintneveknél), és kell `meta`, `levels`,
 `rooms`, `grid`, `masks`, `walls`, `stairs`, és a `PORTA`-ban egy porta. Falak
 nélkül a Dijkstra mindenen átmenne, lépcső nélkül a szintek nem érnének össze,
 porta nélkül a gyorsgombok rossz helyről indítanának — ilyenkor az épület
 marad adatlap, és a lista megmondja, hogy nem érhető el. **Ezért a `navigalhato`
 nem azt jelenti, hogy van tervlap**, hanem hogy az app adata kész.
 
-**Most két épület nyitható meg: az OA (beégetve) és az OD**
-(`data/epuletek/od.json`, a tervlapokból gépi úton kinyerve). Amit az OD-ről
-tudni kell:
+**Hét épület nyitható meg: az OA (beégetve), és a `data/epuletek/`-ből az OD,
+FF, FK, KH, KT és OC** (a tervlapokból gépi úton kinyerve, lásd `docs/ATADAS.md`).
+Az OD volt az első. Ami mind a hatra áll:
 
 - **Ajtóadat nincs** (IFC csak az OA-hoz van), ezért az útvonal a helyiséghez
   legközelebbi cellánál ér véget, nem az ajtajánál — ahogy az OA-nál is volt az
   `ifc-ajtok.py` előtt.
 - **Lift sincs az adatban**: a tervlap helyiségnevei közt nem volt azonosítható
-  liftfülke, így az OD-ben nincs liftes alternatíva. Ez ellenőrizendő a
-  helyszínen; ha van, a `lifts` tömbbe kell felvenni.
-- **A 229 helyiségből 215-höz van út a portától.** Ami kimarad: a −2. szint
-  három helyisége (a szintet egyetlen lépcső sem köti be — a saját `ODX2PK1
-  LÉPCSŐ` helyisége is elérhetetlen), és egy tízes földszinti tömb (rajztermek,
-  raktárak, öltöző, WC, zuhanyzó, `OD00FK4` közlekedő). Mindkettő a maszkon
-  összefüggő, de a bejárat felől elvágott folt: a tervlapról hiányzik a nyílás,
-  ami bekötné. Ezt mérni kell, nem tippelni — a mérés egy sorban megvan:
-  `dijkstra(ROOM[START],PORTAL,null)` után `routeTo()` minden kódolt helyiségre.
-- **A porta kézzel felvett érték** (`PORTA.OD = "OD00F01"`): a tervlapon
-  „PORTA" nevű, DOLGOZÓI TERÜLETEK kategóriájú helyiség a SZÉLFOGÓ (`OD00FK1`)
-  és az ELŐCSARNOK (`OD00FK2`) mellett — ugyanaz a minta, mint az OA-é.
+  liftfülke, így liftes alternatíva sincs. Ez ellenőrizendő a helyszínen; ha
+  van, a `lifts` tömbbe kell felvenni.
+- **Egy épület csak akkor nyílik meg, ha a `data/epuletek/<kód>.json` mellett
+  a `PORTA` táblában is van portája** — kézzel felvett érték. Ahol a tervlapon
+  van „PORTA" nevű helyiség, az (az OD-ben `OD00F01`, DOLGOZÓI TERÜLETEK
+  kategóriában, a SZÉLFOGÓ `OD00FK1` és az ELŐCSARNOK `OD00FK2` mellett —
+  ugyanaz a minta, mint az OA-é); ahol nincs, a bejárati tér (az FF-ben a
+  szélfogó, `FF00FK1`).
+
+Ami csak az OD-re áll: **a 229 helyiségből 215-höz van út a portától.** Ami
+kimarad (a valódi appban mérve):
+- a −2. szint három helyisége. A `D.stairs`-ben VAN lépcső a −2. és a −1.
+  szint közt (`ODX2PK1` → `ODX1P09`), de a −1-es vége 8,9 m-re esik a
+  legközelebbi járható cellától, és a `nodesOf()` 7 m-es korlátja kiejti; az
+  `ODX2P01`-nek 6 m-en belül cellája sincs;
+- kilenc földszinti helyiség: hét nyugati (F22–F26, a `OD00FK4` közlekedő és
+  az `OD00FK5` raktár) egy 123 cellás, a fő hálózattól elvágott foltban, az
+  `OD00F03` egy 33 cellásban; az `OD00F28`-nak 6 m-en belül egyetlen járható
+  cellája sincs. Itt a maszkról egy egész térrész hiányzik, egy nyílás nem
+  kötné be őket;
+- **két helyiség, amely a fő hálózat mellett áll, mégsem érhető el**: az
+  `OD00F02` előadóterem és a III. emeleti `OD35E04` iroda. A fő folyosó
+  cellái 0,03, illetve 0,05 m-re vannak a sokszögüktől, az `epuletRcell()`
+  viszont ajtóadat nélkül egyetlen cellához köti a helyiséget — a csúcsaihoz
+  vagy a középpontjához legközelebbihez —, és ez egy leszakadt, 4, illetve 32
+  cellás szilánkba esik (a fő hálózatot csak átlósan érinti, a Dijkstra pedig
+  átlósan csak két járható ortogonális szomszéddal lép). Ez a kötés hibája,
+  nem a maszké; ugyanez tarthatja vissza a többi gépi kinyerésű épület
+  elérhetetlen helyiségeinek egy részét is. Javítási irány: a kötés a
+  sokszög élétől számolt közelségben több cellát vegyen fel, vagy a
+  legnagyobb összefüggő komponenst részesítse előnyben — ez az aranyértékeket
+  is elmozdítja, ezért mérve kell bevezetni.
+Az OD 2-es lépcsője (`OD00F15` ↔ `OD05E04`, földszint–félemelet) is kiesik a
+gráfból: mindkét vége 7 m-nél messzebb van a maszktól (9,2 és 7,7 m). Mivel
+két, egyébként elérhető labort köt össze, elérhetőségi hatása nincs. Ezt mérni
+kell, nem tippelni — a mérés egy sorban megvan:
+`dijkstra(ROOM[START],PORTAL,null)` után `routeTo()` minden kódolt
+helyiségre. A többi épület elérhetetlen helyiségei a `docs/ATADAS.md`-ben.
+
+**Más épületben az OA-ra szabott szöveg és adat hamis.** Hat ilyen hiba
+vitte rossz helyre a hallgatót vagy hagyta segítség nélkül, mind javítva, a
+`tests/masepulet.js` őrzi:
+- **A szint neve és helye az épület saját szintjeiből jön**, nem a
+  sorszámból (`szintAdatL()`). Az OA-ban az 1-es szint a félemelet, máshol
+  többnyire már az I. emelet, az OD-ben a 6-os az V. emelet: a sorszámra írt
+  táblák ott „Lépcsőn fel a félemeletre”-t mondtak az I. emelet helyett, az
+  OD V. emeletére „undefined”-ot, és rosszul számolták a szinteket. **A szint
+  neve az elsődleges** (Alagsor, Pince -N, Földszint, Félemelet, I…X. emelet,
+  Tetőtér), mert a szintválasztó is azt mutatja; a félemelet az alatta lévő
+  szint fölötti fél, a tetőtér az alatta lévő fölötti egész emelet. A kód
+  (X2, X1, 00, 10…90, a második jegy nem 0: félszint) csak az ismeretlen nevű
+  szintnél dönt („Udvar szint”, „1-2 felszint”). **Ha a név és a kód is mond
+  emeletet, és mást mond, vagy a sor nem nő alulról felfelé, az épület nem
+  nyílik meg** (`szintekRendben()`): nem tudni, melyik a jó. A kód nem
+  mindenhol emelet — a BA, BB és YB táblájában a földszint kódja 10 —, a név
+  sem mindig — a TA a TC-vel közös lapjain a TC emeletszámait kapta —, és a
+  KD félemeletének kódja 15, holott a földszint fölött áll. A leltár szintjeit
+  az `epulet-json.py` módján képezve ma ezért maradna adatlap a BA, BB, BF,
+  YB (a név nélküli, 00-s kódú udvarszint egy második földszint lenne), a KD
+  és a TA; a 7 megnyitható épület mind átmegy. A javítás az eszközben van:
+  írja ki egyértelműen a szint fajtáját és emeletszámát. A ragozott célszint
+  (`lvTo()`), az angol szintnév (`lvName()`) és a 3D-s szintfelirat meg a
+  szint felolvasói neve is ebből készül (ez utóbbi kettő az OA-ban is magyar
+  maradt angolul); az „az” az I. és az V. előtt áll.
+- **A foglalható termek az OA-é** (a `data/termek.json` a NIK-órarendből): más
+  épületben a gomb nincs kint, a lista és a terem adatlapjának foglaltsága
+  sem jön. Korábban az OD-ben és a KT kollégiumban is az OA 24 terme állt
+  „Szabad” jelzéssel.
+- **A liftes megjegyzés** (`liftMegj()`) az OA-ban az FL3 magról szól, máshol
+  feltételesen fogalmaz: a liftek — ha vannak — még nincsenek a térképen.
+  Liftre utaló helyiség három épületben van (OD50E02 és OC50E03 gépház, KT00F05
+  liftkapcsoló), az FF, FK és KH adatában és leltárában semmi; fülke-helyet
+  egyik tervlap sem ad, gépház hiánya pedig nem bizonyítja, hogy nincs lift.
+  Lifttel felvett más épületre külön szöveg áll készen (`liftOther`,
+  `noLiftOther`), ma ez az ág nem fut.
+- **A nemre nem jelölt mosdó** („WC”, „MOSDÓ”) sosem kerül a női vagy a
+  férfi sorba: ha valamelyik jelölt sor hiányzik, egy külön, semleges sor
+  mutatja („Mosdó (nemre nem jelölt)”). Ajtóadat nélkül egy kollégiumi
+  lakóegység saját WC-je nem különböztethető meg egy nyilvános mosdótól, és
+  korábban az jött „Női” és „Férfi” mosdóként is (KT, FF, FK, KH) — két sorban
+  ugyanaz a helyiség.
+- **A mosdó neve épületenként másképp áll** (`iconsOf()`): az akadálymentes
+  az OA-ban „AK. MENT.”, a KH-ban „M.K. WC” (mozgáskorlátozott), a KT-ban
+  „M.S. MOSDÓ” (mozgássérült), a leltár más épületeiben „MK.”, „MS.”, „AKM.”;
+  a nő „NŐI”, „NŐ”, „N”, a férfi „FFI”, „FF”, „F”; a „FFI PISZOÁR” is férfi
+  mosdó; a mosdó „MOSD.” is lehet. Az első változat csak az OA alakját
+  ismerte, és a KH meg a KT akadálymentes mosdója eltűnt a mosdóválasztóból.
+  A kategória nélküli helyiségnél (a táblából hiányzik, csak a tervlapon van
+  meg: az OC I. emeleti `OC10E28` FFI WC és `OC10E29` NŐI WC) a név dönt; más
+  kategóriában (KÜLSŐS SZOLGÁLTATÁS: személyzeti, beteg WC) nem mosdó. A név
+  szerint személyzeti (TANÁRI, OKTATÓI, TAKARÍTÓI, SZEMÉLYZETI, DOLGOZÓI)
+  mosdót a mosdóválasztó nem kínálja (`SZEMELYZETI_WC`).
+- **A Büfé gyorsgomb** csak ott van kint, ahol van pontosan „BÜFÉ” nevű
+  helyiség (ma az OA-ban és az FK-ban, `FKX1P10`): máshol koppintásra semmi
+  nem történt volna.
 
 ## Kipróbálás
 
 ```
 npm install          # playwright (a böngésző a képen már megvan)
-npm test             # mind a 23 tesztfájl
+npm test             # mind a 25 tesztfájl
 pip install -r tools/requirements.txt   # csak a tools/ szkriptjeihez
 node tests/run.js url share     # csak egy-kettő
 ```
@@ -140,7 +254,7 @@ hagytak egy hibás kódot.
 | `tests/sheet.js` | az alsó panel aljának elérhetősége |
 | `tests/staff.js` | hallgatói/minden szűrő; a tervtári színkulcs (minden helyiség, a halványított is a saját színében; a jelmagyarázat sorrendje) |
 | `tests/termek.js` | foglalható termek: heti órák, páros/páratlan hét, ünnepnap, a félév előtti és utáni nap, a más karral közös termek, a térképen kiválasztott terem adatlapja, a sorrend (ami most szabad, elöl; az indulástól menetidő szerint), és a deploy után a régi service workerben ragadt fájl |
-| `tests/pwa.js` | manifest, service worker, **offline indulás**, a teremadat frissessége |
+| `tests/pwa.js` | manifest, service worker, **offline indulás** (a service worker saját kéréseit is elvágva), a teremadat frissessége és `?v=`-s újrakérése (a friss példány a paraméter nélküli kulcs alá kerül); alkönyvtáras hatókörrel is (`/oemap/`, a régi github.io-s cím alakja; a saját domain gyökérhatókörét az első szakasz méri): a szerver 404-e (kikapcsolt Pages) és egy másik lap (mérőlap) nem kerül a tárolt app helyére, egy másik lap 404-e 404 marad, az átirányítást viszont követi; app nélkül nem települ; aktiváláskor csak a saját régi tárolóit törli |
 | `tests/a11y.js` | billentyűzetes bejárás, felolvasónak szóló jelölés; a panel és a szintválasztó újrarajzolása, a téma váltása nem dobja el a fókuszt |
 | `tests/perf.js` | Épület nézet: képkockánként hány renderpass, a telefon (GPU-s) kódútján — **élesben bejelentett akadozás** |
 | `tests/neptun.js` | ajtószámok (Neptun-nevek) a térképen, a keresőben (pont nélkül is: „110”) és az adatlapon; az F06 nem állhat az OA00F03-on (az F09); a földszinten Neptun-névnek látszó tervlapi kód (a büfé „F04”-e) nem állhat feliratként; a foglalható termek listájából a térképre ugrás; a párosító mód (`?parosit`) |
@@ -153,7 +267,9 @@ hagytak egy hibás kódot.
 | `tests/totem.js` | totem mód: egy perc tétlenség után alaphelyzet, tíz másodperccel előtte szól, gesztus közben soha, naponta újratölt — a Playwright órájával, percekig várás nélkül; a link végére, a # után írt `?totem` is bekapcsolja — **élesben bejelentett: „nem működik az alaphelyzet"** |
 | `tests/kuld.js` | telefonra küldés: a QR-kódot a képernyőképből olvassa vissza (jsQR), a csendzónát és a sérült kódot külön méri, sötét témában is; a beolvasott link telefonon ugyanazt az útvonalat nyitja meg, lifttel; a totemről `?totem` nélkül |
 | `tests/meres.js` | a telefonos mérőlap (`meres.html`) végigfut a valódi appon |
-| `tests/epuletek.js` | épületválasztó és **épületváltás**: mind a 39 épület bent van, de csak az nyitható meg, aminek kész az adata; a Tervtár adatai a soron; más épület kódjára mutató link megnevezi az épületet, nem tűnik el csendben; a váltás mércéje az OA adata más kód alatt — **méterre ugyanaz az útvonal**; hiányos adattal nem vált; **nyilvántartás nélkül** (letiltott kérés) a gomb el sem jelenik meg, és az app elindul |
+| `tests/epuletek.js` | épületválasztó és **épületváltás**: mind a 39 épület bent van, de csak az nyitható meg, aminek kész az adata; a Tervtár adatai a soron; más épület kódjára mutató link megnevezi az épületet, nem tűnik el csendben; a váltás mércéje **valódi épületeken mért aranyérték** (épületenként az elérhetetlen helyiségek, az útvonalak összhossza és a gráf élszáma a portától), a váltás utáni **tisztaság** (egyetlen tárolóban, a szintdobozokban sem marad régi bejegyzés), OD → KT → OD (a KT betöltésével), offline vissza az OA-ra; az `epuletKesz()` egyenként mind a hét kötelező elemre és a portára; a nem elérhető adat üzenete angolul is a kóddal; **nyilvántartás nélkül** (első indulás, letiltott kérés) a gomb el sem jelenik meg, és az app elindul |
+| `tests/masepulet.js` | más épületben nincs OA-ra szabott dolog: a foglalható termek (az OA órarendje) nincs kint, a Büfé gomb csak ahol van büfé (OA, FK; az OD-ben nincs); a szintnév és az emeletszám az épület saját szintjeiből (KT I. és IV. emelet, KH tetőtér, OD V. emelet, egy félszint és egy „Pince”, angolul is), a név az elsődleges (a KD-alak félemelete a földszint fölött, a kötőjel nélküli „Pince 2”), de ahol a név és a kód ellentmond (KD, TA) vagy két földszint jönne ki (BA), az épület nem nyílik meg; a 3D-s szintfelirat és a felolvasói név angolul (OA, KT); a liftes megjegyzés a lift nélküli szöveg; a nemre nem jelölt WC nem „Női” és „Férfi” mosdó, hanem semleges sor; a mosdónevek írásmódjai, a kategória nélküli OC-mosdók, a személyzeti WC kizárása; a KH és a KT akadálymentes mosdója ott van; vissza az OA-ra minden OA-s dolog visszajön |
+| `tests/csomag.js` | a Pages-re publikált csomag (`tools/pages-csomag.js`): csak engedélylistás fájl, belső anyag és fejlesztői fájl nincs benne, minden, amire a lapok és a manifest hivatkoznak, benne van; a célkönyvtár nem lehet a repó, a szülője, egy forráskönyvtár, sem egy csomagnevű, de idegen tartalmú könyvtár (a repó-szabály külön is mérve); és az app ebből a csomagból minden épületen végigváltva, a service workerrel együtt egyetlen sikertelen kérés nélkül fut |
 
 ## Amit érdemes tudni, mielőtt hozzányúlsz
 
@@ -704,10 +820,13 @@ ugyanez a mag, céllal: az az első célajtónál megáll.
 **A mosdóválasztó a nemet is kérdezi.** Egyetlen „legközelebbi mosdó” egy nőt
 is egy férfi mosdóhoz vitt, ha az volt közelebb. Most a gomb három sort ad —
 női, férfi, akadálymentes —, mindegyikből a menetidő szerint legközelebbit, az
-indulástól (ha nincs, a portától); a nemre nem jelölt mosdó mindkét sorba
-számít. Kimarad, amibe csak egy másik helyiségen át lehet bejutni (`via`:
-irodából nyíló mosdók), és az alagsori dolgozói öltöző két mosdója
-(`DOLGOZOI_WC`). A `tests/url.js` mindkét kizárást számon kéri.
+indulástól (ha nincs, a portától). A nemre nem jelölt mosdó nem kerül a női
+vagy a férfi sorba: ha valamelyik jelölt sor hiányzik, egy külön, semleges sor
+mutatja (lásd „Más épületben az OA-ra szabott…”). Kimarad, amibe csak egy
+másik helyiségen át lehet bejutni (`via`: irodából nyíló mosdók), az alagsori
+dolgozói öltöző két mosdója (`DOLGOZOI_WC`), és a név szerint személyzeti
+mosdó (`SZEMELYZETI_WC`). A `tests/url.js` az első kettőt, a
+`tests/masepulet.js` a harmadikat kéri számon.
 
 **A foglalható termek közül ami most szabad, elöl.** Szabad, utána „Szabad?”,
 végül foglalt; a szabadok közt, ha az indulás megvan (QR, totem, „Innen”), a
@@ -755,9 +874,9 @@ A térkép (`D`) kézzel nem szerkesztendő: a régi generátor adatára a fenti
 három eszköz épít, ebben a sorrendben (a szárny után az ajtók, hogy az új
 helyiségek is megkapják, és a lépcsőkarok, amelyek a szárnnyal megnőtt
 kerethez illeszkednek), utána a `tervtar-ajtoszam.py` az ajtószámokat. A
-PDF, az xls és az IFC belső anyag. A repó privát, ezért a `forras/`-ban
-benne vannak — de a Pages site NEM privát, ezért a deploy a publikált
-csomagból kidobja őket (`deploy-pages.yml`). A szárnyról:
+PDF, az xls és az IFC belső anyag. A PDF-ek és a táblák a privát repó
+`forras/` könyvtárában vannak, az IFC (`OE-OA.ifc`) nincs a repóban. A Pages-re
+csak az engedélylista kerül ki (lásd „Deploy”). A szárnyról:
 - A régi adat keretével levágta a felső szárny északkeleti végét (41
   helyiség, 10 órarendi terem). Az eszköz a PDF falait a térkép falaira
   illeszti, a helyiségeket a falak közti szabad térből vágja ki, és ahol a
@@ -784,8 +903,9 @@ csomagból kidobja őket (`deploy-pages.yml`). A szárnyról:
   (±7%). Valódi telefonon mérendő (erre van a `meres.html`); ha ott is
   akad, a nem aktív szintek rajzán kell faragni, nem a szárnyon.
 
-**Az egész egyetem a Tervtárból.** A `tervtar-leltar.py` mind a 26 épületadat-
-táblát beolvassa (29 épület, 4643 helyiség, 105 204 m²), a `tervlap-epuletek.py`
+**Az egész egyetem a Tervtárból.** A `tervtar-leltar.py` a 26 épületadat-
+táblából 25-öt olvas be (a KG-é sérült, lásd lent; 29 épület, 4643 helyiség,
+105 204 m²), a `tervlap-epuletek.py`
 ebből és a tervlapok fejbélyegzőjéből állítja elő a `data/epuletek.json`-t.
 Amit a forrásokról tudni kell, mert egyik sem látszik első ránézésre:
 
@@ -800,7 +920,8 @@ Amit a forrásokról tudni kell, mert egyik sem látszik első ránézésre:
 - **A kódregex nem lehet laza.** Az OA összesítő lapján az „ALAGSOR" szó
   beleillik egy `[A-Z]{2}[A-Z0-9]{5}` mintába, és ebből egy nem létező „AL"
   épület született. A helyes alak: két betű, szint, betű, kettő.
-- **Egy tábla olvashatatlan**: a `…kh_gyumolcs_u_lebenyi_kollegium.xls` az
+- **Egy tábla olvashatatlan**: a `…kh_gyumolcs_u_lebenyi_kollegium.xls` — a
+  neve ellenére a KG épületé, a kiolvasható kódok mind KG-k — az
   xlrd-t a saját szövegtáblájával akasztja meg (a corruption-toleráns mód sem
   viszi át). Excelből `.xlsx`-ként újramentve beolvasható; addig kimarad, és a
   jelentés kiírja.
@@ -817,8 +938,9 @@ Amit a forrásokról tudni kell, mert egyik sem látszik első ránézésre:
   ÉPÜLET"-et, az `FS`-é „FA ÉPÜLET"-et címkéz — ez a kettő valódi ütközés, a
   többi eltérés csak annyi, hogy a lap campuson belül „A ÉPÜLET"-nek hívja azt,
   ami kódban YA.
-- A `HASZNÁLÓ` oszlop kimarad a leltárból: most mindenhol üres, de ha egyszer
-  személynév kerül bele, annak nincs helye egy továbbadott listában.
+- A `HASZNÁLÓ` oszlop kimarad a leltárból: hét táblában ki van töltve
+  (szervezeti egységek, teremnevek), és ha személynév kerül bele, annak nincs
+  helye egy továbbadott listában.
 - **A használó kart csak a FUNKCIÓ szerinti lap tudja.** A tervtári lapon és a
   táblában sincs benne; a funkció lap fejbélyegzőjében áll, 2-3 sorba tördelve
   („NEUMANN JÁNOS" / „INFORMATIKAI KAR"), és a `tervlap-epuletek.py` onnan
@@ -836,16 +958,20 @@ Amit a forrásokról tudni kell, mert egyik sem látszik első ránézésre:
   van" kérdésre a felirat helye elég: 18 lapról 34 épület, méterben, a lap bal
   felső sarkától — és csak egy lapon belül összehasonlítható. Ellenőrzésnek ott
   van, hogy a `h01` és a `h02` ugyanarról a négy épületről szól, más origóval,
-  és az OA–OC távolság mindkettőn 48,1 m. Nyolc épületnek (BC, FA, FB, KG, KM,
-  SA, SB, SC) ez az EGYETLEN adata.
+  és az OA–OC távolság mindkettőn 48,1 m. Hat épületnek (FA, FB, KM, SA, SB,
+  SC) ez az EGYETLEN adata.
 - **A leltár a `forras/kivonat/`-ban van, nem a `data/`-ban** (1,1 MB, az egész
   egyetem helyiséglistája a Tervtár belső anyagából): a `forras/` kimarad a
-  Pages-re publikált csomagból, a `data/` nem. A `data/epuletek.json` azért
-  mehet oda, mert abban csak az van, ami egy épületről kívülről is tudható.
+  Pages-re publikált csomagból, a `data/` nem. A `data/epuletek.json` és a
+  `data/epuletek/*.json` is a Tervtár anyagából készül (név, cím, szintek,
+  helyiségnév, funkció, terület, alaprajz) — ugyanolyan adat, amilyen az OA-é
+  az `index.html`-ben eddig is nyilvános volt. Ami ezen túl megy (a teljes
+  leltár, az ajtószámok, a `HASZNÁLÓ`), az a `forras/`-ban marad.
 
 ```
 python3 tools/tervtar-leltar.py forras/kivonat/leltar.json \
-        forras/oe-*epuletadatok*.xls* forras/oe_tervtar_*kollegium*.xls
+        forras/oe[-_]*epuletadatok*.xls* forras/oe_tervtar_*kollegium*.xls
+# várt eredmény: 25 tábla (a 26-ból a sérült KG-tábla kimarad), 29 épület, 4643 helyiség
 python3 tools/tervlap-epuletek.py forras/kivonat/epuletek.json forras/kivonat/leltar.json \
         --app data/epuletek.json forras/oe-* forras/oe_*
 ```
@@ -918,7 +1044,20 @@ teremfoglalási tábla (`terem.xlsx`) volt, amit a cellák kitöltőszínéből
 olvastunk; két hétre szólt, és lejárt — a feldolgozója a git-történetben van.
 
 **A `data/` hálózat-először jön** a service workerből (`sw.js`), mint maga a
-dokumentum; a betűk és ikonok gyorsítótár-először. A `termek.json` neve
+dokumentum; a betűk és ikonok gyorsítótár-először. **A tárolt app helyére csak
+maga az app kerülhet, ép válaszból**: korábban a navigációs ág minden választ
+eltett, és a Pages kikapcsolásakor a 404-oldal felülírta az offline példányt
+(utána offline is az jött, és egy totem a JS nélküli hibaoldalon magától már
+nem töltött volna újra); egy másik lap (a mérőlap) ugyanígy átvette az app
+helyét. Most hibaválasznál (4xx, 5xx) — a dokumentumnál és a `data/`-nál is
+— a tárolt példány jön, az **átirányítást** viszont a böngésző követi: ha a
+site új címre költözik, a régi címen a telepített app különben sosem tudná
+meg. A telepítésnél maga az app kötelező (a betűk és ikonok nem): ha az nem
+jön le, a régi service worker marad a régi, működő tárolójával. Aktiváláskor
+csak az `oemap-` kezdetű régi tárolók törlődnek — egy github.io-s címen a
+felhasználó összes projektoldala egy origin. A `data/` `?v=`-s újrakérése a
+paraméter nélküli kulcs alá kerül. A `tests/pwa.js` ezt mind egy saját,
+hibát, átirányítást és megszakadó telepítést adó szerverrel méri. A `termek.json` neve
 félévről félévre ugyanaz, gyorsítótár-először egy telepített app sosem kapná
 meg az újat. Ha a formátuma változik, a `CACHE` nevét is emeld: az dobja el a
 régi példányt. Az app a nem várt formátumú adatot „nincs adat"-nak veszi
@@ -934,17 +1073,70 @@ Actions → Deploy to GitHub Pages → Run workflow.
 
 **A repó privát, a Pages site NEM az.** Ez a kettő független, és könnyű
 összekeverni: ami bekerül a Pages artifactba, azt bárki letöltheti az oldal
-URL-jéről, akkor is, ha a repóhoz nincs hozzáférése. A workflow ezért a
-feltöltés előtt kidobja a `forras/`-t — ott van a Tervtár összes belső
-anyaga (101 fájl, 95 MB) és a belőlük készült leltár. **Ami a `data/` alá
-kerül, az nyilvános**; a `forras/` alatti nem. Új adatfájlnál ez a kérdés
-dönt, nem a repó láthatósága.
+URL-jéről, akkor is, ha a repóhoz nincs hozzáférése. **Ezért csak egy
+engedélylista kerül ki** (`tools/pages-csomag.js`, a workflow ezzel állítja
+össze a `_site`-ot): az app, a service worker, a manifest, a mérőlap, a betűk,
+az ikonok és a `data/` futásidejű fájljai — 31 fájl, 1,7 MB. Ami nincs a
+listán (CLAUDE.md, `docs/`, `tools/`, `tests/`, `.claude/`, `forras/`), az nem
+kerül ki. **Korábban a munkafa ment ki** (`path: .`), amíg a Pages élt; a
+`forras/` akkor még nem volt a repóban. Az utolsó sikeres, 040a474-es deploy
+(2026-10-12) artifactjában a `.git` és a `.github` kivételével minden benne
+volt — a CLAUDE.md, a README, a `docs/`, a `tools/`, a `tests/`, a `.claude/`,
+a `package*.json` és a `data/rooms.json` is —, bennük a belső forrásfájlok
+NEVÉVEL (a tervtári alaprajz-PDF, az épületadat-tábla, az `OE-OA.ifc`, a
+Neptun-export) és a leírásukkal. Maga a belső anyag (`forras/`) és a leltár
+nem került ki: azok olyan commitokkal kerültek a `main`-re, amelyeknek a
+deployja már a feltöltés előtt bukott (a Pages addigra kikapcsolt).
+
+**Az összeállító őr** (a CI-ben is, böngésző nélkül) elbukik, ha a csomagban
+tiltott fájl van; ha a service worker készletéből vagy abból, amire egy lap
+vagy a manifest hivatkozik (a HTML-tagek href/src-je és srcset-je, a CSS
+`url()`; a JS-kód és a kommentek nem), valami hiányzik, vagy egy hivatkozás
+gyökér-abszolút (`/icons/…`: alkönyvtár alól nem a csomagra mutat); vagy ha a
+nyilvántartás egy épületet megnyithatónak mond, és nincs kint az adatfájlja.
+A könyvtárak tartalmát a git indexe szerint veszi (`git ls-files`, ha a repó
+teteje a gyökér), hogy egy elfelejtett `git add` helyben is látsszon, ne csak
+a CI-ben. A célt előbb törli, ezért csak üres vagy korábbi csomag lehet,
+és nem lehet a futtatás könyvtára: korábbi csomag az, amit ő írt (a
+gyökerében a `.oemap-csomag` jelzőfájl, ez a Pages-re is kikerül), és amiben
+minden fájl a csomag alakjába illik. A `tests/csomag.js` az őrt a CLI-n át,
+egy repómásolaton elrontott esetekkel is futtatja. A böngészős ellenőrzés
+(`tests/csomag.js`: az app a csomagból egyetlen sikertelen kérés nélkül fut)
+csak helyben fut, a workflow nem. **Új futásidejű fájlt fel kell venni a
+listára**, különben élesben 404-et kap.
+
+**A `forras/` benne van a git-történetben** (a 101 tervlap és tábla, 95 MB,
+és a belőlük készült leltár). Ezt a repót ezért **nem szabad nyilvánossá
+tenni, forkolni vagy a történetével együtt nyilvános repóba tolni**: az
+azonnal kiadná a teljes belső anyagot. Ha a nyilvános oldalhoz külön
+nyilvános repó kell, az csak a `tools/pages-csomag.js` csomagjából épülhet,
+friss történettel. Hogy a `forras/` maradjon-e ebben a repóban, vagy
+kiköltözzön (és a történetből is kitisztuljon), azt a felhasználó dönti el.
 
 **A privátra állítás kikapcsolta a Pages-t** (ingyenes csomagban privát
 repóból nem publikálható), és az oldal 404-et adott mindkét címen. Ha a
 teremkeresőnek élnie kell, a Pages-t újra be kell kapcsolni egy olyan
-csomagon, ami privát repóból is publikál — vagy a publikálandó részt külön,
-publikus repóba kell tenni.
+csomagon, ami privát repóból is publikál — vagy a publikálandó csomagot
+külön, publikus repóba kell tenni (friss történettel, lásd fent). Az új
+helynek ugyanazt a címet kell adnia, amit a kiragasztott QR-matricák és a
+totemek kódolnak, különben azok halott linkre mutatnak. **A kiszolgált cím a
+deploy-napló szerint az `oemap.maydayprod.app` saját domain volt** (az utolsó
+sikeres deploy „Evaluated environment url”-je `http://oemap.maydayprod.app/`,
+a repó homepage-mezője is ez). A régi `mayydayy99.github.io/oemap/` cím a repó
+`mos-eisley` alá kerülésével megszűnt: ebből a repóból újra bekapcsolt
+Pages-szel sem szolgálható ki. Hogy a matricák és a totemek melyiket kódolják,
+azt a helyszínen kell megnézni — a `make-qr.py` docstringje a saját domaint
+írta, a README matricanyomtató példája korábban a github.io-sat; ha a régit,
+azokat újra kell nyomtatni, vagy a régi címre átirányítás kell. A kiesés alatt még a régi service
+worker fut, ami a 404-oldalt eltette offline példánynak: a telefonok a
+visszaállítás után maguktól rendbe jönnek (a dokumentum hálózat-először jön),
+egy **totem viszont a JS nélküli hibaoldalon ragadhatott, azt kézzel újra kell
+tölteni**. **Ha az app elköltözik, a régi címen maradjon kiszolgáló**: az új
+service worker a 404-re a tárolt appot adja, tehát egy átirányítás nélkül
+megszűnő cím mögött a telepített kliensek örökre a befagyott appot futtatnák.
+Átirányítás (301) mellett az új címre mennek; ha az nem megoldható, a régi
+helyen egy önmagát törlő `sw.js` (unregister + a tárolók törlése) és egy
+átirányító `index.html` kell.
 
 **Ha egy deploy elszáll, az EGÉSZ workflow-t indítsd újra, ne csak a bukott
 job-ot.** A feltöltés lépés az első próbán már sikerülhetett, és a retry egy

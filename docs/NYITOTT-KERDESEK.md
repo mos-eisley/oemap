@@ -166,8 +166,9 @@ következő mozdulat ebbe esik, az 77%-kal lassabb. A tesztút GPU-ja
 szoftveres; egy valódi GPU-n a raszterezés jóval olcsóbb, ott a mérleg
 megfordulhat. Ezt csak telefonon lehet eldönteni, ezért addig nem került be.
 
-**Kitől kell.** Bárkitől, akinek telefonja van: a
-https://mayydayy99.github.io/oemap/meres.html lapon **Indítás**, kb.
+**Kitől kell.** Bárkitől, akinek telefonja van — amint az oldal újra él (most
+a Pages ki van kapcsolva, lásd CLAUDE.md „Deploy”): a
+https://oemap.maydayprod.app/meres.html lapon **Indítás**, kb.
 másfél perc várakozás (közben nem kell érinteni), és a táblázat
 képernyőképe. Minél többféle telefonról (régebbi Android, iPhone), annál
 jobb.
@@ -224,9 +225,13 @@ A számok szoftveres renderelőből (SwiftShader) jönnek — valódi GPU-n
 mindkét érték jobb, és a kettő aránya is eltolódhat. Mielőtt a fenti
 döntést meghozzuk, érdemes valódi eszközön megmérni.
 
-**Épületválasztó.** A meetingen eldőlt, hogy GPS-alapú épületválasztó kell —
-de csak akkor, ha lesz több épület. Addig nincs mit választani. A beltéri
-„hol vagyok?" kérdést a QR-kódok már megoldják.
+**Épületválasztó.** A meetingen eldőlt, hogy GPS-alapú épületválasztó kell,
+ha lesz több épület. Most hét épület nyitható meg, és van választó — de
+listából, nem GPS-ből: a fejléc épületneve a nyitógomb (lásd `docs/ATADAS.md`).
+A GPS-es kiválasztás tehát még hátravan; a helyszínrajzokból 34 épület helye
+megvan méterben (`forras/kivonat/helyszinrajz.json`), de egy lapon belüli
+koordinátaként, nem földrajzi helyként. A beltéri „hol vagyok?" kérdést a
+QR-kódok már megoldják.
 
 ---
 

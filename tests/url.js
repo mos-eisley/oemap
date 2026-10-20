@@ -92,7 +92,7 @@ run("mély link (URL-állapot)", async ({ t, ctx, base }) => {
   // E) elgépelt vagy elavult link ne akassza meg az indulást
   p = await open(ctx, base + "#to=NINCSILYEN&from=SEM", { settle: 1400 });
   let e = await st(p);
-  t("ismeretlen kódot csendben elhagy", !e.from && !e.to && !e.sel, JSON.stringify(e));
+  t("ismeretlen kódot elhagy", !e.from && !e.to && !e.sel, JSON.stringify(e));
   t("az app ettől még elindul", await p.evaluate(() => document.querySelectorAll(".floor").length > 0));
   await p.close();
 

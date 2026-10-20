@@ -22,7 +22,7 @@ Használat:  python3 tools/ifc-lepcsok.py <OE-OA.ifc> index.html
             (pip install ifcopenshell numpy scipy shapely)
 Az IFC belső anyag: ne tedd a repóba.
 """
-import sys, json, math, importlib.util, collections
+import re, sys, json, math, importlib.util, collections
 from pathlib import Path
 import numpy as np
 import shapely
@@ -60,7 +60,7 @@ def fokok(S, e):
 
 def main(ifc, html):
     src = open(html, encoding="utf-8").read()
-    i0 = src.index("const D = ") + len("const D = ")
+    i0 = re.search(r"\b(?:const|let) D = ", src).end()   # 7b0b987 óta `let D` (épületváltás)
     D, i1 = json.JSONDecoder().raw_decode(src, i0)
     f = ifcopenshell.open(ifc)
     S = G.settings(); S.set(S.USE_WORLD_COORDS, True)

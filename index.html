@@ -784,15 +784,16 @@ const I18N={hu:{
   go:"Indulj innen:", arrive:"Cél:", inThru:"Bejárat ezen át:", outThru:"Kijárat ezen át:", walk:"Haladj tovább", left:"Fordulj balra", right:"Fordulj jobbra",
   stairs:"Lépcsőn", up:"fel", down:"le", via:"Lépcsőház", nLv:"%s szint", nRooms:"helyiség",
   epvOpen:"Épület választása", epvHere:"itt vagy", epvNoPlan:"alaprajz még nincs",
-  epvNote:"Megnyitni egyelőre az OA és az OD épületet lehet. A többiről az Egyetemi Tervtár adatai látszanak: cím, szintek és helyiségek száma.",
   epvOther:"Ez a kód a(z) %s épületé, ahhoz viszont még nincs alaprajz.",
   epvUnknown:"Ez a kód egyetlen ismert épülethez sem tartozik.",
-  epvNoData:"A(z) %s alaprajza most nem érhető el, ezért nem nyitható meg.",
-  lvTo:{"-1":"az alagsorba",0:"a földszintre",1:"a félemeletre",2:"az I. emeletre",3:"a II. emeletre",
-        4:"a III. emeletre",5:"a IV. emeletre"},
+  epvNoData:"A(z) %s épület alaprajza most nem érhető el, ezért nem nyitható meg.",
   byLift:"Lifttel", liftVia:"Lift", optStairs:"Lépcső", optLift:"Lift",
   viaLabel:"Szintváltás", noLiftHere:"Ehhez az útvonalhoz nincs liftes alternatíva: a hallgatói lift (az FL3 magban) az indulástól vagy a céltól lépcső nélkül nem érhető el.",
   lift:"A hallgatók az épületben csak az FL3 lépcsőmagban lévő liftet használhatják, ezért az alternatív útvonal ezen keresztül vezet.",
+  noLiftData:"Ebben az épületben a liftek – ha vannak – még nincsenek a térképen, ezért lépcső nélküli útvonalat nem tudunk ajánlani.",
+  liftOther:"Az alternatív útvonal lifttel vezet.",
+  noLiftOther:"Ehhez az útvonalhoz nincs liftes alternatíva: a lift az indulástól vagy a céltól lépcső nélkül nem érhető el.",
+  tmOtherBuilding:"Ehhez az épülethez még nincs órarendi adat: a foglalható termeket egyelőre csak az OA épületben ismerjük.",
   foot:"Az alaprajzokból gépi úton előállított adat. Tájékoztató jellegű.",
   share:"Megosztás", shareCopied:"Link a vágólapra másolva",
   qrSend:"Küldd el a telefonodra", qrTitle:"Olvasd be a telefonoddal",
@@ -804,7 +805,7 @@ const I18N={hu:{
   qwc:"Legközelebbi mosdó", qbufe:"Büfé", qentry:"Porta", tmWalk:"%s perc",
   totemSoon:"10 másodperc múlva alaphelyzetbe áll — érintsd meg a képernyőt, ha még használod.",
   totemOn:"Totem mód: egy perc tétlenség után alaphelyzetbe áll.",
-  wcWomen:"Női mosdó", wcMen:"Férfi mosdó", wcAcc:"Akadálymentes mosdó",
+  wcWomen:"Női mosdó", wcMen:"Férfi mosdó", wcAcc:"Akadálymentes mosdó", wcAny:"Mosdó (nemre nem jelölt)",
   qrooms:"Foglalható termek", qroomsSub:"most szabad vagy foglalt",
   tmTitle:"Foglalható termek", tmFree:"Szabad", tmBusy:"Foglalt",
   tmUntil:"%s-ig", tmFrom:"%s-tól", tmNoData:"Erre a napra nincs adat",
@@ -840,16 +841,16 @@ const I18N={hu:{
   go:"Start at:", arrive:"Destination:", inThru:"Enter through:", outThru:"Leave through:", walk:"Continue", left:"Turn left", right:"Turn right",
   stairs:"Take the stairs", up:"up", down:"down", via:"Stairwell", nLv:"%s floors", nRooms:"rooms",
   epvOpen:"Choose building", epvHere:"you are here", epvNoPlan:"no floor plan yet",
-  epvNote:"So far the OA and OD buildings can be opened. For the others the University Plan Archive data is shown: address, number of floors and rooms.",
   epvOther:"This code belongs to building %s, which has no floor plan yet.",
   epvUnknown:"This code does not belong to any known building.",
-  epvNoData:"The floor plan of %s is not available right now, so it cannot be opened.",
-  lvTo:{"-1":"to the basement",0:"to the ground floor",1:"to the mezzanine",2:"to the 1st floor",
-        3:"to the 2nd floor",4:"to the 3rd floor",5:"to the 4th floor"},
-  lvNames:{"-1":"Basement",0:"Ground floor",1:"Mezzanine",2:"1st floor",3:"2nd floor",4:"3rd floor",5:"4th floor"},
+  epvNoData:"The floor plan of building %s is not available right now, so it cannot be opened.",
   byLift:"Take the lift", liftVia:"Lift", optStairs:"Stairs", optLift:"Lift",
   viaLabel:"Between levels", noLiftHere:"No lift alternative for this route: the student lift (in the FL3 core) can't be reached without stairs from the start or the destination.",
   lift:"Students may only use the lift in the FL3 stair core, so the alternative route goes through it.",
+  noLiftData:"Lifts in this building (if any) are not on the map yet, so we can't suggest a step-free route.",
+  liftOther:"The alternative route takes the lift.",
+  noLiftOther:"No lift alternative for this route: the lift can't be reached without stairs from the start or the destination.",
+  tmOtherBuilding:"There is no timetable data for this building yet: bookable rooms are only known for the OA building so far.",
   foot:"Data derived automatically from the architectural plans. For orientation only.",
   share:"Share", shareCopied:"Link copied to clipboard",
   qrSend:"Send to your phone", qrTitle:"Scan with your phone",
@@ -861,7 +862,7 @@ const I18N={hu:{
   qwc:"Nearest toilet", qbufe:"Café", qentry:"Front desk", tmWalk:"%s min",
   totemSoon:"Resetting in 10 seconds — touch the screen if you are still using it.",
   totemOn:"Totem mode: resets after a minute without use.",
-  wcWomen:"Women's toilet", wcMen:"Men's toilet", wcAcc:"Accessible toilet",
+  wcWomen:"Women's toilet", wcMen:"Men's toilet", wcAcc:"Accessible toilet", wcAny:"Toilet (not marked by gender)",
   qrooms:"Bookable rooms", qroomsSub:"free or busy right now",
   tmTitle:"Bookable rooms", tmFree:"Free", tmBusy:"Busy",
   tmUntil:"until %s", tmFrom:"from %s", tmNoData:"No data for this day",
@@ -902,7 +903,7 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",
 /* ------------------------------------------------------------------ adat */
 const MOB=()=>matchMedia("(max-width:900px)").matches;
 
-/* Amire egy hallgatónak nincs dolga: a 183 helyiségből 87 (47,5%). Nem
+/* Amire egy hallgatónak nincs dolga: az OA 223 helyiségéből 109. Nem
    vesszük ki őket — a födém sziluettje az összes poligonból áll össze, így
    lyukas lenne az alaprajz —, csak semlegesre halványítjuk és elhagyjuk a
    feliratukat. A karbantartásnak a fejlécben visszakapcsolható. */
@@ -923,7 +924,7 @@ const PXM=10*SS, GAP=(MOB()?84:118)*SS;
    épületváltás mindegyiket újraépíti, ezért `let` — és EGY függvény állítja
    elő mindet, ugyanabban a sorrendben, ahogy betöltéskor is (`epuletGeo(D)`
    itt alatta). Így a váltás nem egy másik kódúton fut, mint az indulás: amit
-   a 23 tesztfájl az indulásra bizonyít, az a váltásra is igaz. */
+   a tesztek az indulásra bizonyítanak, az a váltásra is igaz. */
 let LV, LVI, GW, GH, RES, CELLS, PW, PH, BB, OFFX, OFFY, ROOM;
 function epuletGeo(d){
   LV=d.levels.map(l=>l.level); LVI=Object.fromEntries(LV.map((l,i)=>[l,i]));
@@ -942,8 +943,9 @@ epuletGeo(D);
    mellett. Aki QR-kódot olvas be vagy maga választ indulást („Innen"), az
    onnan indul.
 
-   Épületenként más, és csak az OA-ét tudjuk: a Tervtár táblája nem mondja meg,
-   melyik helyiség a porta. Amelyik épülethez nincs felvéve, oda nem is lehet
+   Épületenként más, és a Tervtár táblája nem mondja meg, melyik helyiség a
+   porta: ahol a tervlapon van PORTA nevű helyiség, az; ahol nincs, a bejárati
+   tér (ELŐCSARNOK > AULA > SZÉLFOGÓ) — lásd a PORTA tábla kommentjét. Amelyik épülethez nincs felvéve, oda nem is lehet
    bekötni — ezért az `epuletKesz()` a portát is megköveteli attól az épülettől,
    amire váltani lehet. Kitalálni nem szabad: egy rossz porta minden útvonalat
    rossz helyről indítana. */
@@ -1033,17 +1035,103 @@ function roomLabel(r){
     ? r.code : sc;
 }
 const lvOf=lv=>D.levels.find(l=>l.level===lv)||{};
-const lvName=lv=>(T().lvNames||{})[lv]||lvOf(lv).name||String(lv);
+/* Melyik szint ez az épületben: a szint SAJÁT nevéből, és ha az nem mond
+   eleget, a kódjából — nem a sorszámából. Az OA-ban az 1-es szint a
+   félemelet, a többi épületben többnyire már az I. emelet, az OD-ben a 6-os
+   az V. emelet, a KH-ban a 2-es a tetőtér. Amíg a sorszámra írt táblák (lvTo,
+   lvNames) mondták meg, más épületben rossz emeletre küldtek („Lépcsőn fel a
+   félemeletre” az I. emelet helyett), az OD V. emeletére pedig
+   „undefined”-ot írtak.
+   A név az elsődleges, mert a szintválasztó is azt mutatja: ha a lépés a
+   kódból számolna, ugyanarról a szintről mást mondhatna. A kód nem mindenhol
+   emelet — a BA és a BB tábláiban a földszint kódja 10, egy udvarszinté 00 —,
+   és a félemeletet sem mindig 05-tel jelöli (a KD-é 15, a földszint és az I.
+   emelet között). A félemelet ezért az alatta lévő szint fölötti fél emelet,
+   a tetőtér az alatta lévő fölötti egész. Csak az ismeretlen nevű szint
+   („Udvar szint”, „1-2 felszint”) jön a kódból: X2, X1 a föld alatt, 00 a
+   földszint, 10…50 az emeletek, és ha a második jegy nem 0, a fölötte lévő
+   félszint.
+   Hogy a kettő együtt értelmes-e, azt az epuletKesz() nézi meg
+   (szintekRendben): ahol a név és a kód is mond emeletet, ott ugyanazt
+   mondják, és a szintsor alulról felfelé nő. Ha nem, nem tudjuk, melyik a
+   jó — a BA-ban a kód sorszám, a TA-nál a közös lapról a név a TC-é —, és az
+   épület inkább adatlap marad, mint hogy rossz emeletre küldjön. */
+const ROMAI=["","I","II","III","IV","V","VI","VII","VIII","IX","X"];
+// a szint a kódjából: X2, X1 a föld alatt, 00 a földszint, 10…90 emelet, x1…x9 félszint
+function szintKodbol(l){
+  const kod=l.code||"";
+  if(/^X\d$/.test(kod)) return {fajta:"alagsor", n:-(+kod[1])};
+  if(kod==="00") return {fajta:"fsz", n:0};
+  if(/^\d[1-9]$/.test(kod)) return {fajta:"fe", n:(+kod[0])+.5};
+  if(/^\d0$/.test(kod)) return {fajta:"em", n:+kod[0]};
+  return null;
+}
+// a szint a nevéből; ismeretlen névnél null
+function szintNevbol(levels,i){
+  const l=levels[i]||{}, nev=(l.name||"").toLowerCase().trim(), k=szintKodbol(l);
+  const lent=k&&k.n<0?k.n:-1, alatta=()=>i>0?szintAdatL(levels,levels[i-1].level).n:-1;
+  let m;
+  if(/alagsor/.test(nev)) return {fajta:"alagsor", n:lent};
+  if((m=nev.match(/pince\s*[-−–]?\s*(\d)/))) return {fajta:"pince", n:-(+m[1])};
+  if(/pince/.test(nev)) return {fajta:"pince1", n:lent};
+  if(/földszint/.test(nev)) return {fajta:"fsz", n:0};
+  if(/félemelet/.test(nev)||l.short==="FE") return {fajta:"fe", n:Math.floor(alatta())+.5};
+  if((m=nev.match(/^([ivx]+)\.\s*emelet/))&&ROMAI.indexOf(m[1].toUpperCase())>0)
+    return {fajta:"em", n:ROMAI.indexOf(m[1].toUpperCase())};
+  if((m=nev.match(/^(\d+)\.\s*emelet/))) return {fajta:"em", n:+m[1]};
+  if(/tetőtér/.test(nev)) return {fajta:"tt", n:Math.floor(alatta())+1};
+  return null;
+}
+function szintAdatL(levels,lv){
+  const i=levels.findIndex(l=>l.level===lv);
+  return szintNevbol(levels,i) || szintKodbol(levels[i]||{}) || {fajta:"em", n:lv};
+}
+const szintAdat=lv=>szintAdatL(D.levels,lv);
+const szintekRendben=levels=>levels.every((l,i)=>{
+  const a=szintNevbol(levels,i), b=szintKodbol(l);
+  if(a&&b&&a.n!==b.n) return false;
+  return !i||szintAdatL(levels,l.level).n>szintAdatL(levels,levels[i-1].level).n;
+});
+const nevelo=n=>n===1||n===5?"az":"a";
+const angolSorszam=n=>n+(n%100>10&&n%100<14?"th":["th","st","nd","rd"][n%10]||"th");
+/* A szint neve a felületen: magyarul a tervlapé, angolul a szint fajtájából. */
+function lvName(lv){
+  if(S.lang!=="en") return lvOf(lv).name||String(lv);
+  const s=szintAdat(lv);
+  if(s.fajta==="fe"&&s.n>1) return `Mezzanine above the ${angolSorszam(Math.floor(s.n))} floor`;
+  return {alagsor:"Basement", pince1:"Basement", pince:`Basement level ${-s.n}`, fsz:"Ground floor",
+          fe:"Mezzanine", tt:"Attic"}[s.fajta] || `${angolSorszam(s.n)} floor`;
+}
+/* A célszint ragozva, a lépésekben: „Lépcsőn fel a II. emeletre”, „…to the
+   2nd floor”. Az „az” a magánhangzóval kezdődő számnév előtt áll: az I., az V. */
+function lvTo(lv){
+  const s=szintAdat(lv), en=S.lang==="en";
+  switch(s.fajta){
+    case "alagsor": return en?"to the basement":"az alagsorba";
+    case "pince1":  return en?"to the basement":"a pincébe";
+    case "pince":   return en?`to basement level ${-s.n}`:`a −${-s.n}. pinceszintre`;
+    case "fsz":     return en?"to the ground floor":"a földszintre";
+    case "fe": { const a=Math.floor(s.n);        // a félemelet 0,5; egy 15-ös szint az I. emelet fölött
+      if(!a) return en?"to the mezzanine":"a félemeletre";
+      return en?`to the mezzanine above the ${angolSorszam(a)} floor`
+               :`${nevelo(a)} ${ROMAI[a]||a}. emelet fölötti félemeletre`; }
+    case "tt":      return en?"to the attic":"a tetőtérre";
+  }
+  return en?`to the ${angolSorszam(s.n)} floor`
+           :`${nevelo(s.n)} ${ROMAI[s.n]||s.n}. emeletre`;
+}
 /* Emelet a lépcsőzés szerint: a félemelet a földszint és az I. emelet közti
    pihenő, nem külön emelet. A portától a II. emeletig így 3 emelet, nem 4
    szintváltás. */
-const emelet=lv=>lv===1?.5:lv<=0?lv:lv-1;
+const emelet=lv=>szintAdat(lv).n;
 
 /* A járhatóság három gyorsítótára. Mind a háromnak az ÉPÜLETHEZ kell tartoznia:
    ha váltáskor bármelyik ottmaradna, a Dijkstra csendben a régi épület rácsán
    futna, és egy látszólag jó útvonalat adna vissza egy másik házból. Ezért
-   `const` tárolók, amiket helyben ürítünk — a modulszinten elkapott
-   hivatkozások így is a frisset látják. */
+   váltáskor helyben ürülnek, egyetlen régi bejegyzés sem maradhat bennük. (Hogy
+   `const`-ok, az mellékes: modulszinten elkapott hivatkozás nincs, mindegyik
+   híváskor frissen olvasódik.) A tests/epuletek.js aranyértékei és
+   tisztasági próbája elbuknak, ha bármelyik kimarad. */
 const MASK={}, CELLLIST={}, CLEAR={};
 const walk=(lv,i,j)=>{if(i<0||j<0||i>=GW||j>=GH)return false;
   const k=j*GW+i,a=MASK[lv];return a?(a[k>>3]>>(k&7))&1:0;};
@@ -1109,10 +1197,12 @@ function nearestCell(lv,x,y){
    (tools/tervlap-szarny.py) a többi koordinátával együtt mozduljon. */
 let LIFTS = [];
 
-/* A gráf tárolói `const`-ok maradnak, és épületváltáskor HELYBEN ürülnek, nem
-   újrakötve: a Dijkstra és a mosdóválasztó modulszinten kapta meg őket
-   (`portals||PORTAL`), egy újrakötött Map-et a régi hivatkozások nem látnának
-   meg, és az útvonal csendben a régi épület gráfján futna. */
+/* A gráf tárolói épületváltáskor HELYBEN ürülnek: egyetlen régi él sem
+   maradhat bennük, különben az útvonal csendben a régi épület lépcsőin is
+   átvezethetne. (Modulszinten elkapott hivatkozás nincs, a `PORTAL`
+   híváskor olvasódik.) A tests/epuletek.js az élszámot épületenként mért
+   aranyértékhez veti, és váltás után mindegyik tárolót egy üres lapról
+   épített példányhoz. */
 const PORTAL=new Map(), PORTAL_LIFT=new Map(), STAIRXY={}, LIFT_LEVELS=new Set();
 const link=(map,A,B,w,meta)=>{
   if(!map.has(A))map.set(A,[]); if(!map.has(B))map.set(B,[]);
@@ -1273,7 +1363,7 @@ function steps(rt,mm){
           !!((atjaro(j,j+1)||{}).kind==="lift")===lift) j++;
     const lv=segs[j].lv, n=Math.round(Math.abs(emelet(lv)-emelet(s.lv)));
     o.push({ico:lift?"⇅":"⌁",v:true,lv,
-      t:`${lift?t.byLift:t.stairs} ${irany>0?t.up:t.down} ${t.lvTo[lv]}`,
+      t:`${lift?t.byLift:t.stairs} ${irany>0?t.up:t.down} ${lvTo(lv)}`,
       d:[v&&`${lift?t.liftVia:t.via} · ${lkod(v,s.lv)}`, !lift&&n>1&&t.nLv.replace("%s",n)].filter(Boolean).join(" · ")});
     si=j;
   }
@@ -1326,6 +1416,9 @@ function flightD(k){
     "M"+pt([b[0]-ux*h-uy*s,b[1]-uy*h+ux*s])+"L"+pt(b)+"L"+pt([b[0]-ux*h+uy*s,b[1]-uy*h-ux*s]);
 }
 function buildFloors(){
+  // a régi szintek dobozai is: egy épületváltás után különben a DOM-ból már
+  // kivett, magasabb szintek bejegyzései ottmaradnának
+  for(const k of Object.keys(FLOOR)) delete FLOOR[k];
   world.textContent="";
   const g=document.createElement("div");
   g.className="ground";
@@ -1353,7 +1446,7 @@ function buildFloors(){
     // mondják el vizuálisan, amit a panel és az élő régió szövegesen — névtelen
     // grafikus csomópontként viszont csak zajt adnának, ezért aria-hidden.
     f.setAttribute("role","group");
-    f.setAttribute("aria-label",L.name);
+    f.setAttribute("aria-label",lvName(L.level));
 
     // 1. födém-sziluett (helyiségek + falak összeolvasztva) + vetett árnyék
     svg.appendChild(el("path",{class:"slabsh",transform:"translate(0.7 2)",d:slabD||"M0 0","aria-hidden":"true"}));
@@ -1403,7 +1496,7 @@ function buildFloors(){
     const tag=document.createElement("div");
     tag.className="ftag";
     tag.setAttribute("aria-hidden","true");
-    tag.innerHTML=`${esc(L.name)}<em>${rs.length}</em>`;
+    tag.innerHTML=`${esc(lvName(L.level))}<em>${rs.length}</em>`;
     f.appendChild(tag);
     world.appendChild(f);
     FLOOR[L.level]={box:f,svg,route:rt,labels:gl,rooms:gr,walls:wallNode,tag,idx,built:false,rs};
@@ -1415,17 +1508,30 @@ function buildFloors(){
    a tervlapi kódjuk (E38, FL2) a hallgatónak semmit nem mond; a kód a
    kiválasztáskor és a felolvasónak továbbra is ott van. A lift a tervlapon
    nem külön helyiség: a LIFTS lépcsőmagjában jár, ott a lépcső mellé kerül. */
-const LIFT_ROOMS=new Set(LIFTS.flatMap(l=>l.pts.map(p=>p[3])));
+const liftHelyiseg=code=>LIFTS.some(l=>l.pts.some(p=>p[3]===code));
 // Épület nézetben magonként egy jelvény: ennyi méteren belül egy mag, ebben a sorrendben
 const MAG_M=10, ICO_SOR=["stair","lift","wcw","wcm","acc","wc"];
+/* Melyik helyiségnek mi jár, a neve dönti el. A tervlapok és a táblák
+   épületenként másképp írják: az akadálymentes mosdó az OA-ban „AK. MENT.”, a
+   KH-ban „M.K.” (mozgáskorlátozott), a KT-ban „M.S.” (mozgássérült), máshol
+   „MK.”, „MS.”, „AKM.”; a nem „NŐI”/„FFI”, vagy csak „N”, „NŐ”, „F”, „FF”;
+   a mosdó „MOSD.” is lehet, és a „FFI PISZOÁR” is férfi mosdó. A „M.K. FÜRDŐ”
+   nem mosdó, ezért a WC/MOSDÓ szó is kell az akadálymentességhez. Kategória nélkül (a táblából hiányzó, csak a
+   tervlapon meglévő helyiség, pl. az OC I. emeleti WC-i) a név dönt; más
+   kategóriában (KÜLSŐS SZOLGÁLTATÁS: személyzeti, beteg WC) nem mosdó. */
+const WC_NEV=/WC|MOSD|PISZOÁR|VIZELDE/, BETU="A-ZÁÉÍÓÖŐÚÜŰ";
+const WC_ACC=new RegExp(`AK\\.?\\s*MENT|AKM\\.|(^|[^${BETU}])M\\.?\\s*[KS]\\.`);
+const WC_NO=new RegExp(`N[ŐÖ]I|(^|[^${BETU}])N[ŐÖ]?\\.?\\s+(WC|MOSD)`);
+const WC_FFI=new RegExp(`FFI|(^|[^${BETU}])FF?\\.?\\s+(WC|MOSD)`);
 function iconsOf(r){
   const n=(r.name||"").toUpperCase();
-  if(/LÉPCSŐ/.test(n)) return LIFT_ROOMS.has(r.code)?["stair","lift"]:["stair"];
-  if(r.cat!=="VIZES HELYISÉGEK") return null;
-  if(/AK\.?\s*MENT/.test(n)) return ["acc"];
-  if(/N[ŐÖ]I/.test(n)) return ["wcw"];
-  if(/FFI/.test(n)) return ["wcm"];
-  return /WC|MOSDÓ/.test(n)?["wc"]:null;
+  if(/LÉPCSŐ/.test(n)) return liftHelyiseg(r.code)?["stair","lift"]:["stair"];
+  if(r.cat&&r.cat!=="VIZES HELYISÉGEK") return null;
+  if(!WC_NEV.test(n)) return null;
+  if(WC_ACC.test(n)) return ["acc"];
+  if(WC_NO.test(n)) return ["wcw"];
+  if(WC_FFI.test(n)) return ["wcm"];
+  return ["wc"];
 }
 // a jelvény a terem feliratpontján, a tervlaphoz kötve (a teremmel nem fordul)
 function iconBadge(r,ic){
@@ -1657,8 +1763,8 @@ function updateView(){
       if(S.mode!==3 && lv!==S.level) F.box.style.visibility="hidden";
     },600);
     F.box.style.zIndex = 100+F.idx;
-    // Csak az aktív szint helyiségei látszanak a képernyőolvasónak: hét szint
-    // mind a 183 helyisége egyszerre bejárhatatlan lenne, és a nem aktív
+    // Csak az aktív szint helyiségei látszanak a képernyőolvasónak: az összes
+    // szint összes helyisége (az OA-ban 223) egyszerre bejárhatatlan lenne, és a nem aktív
     // szintek amúgy sem kattinthatók. aria-hidden nem tartalmazhatja a fókuszt,
     // ezért ha ott áll, előbb kihozzuk a térkép szintjére.
     if(!on && F.box.contains(document.activeElement)) stage.focus();
@@ -2434,6 +2540,7 @@ function tmDetail(r,now,t){
    adatlapba — az egész panel újrarajzolása elvinné a billentyűzetes
    fókuszt a gombjairól. */
 function tmCard(code,t){
+  if(D!==D_OA) return "";            // az órarendi adat az OA-é (lásd renderTermek)
   if(!tmDone){ tmLoad().then(()=>{
       const top=document.querySelector("#scroll .rcard .top");
       if(S.sel===code && !S.termek && top && !top.parentNode.querySelector(".rtm"))
@@ -2527,6 +2634,12 @@ function fokuszUtana(box,kulcs){
 }
 function renderTermek(){
   const t=T(), box=$("scroll"), fk=fokuszElotte(box);
+  /* Az órarendi adat (data/termek.json) az OA NIK-termeié. Más épületben
+     korábban ugyanez a 24 terem jött „Szabad” jelzéssel, mintha ottaniak
+     lennének — a gomb ott nincs is kint, ez a linkről vagy állapotból
+     ideérő esetre szól. */
+  if(D!==D_OA){ box.innerHTML=`<div class="empty" style="padding:18px 16px">${t.tmOtherBuilding}</div>`;
+    fokuszUtana(box,fk); return; }
   if(!TM){ box.innerHTML=`<div class="empty" style="padding:18px 16px">${tmDone?t.tmNoData:"…"}</div>`;
     fokuszUtana(box,fk); return; }
   const now=new Date(), src=ROOM[S.from]||ROOM[START], ido=src?tmIdok(src):{};
@@ -2651,7 +2764,7 @@ function renderPanel(){
         <ol class="steps">${st.map((x,i)=>`<li><button class="step ${x.v?"v":""}" data-s="${i}">
           <span class="ico">${x.ico}</span><span class="b"><span class="t">${esc(x.t)}</span>
           ${x.d?`<span class="d">${esc(x.d)}</span>`:""}</span></button></li>`).join("")}</ol>
-        ${mm.vert?`<p class="note">${S.hasLift?t.lift:t.noLiftHere}</p>`:""}`;
+        ${mm.vert?`<p class="note">${liftMegj(t)}</p>`:""}`;
       window.__steps=st;
     } else h+=`<p class="note" style="border:0;padding-top:8px">${t.hint2}</p>`;
     h+=`</div>`;
@@ -2664,14 +2777,14 @@ function renderPanel(){
           stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="4" r="1.7"/><path d="M4.4 17V11H3.4l1.4-4.2h3.4L9.6 11H8.6v6z"/>
           <circle cx="14" cy="4" r="1.7"/><path d="M11.3 17l1.1-5.4h-1.1l1.4-4.8h2.6l1.4 4.8h-1.1L16.7 17z"/></svg>
           <span>${t.qwc}<small>${sub}</small></span></button>
-        <button class="qbtn" data-q="BÜFÉ"><svg width="19" height="19" viewBox="0 0 20 20" fill="none"
+        ${D.rooms.some(r=>r.code&&QUICK_OK("BÜFÉ",r))?`<button class="qbtn" data-q="BÜFÉ"><svg width="19" height="19" viewBox="0 0 20 20" fill="none"
           stroke="currentColor" stroke-width="1.5"><path d="M3.5 8h9v4a4.5 4.5 0 0 1-9 0z"/>
           <path d="M12.5 9h1.8a2 2 0 0 1 0 4h-.6"/><path d="M2.5 17.2h11"/><path d="M6 3.2v2M9.5 2.6v2.6"/></svg>
-          <span>${t.qbufe}<small>${sub}</small></span></button>
-        <button class="qbtn" data-q="@ROOMS"><svg width="19" height="19" viewBox="0 0 20 20" fill="none"
+          <span>${t.qbufe}<small>${sub}</small></span></button>`:""}
+        ${D===D_OA?`<button class="qbtn" data-q="@ROOMS"><svg width="19" height="19" viewBox="0 0 20 20" fill="none"
           stroke="currentColor" stroke-width="1.5"><rect x="2.6" y="3.4" width="14.8" height="13.2" rx="1.6"/>
           <path d="M2.6 8h14.8M7.6 8v8.6"/><circle cx="12.6" cy="12.2" r="1.5"/></svg>
-          <span>${t.qrooms}<small>${t.qroomsSub}</small></span></button>
+          <span>${t.qrooms}<small>${t.qroomsSub}</small></span></button>`:""}
         <button class="qbtn" data-q="@ENTRY"><svg width="19" height="19" viewBox="0 0 20 20" fill="none"
           stroke="currentColor" stroke-width="1.5"><path d="M11.5 2.8h4.2v14.4h-4.2"/>
           <path d="M8.6 10H2.9M5.6 6.9 2.5 10l3.1 3.1"/></svg>
@@ -2705,6 +2818,11 @@ function renderPanel(){
   if(px) px.onclick=()=>{ location.href=location.pathname+location.hash; };
   fokuszUtana(box,fk);
 }
+/* A liftes megjegyzés az OA-ra szól: ott a hallgatói lift az FL3 magban van.
+   Más épületben ez hamis volt — ott a lift (ha van) még nincs felvéve a
+   térképre, és ezt kell mondani, nem egy másik ház lépcsőmagját. */
+const liftMegj=t=>D===D_OA ? (S.hasLift?t.lift:t.noLiftHere)
+  : !LIFTS.length ? t.noLiftData : S.hasLift ? t.liftOther : t.noLiftOther;
 /* Mi számít találatnak a gyorsgomboknál. A névben keresés magában kevés: a
    „BÜFÉ" a büfé raktárára (OA00F05) is illik, és onnan közelebb esett, mint a
    büfé. */
@@ -2719,21 +2837,33 @@ const QUICK_OK=(key,r)=>{
    mosdó számít: a porta mögötti dolgozói öltözők WC-je (OAX1A09, OAX1A12) és
    egy raktárból nyíló mosdó (OA20E26) csak más helyiségen át érhető el
    (`via`). A III–IV. emeleten nincs női mosdó — ott a sor a II. emeletit
-   adja, az akadálymentes pedig mellette áll. */
+   adja, az akadálymentes pedig mellette áll.
+   A nemre nem jelölt mosdó („WC”, „MOSDÓ”) nem kerül a női vagy a férfi
+   sorba: ha valamelyikből nincs elérhető, kifejezetten jelölt mosdó, egy
+   semleges sor jön helyette a legközelebbi jelöletlennel. Az OA-ban ilyen csak a fent kizártak közt van, más épületben viszont
+   gyakori: a kollégiumban a lakóegység saját WC-je, amit ajtóadat nélkül nem
+   lehet megkülönböztetni egy nyilvános mosdótól — és korábban egy szobán
+   belüli WC jött „Női mosdó”-ként és „Férfi mosdó”-ként is. */
+const WC_SEMLEGES=["wc","wcAny"];
 const DOLGOZOI_WC=new Set(["OAX1A09","OAX1A12"]);
+// a név szerint személyzetinek jelölt mosdó (a leltárban: TANÁRI, OKTATÓI, TAKARÍTÓI WC) sem a hallgatóé
+const SZEMELYZETI_WC=/TANÁRI|OKTATÓI|TAKARÍTÓI|SZEMÉLYZETI|DOLGOZÓI/;
 const WC_FAJTA=[["wcw","wcWomen"],["wcm","wcMen"],["acc","wcAcc"]];
 function mosdok(src){
   const k=dijkstra(src,PORTAL,null); if(!k) return [];
-  const best={};
+  const best={}, jeloletlen={};
   for(const r of D.rooms){
     // az iconsOf() a lépcsőházakat is jelöli, azokat nem kell végigszámolni
-    const ic=r.code&&!r.via&&!DOLGOZOI_WC.has(r.code)&&r.cat==="VIZES HELYISÉGEK"&&iconsOf(r); if(!ic) continue;
+    const ic=r.code&&!r.via&&!DOLGOZOI_WC.has(r.code)&&!/LÉPCSŐ/.test((r.name||"").toUpperCase())
+      &&!SZEMELYZETI_WC.test((r.name||"").toUpperCase())&&iconsOf(r); if(!ic) continue;
     const rt=routeTo(k,src,r); if(!rt) continue;
-    // menetidő a lépcsővel együtt, ahogy az útvonal is számolja; a nemre nem jelölt mosdó bárkié
-    const mm=analyse(rt);
-    for(const f of ic.flatMap(x=>x==="wc"?["wcw","wcm"]:[x])) if(!best[f]||mm.sec<best[f].mm.sec) best[f]={r,mm};
+    // menetidő a lépcsővel együtt, ahogy az útvonal is számolja
+    const mm=analyse(rt), cel=ic.includes("wc")?jeloletlen:best;
+    for(const f of ic.flatMap(x=>x==="wc"?["wcw","wcm"]:[x])) if(!cel[f]||mm.sec<cel[f].mm.sec) cel[f]={r,mm};
   }
-  return WC_FAJTA.filter(([f])=>best[f]).map(([f,lbl])=>({f,lbl,...best[f]}));
+  const sorok=WC_FAJTA.filter(([f])=>best[f]).map(([f,lbl])=>({f,lbl,...best[f]}));
+  if((!best.wcw||!best.wcm)&&jeloletlen.wcw) sorok.push({f:WC_SEMLEGES[0],lbl:WC_SEMLEGES[1],...jeloletlen.wcw});
+  return sorok;
 }
 function quick(key){
   if(key==="@ROOMS"){ S.view0=S.tmOpen=null; S.termek=true;
@@ -2865,6 +2995,10 @@ function applyLang(){
     : [(EPULETEK && (EPULETEK.epuletek[epItt()]||{}).kar) || D.meta.faculty,
        D.meta.address].filter(Boolean).join(" · ");
   $("q").placeholder=t.ph;
+  // a szintek felolvasói neve és a 3D-s szintfelirat (a buildFloors() egyszer írja ki)
+  for(const l of D.levels){ const F=FLOOR[l.level]; if(!F) continue;
+    F.box.setAttribute("aria-label",lvName(l.level));
+    F.tag.innerHTML=`${esc(lvName(l.level))}<em>${F.rs.length}</em>`; }
   /* Az épületlista a nyelvvel együtt újraépül (szintek, „alaprajz még nincs”,
      az ezres csoportosítás is más). A nyilvántartás előtt még nincs mit. */
   if(EPULETEK){ $("epvBtn").setAttribute("aria-label",t.epvOpen); epvRender(); }
@@ -3227,7 +3361,7 @@ function epvIsmeretlenKod(kod){
      és a cím újra lefut rajta. Egy falra ragasztott QR-kód vagy egy megosztott
      útvonal így a másik épületben is odavisz, ahová mutat. */
   if(e && e.navigalhato){ epuletValt(e.kod,hash); return; }
-  epvNyit(e ? T().epvOther.replace("%s",e.nev) : T().epvUnknown);
+  epvNyit(e ? T().epvOther.replace("%s",e.kod||kod) : T().epvUnknown);
 }
 
 $("epvBtn").onclick=e=>{e.stopPropagation();
@@ -3241,6 +3375,10 @@ const EP_KELL=["meta","levels","rooms","grid","masks","walls","stairs"];
 function epuletKesz(d){
   if(!d || EP_KELL.some(k=>!d[k])) return false;
   if(!d.levels.length || !d.rooms.length) return false;
+  /* Ha a szintek nevéből és kódjából nem áll össze egy alulról felfelé haladó
+     sor (két földszint, egy kódjával emeletnek látszó udvarszint), a lépések
+     rossz emeletre küldenének: az épület inkább adatlap marad. */
+  if(!szintekRendben(d.levels)) return false;
   const p=PORTA[((d.rooms.find(r=>r.code)||{}).code||"").slice(0,2)];
   /* A portának a BETÖLTÖTT adatban is meg kell lennie: a táblában szerepelhet
      olyan helyiség, amit a tervlapról nem sikerült kivágni, és akkor az
@@ -3280,7 +3418,7 @@ function epuletValt(kod,hashMegtart){
   p.then(d=>{
     epvTolt=false;
     if(!epuletKesz(d)){ epvNyit(T().epvNoData.replace("%s",
-      (EPULETEK.epuletek[kod]||{}).nev||kod)); return; }
+      (EPULETEK.epuletek[kod]||{}).kod||kod)); return; }
     /* Linkről érkezve a címet meg kell tartani: az epuletAllit() üres
        állapotból indul és törli a hash-t, utána játsszuk vissza. */
     const hash=hashMegtart||"";

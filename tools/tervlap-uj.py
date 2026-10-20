@@ -45,7 +45,8 @@ Használat:
   python3 tools/tervlap-uj.py <tervtari_alaprajzok.pdf> <epuletadatok.xls> \\
           <jelentes.json> [--pre OD] [--geo sokszogek.json]
   (pip install pymupdf numpy scipy shapely xlrd)
-A PDF és az xls belső anyag: ne tedd a repóba.
+A PDF és az xls belső anyag: a forras/-ban van, a publikált csomagba nem kerül
+be (tools/pages-csomag.js). Máshova ne tedd.
 """
 import sys, os, re, json, math, collections, importlib.util
 import numpy as np
@@ -385,8 +386,8 @@ def main(pdf, xls, jelentes, pre=None, geo=None):
            for L in lapok if L.get("_falak_pdf")]
     if not hat:
         # egyetlen lapon sincs falkitöltés: a BD lapjain nincs rétegnév, a
-        # KD-n a falak fehérrel vannak kitöltve, nem szürkével — egyik lapról
-        # sem lehet szabad teret számolni
+        # KD-n a falak körvonallal és 45°-os sraffozással vannak rajzolva,
+        # kitöltés nélkül — egyik lapról sem lehet szabad teret számolni
         sys.exit(f"{pre}: egyetlen lapon sincs falkitöltés a FAL rétegeken — "
                  f"ebből a tervlapból nem lehet geometriát kinyerni")
     t_kozos = np.array([0.3 - min(b[0] for b in hat), 0.3 - min(b[1] for b in hat)])

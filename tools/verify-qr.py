@@ -19,8 +19,8 @@ Kell hozzá: pip install opencv-python-headless, és npm install (a rajzolást a
 repó Node playwrightja végzi a tools/render-qr.js-en át).
 
 Használat:
-  python3 tools/make-qr.py https://mayydayy99.github.io/oemap/ /tmp/qr.html
-  python3 tools/verify-qr.py /tmp/qr.html https://mayydayy99.github.io/oemap/
+  python3 tools/make-qr.py https://oemap.maydayprod.app/ /tmp/qr.html
+  python3 tools/verify-qr.py /tmp/qr.html https://oemap.maydayprod.app/
 """
 import sys, re, json, glob, os, subprocess, tempfile, pathlib
 

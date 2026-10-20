@@ -38,13 +38,14 @@ const MIME = { ".html":"text/html", ".js":"text/javascript", ".json":"applicatio
 
 /* Port 0: a rendszer ad szabad portot. Fix port ütközne egy ottfelejtett
    szerverrel, és akkor a teszt egy RÉGI build ellen futna — ez egyszer már
-   megtörtént, és zöld tesztek mellett hagyott hibás kódot. */
-function serve() {
+   megtörtént, és zöld tesztek mellett hagyott hibás kódot. A root a
+   kiszolgált könyvtár: alapból a repó, a tests/csomag.js a publikált csomag. */
+function serve(root = ROOT) {
   return new Promise(resolve => {
     const srv = http.createServer((req, res) => {
       const rel = decodeURIComponent(req.url.split("?")[0]).replace(/^\/+/, "") || "index.html";
-      const file = path.join(ROOT, rel);
-      if (!file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
+      const file = path.join(root, rel);
+      if (!file.startsWith(root) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
         res.writeHead(404); return res.end("nincs ilyen");
       }
       res.writeHead(200, { "content-type": MIME[path.extname(file)] || "application/octet-stream",
@@ -109,6 +110,10 @@ async function run(name, body, ctxOpts = PHONE, args = []) {
   const ctx = await browser.newContext(ctxOpts);
   try {
     await body({ t, ctx, browser, url: srv.url, base: srv.url + "index.html" });
+  } catch (e) {
+    /* Egy kivétel ne nyelje el az addig gyűlt sorokat: bukott sorként kerül
+       a jelentésbe, a többi sorral együtt. */
+    t("a teszt kivétel nélkül végigfutott", false, String(e && e.stack || e).split("\n").slice(0, 4).join(" | "));
   } finally {
     await browser.close();
     await srv.close();

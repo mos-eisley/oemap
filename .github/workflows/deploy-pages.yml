@@ -38,18 +38,23 @@ jobs:
       # próbálkozás egy második "github-pages" artifactot hagy, amitől a deploy
       # elutasítja a futást. Helyette a teljes workflow-t futtasd újra, vagy
       # indítsd kézzel (Run workflow) — az saját artifactot kap.
-      # A forras/ a Tervtár belső anyaga (tervlapok, épületadat-táblák) és a
-      # belőlük készült leltár. A repó privát, de a Pages site NEM az: ami
-      # bekerül az artifactba, az nyilvános URL-en letölthető az oldalról.
-      # Ezért a publikált csomagból kimarad — az appnak nincs is rá szüksége,
-      # a kész adata a data/-ban van.
-      - name: Drop internal sources from the published bundle
-        run: rm -rf forras
+      # A repó privát, de a Pages site NEM az: ami bekerül az artifactba, az
+      # nyilvános URL-en letölthető az oldalról. Ezért csak egy engedélylista
+      # kerül ki (tools/pages-csomag.js): az app, a service worker, a
+      # manifest, a mérőlap, a betűk, az ikonok és a data/ futásidejű fájljai.
+      # Korábban a munkafa ment ki (path: .), és amíg a Pages élt, vele a
+      # CLAUDE.md, a README, a docs/, a tools/, a tests/ és a .claude/ is.
+      # Az összeállító elbukik, ha a csomagban tiltott fájl van, ha a service
+      # worker készletéből, a lapok hivatkozásaiból vagy a megnyitható
+      # épületek adatából valami hiányzik; a tests/csomag.js (helyben) azt
+      # is méri, hogy az app a csomagból egyetlen hiányzó fájl nélkül fut.
+      - name: Assemble the published bundle (allowlist)
+        run: node tools/pages-csomag.js _site
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: _site
 
       - name: Deploy to GitHub Pages
         id: deployment

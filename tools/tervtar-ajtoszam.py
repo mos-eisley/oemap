@@ -14,8 +14,8 @@ Amit a tábláról tudni kell:
   „10"), és szám, ami nem terem száma („00", folyosón „2.61"). Ezek
   kimaradnak, és a kimenet végén felsoroljuk őket — nem írhatunk ki olyan
   számot, ami két ajtón is állhat.
-- Belső anyag (a Tervtár a vezetői körnek szól): a táblát ne tedd a repóba,
-  csak a belőle készült NEPTUN táblát.
+- Belső anyag (a Tervtár a vezetői körnek szól): a tábla a forras/-ban van,
+  a publikált csomagba csak a belőle készült NEPTUN tábla kerül (az index.html-ben).
 
 Használat:  python3 tools/tervtar-ajtoszam.py <épületadatok.xls> index.html
             (pip install xlrd — a régi .xls formátumhoz kell)
