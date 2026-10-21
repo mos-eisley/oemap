@@ -1167,9 +1167,14 @@ function clearance(lv){
    cellája is felkerül, ha az legfeljebb KOTES_TAV-ra van a körvonal egy
    élétől — vagyis egy falnyira. A régi cella marad: a saját foltjában álló
    többi helyiségből (egy lakóegység, egy pincesor) továbbra is oda vezet az
-   út. Csak az él számít, a csúcs nem: egy sarkon túl álló cella egy olyan
-   szomszéd helyiségben van, amelyiknek nincs közös fala a céllal. Az ajtós és
-   a `via`-n át megközelíthető helyiséghez ez nem nyúl. */
+   út. Csak az él számít, a csúcs nem: a sarkon túli cella többnyire olyan
+   helyiségben áll, amellyel a célnak nincs (KHX1PK1 folyosó, KHX1PL1
+   lépcsőház) vagy csak arasznyi közös fala (az OC00F32 BETEG WC a
+   zsibongóval 0,5 m-en; a bejárata az előtere). Az OD00F03 rajzteremnél ez
+   túl szigorú: ott a sarki cella abban az előcsarnokban van, amellyel 7 m-en
+   közös a körvonala. Az ajtós és a `via`-n át megközelíthető helyiséghez ez
+   nem nyúl, és csak olyan cellára köt, ahonnan a szintjén az épületen belül
+   is el lehet jutni a portáig vagy egy lépcsőig (`bentrolVizsgalo()`). */
 const RCELL={}, KOTES_TAV=1.2;
 const nodesOf=st=>st.pts.slice().sort((a,b)=>a[0]-b[0])
   .map(p=>({lv:p[0],c:nearestCell(p[0],p[1],p[2]),code:p[3],x:p[1],y:p[2]}))
@@ -1208,7 +1213,90 @@ function foHalozat(d,porta){
   if(porta&&folt[porta.lv]&&folt[porta.lv][porta.c]>=0) fo=f(folt[porta.lv][porta.c]);
   else { const ossz={}; meret.forEach((n,id)=>{ const g=f(id); ossz[g]=(ossz[g]||0)+n; });
     for(const g in ossz) if(fo<0||ossz[g]>ossz[fo]) fo=+g; }
-  return (lv,k)=>!!folt[lv]&&k>=0&&folt[lv][k]>=0&&f(folt[lv][k])===fo;
+  const be=(lv,k)=>!!folt[lv]&&k>=0&&folt[lv][k]>=0&&f(folt[lv][k])===fo;
+  /* Szintenként azok a cellák, ahol a fő hálózat a szintre érkezik: a porta
+     és a fő rendszer lépcsőpontjai. A bentrol() ezekig keres utat. */
+  be.cel={};
+  const cel=(lv,k)=>{ if(be(lv,k)) (be.cel[lv]=be.cel[lv]||new Set()).add(k); };
+  if(porta) cel(porta.lv,porta.c);
+  for(const st of d.stairs) for(const p of nodesOf(st)) cel(p.lv,p.c);
+  return be;
+}
+/* A kinyert maszkon az épület körül egy cella széles járható gyűrű fut, és a
+   homlokzat ablakrésein át ez a gyűrű a szobákba is bevezet. A fő hálózatnak
+   ez is része (a KH-ban 11 földszinti útvonal ma is kint fut egy darabon), de
+   a második menet nem köthet rá: a KH-ban három helyiség „útvonala” így az
+   épület mellett, a fal túloldalán ért célba, vagy ablakon át ment be.
+   Kint az a járható cella, amelyik egyetlen helyiség és fal sokszögébe sem
+   esik, és a nyolc irányból legalább háromban semmibe nem ütközve kifut a
+   tervlap széléig. A két fal közti, sokszög nélküli sáv (a KT lakóegységei
+   előtt) így bent marad: abból csak a sáv két vége felé nyílik szabad irány;
+   és a sokszög nélküli belső csarnokrész is (az OD előcsarnokában): azt
+   minden irányban helyiségek veszik körül. Egy 6 m-es sugárral ez utóbbi még
+   kintnek számított. */
+const KINT_IRANY=3;
+function kintVizsgalo(d){
+  const poli={}, memo={}, S=Math.max(GW,GH);
+  const raszter=lv=>{
+    if(poli[lv]) return poli[lv];
+    const a=new Uint8Array(CELLS);
+    const tolt=P=>{
+      if(!P||P.length<3) return;
+      const xs=P.map(p=>p[0]), ys=P.map(p=>p[1]);
+      const i0=Math.max(0,Math.floor(Math.min(...xs)/RES)), i1=Math.min(GW-1,Math.ceil(Math.max(...xs)/RES));
+      const j0=Math.max(0,Math.floor(Math.min(...ys)/RES)), j1=Math.min(GH-1,Math.ceil(Math.max(...ys)/RES));
+      for(let j=j0;j<=j1;j++) for(let i=i0;i<=i1;i++){
+        const k=j*GW+i; if(a[k]) continue;
+        const x=(i+.5)*RES, y=(j+.5)*RES; let b=false;
+        for(let e=0,o=P.length-1;e<P.length;o=e++){ const p=P[o], q=P[e];
+          if((p[1]>y)!==(q[1]>y)&&x<(q[0]-p[0])*(y-p[1])/(q[1]-p[1])+p[0]) b=!b; }
+        if(b) a[k]=1;
+      }
+    };
+    for(const r of d.rooms) if(r.level===lv) tolt(r.poly);
+    for(const w of (d.walls&&d.walls[lv])||[]) tolt(w);
+    return poli[lv]=a;
+  };
+  return (lv,k)=>{
+    const m=memo[lv]||(memo[lv]=new Int8Array(CELLS));
+    if(m[k]) return m[k]===2;
+    const a=raszter(lv), i=k%GW, j=(k-i)/GW;
+    let n=0;
+    if(!a[k]) for(const [di,dj] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){
+      let s=1;
+      for(;s<=S;s++){ const ii=i+di*s, jj=j+dj*s;
+        if(ii<0||jj<0||ii>=GW||jj>=GH){ s=S+1; break; }
+        if(a[jj*GW+ii]) break; }
+      if(s>S&&++n>=KINT_IRANY) break;
+    }
+    m[k]=n>=KINT_IRANY?2:1;
+    return m[k]===2;
+  };
+}
+/* A jelölt cellából a saját szintjén, kinti cellák nélkül el kell jutni oda,
+   ahol a fő hálózat a szintre érkezik (porta, lépcső). Az eredmény a bejárt
+   folt minden cellájára érvényes, ezért foltonként egyszer keresünk. */
+function bentrolVizsgalo(fo,kint){
+  const memo={}, q=new Int32Array(CELLS);
+  return (lv,k0)=>{
+    const m=memo[lv]||(memo[lv]=new Int8Array(CELLS));
+    if(m[k0]) return m[k0]===1;
+    const cel=fo.cel[lv];
+    if(!cel||kint(lv,k0)){ m[k0]=2; return false; }
+    const lat=new Uint8Array(CELLS);
+    let h=0, t=0, ok=cel.has(k0); q[t++]=k0; lat[k0]=1;
+    while(h<t&&!ok){
+      const k=q[h++], i=k%GW;
+      for(const kk of [i>0?k-1:-1, i<GW-1?k+1:-1, k-GW, k+GW]){
+        if(kk<0||kk>=CELLS||lat[kk]||!fo(lv,kk)) continue;
+        if(cel.has(kk)){ ok=true; break; }
+        if(kint(lv,kk)) continue;
+        lat[kk]=1; q[t++]=kk;
+      }
+    }
+    for(let n=0;n<t;n++) m[q[n]]=ok?1:2;
+    return ok;
+  };
 }
 /* A helyiség körvonalától KOTES_TAV-on belüli járható cellák, a távolsággal.
    A távolság egy él belső pontjáig számít (a csúcsig nem), a helyiségen belüli
@@ -1249,14 +1337,16 @@ function epuletRcell(d){
      épületben 2–8 ms), utána helyiségenként egy kikeresés dönt. A szobánként
      külön bejárt folt ennél jóval drágább volt (az OA indulásakor +60 ms). */
   const pr=ROOM[START], pc=pr&&RCELL[pr.id]&&RCELL[pr.id][0];
-  let fo=null;
+  let fo=null, bentrol=null;
   for(const r of d.rooms){
     if((r.doors||[]).length||r.via) continue;
     const c=RCELL[r.id]?RCELL[r.id][0]:-1;
     fo=fo||foHalozat(d,pc>=0?{lv:pr.level,c:pc}:null);
     if(c>=0&&fo(r.level,c)) continue;
-    let uj=-1, ud=1e9;
-    for(const [k,tav] of kotesJeloltek(r)) if(tav<ud&&fo(r.level,k)){ ud=tav; uj=k; }
+    const jel=kotesJeloltek(r).filter(([k])=>fo(r.level,k)).sort((a,b)=>a[1]-b[1]);
+    if(!jel.length) continue;
+    bentrol=bentrol||bentrolVizsgalo(fo,kintVizsgalo(d));
+    const uj=(jel.find(([k])=>bentrol(r.level,k))||[-1])[0];
     if(uj>=0) RCELL[r.id]=c>=0?[c,uj]:[uj];
   }
 }

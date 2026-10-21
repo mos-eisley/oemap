@@ -157,7 +157,7 @@ run("épületválasztó", async ({ t, ctx, browser, base }) => {
      itt kell átírni. */
   const ARANY = {
     OA: { ki: 3, hossz: 13223, el: 26, lel: 30 }, FF: { ki: 3, hossz: 1003, el: 18, lel: 0 },
-    FK: { ki: 11, hossz: 3686, el: 8, lel: 0 }, KH: { ki: 11, hossz: 7430, el: 22, lel: 0 },
+    FK: { ki: 11, hossz: 3686, el: 8, lel: 0 }, KH: { ki: 14, hossz: 7270, el: 22, lel: 0 },
     KT: { ki: 8, hossz: 15059, el: 86, lel: 0 }, OC: { ki: 6, hossz: 2466, el: 28, lel: 0 },
     OD: { ki: 12, hossz: 4103, el: 14, lel: 0 }
   };
@@ -245,8 +245,9 @@ run("épületválasztó", async ({ t, ctx, browser, base }) => {
      így nem volt elérhető, pedig a fő folyosó ott van mellettük (3 cm-re,
      illetve az iroda sokszögébe nyúlva). Most a fő hálózat egy cellája is
      melléjük kerül, de csak egy él mentén, egy falnyira (KOTES_TAV). Az
-     OD00F03 rajzterem fő hálózati cellája viszont csak a sarkánál áll: az egy
-     közös fal nélküli szomszéd helyiség, oda nem köt. */
+     OD00F03 rajzterem fő hálózati cellája viszont csak a sarkánál áll, oda
+     nem köt (itt ez a szabály a szigorúbb oldalon téved: a sarki cella abban
+     az előcsarnokban van, amelyikkel 7 m-en közös a körvonala). */
   const kotes = await p4.evaluate(() => {
     const r1 = ROOM[START], k = dijkstra(r1, PORTAL, null);
     return ["OD00F02", "OD35E04", "OD00F03"].map(c => { const r = ROOM[c], cs = RCELL[r.id] || [];
@@ -271,14 +272,43 @@ run("épületválasztó", async ({ t, ctx, browser, base }) => {
      cella a helyiség egy élétől legfeljebb KOTES_TAV-ra (vagy a helyiségen
      belül) áll, és a kettő közé nem esik harmadik, nem közlekedő helyiség —
      különben az útvonal egy másik helyiség túloldalán érne célba. A régi cella
-     is megmarad (a saját foltjából oda vezet az út). */
+     is megmarad (a saját foltjából oda vezet az út).
+     És az útvonal a célszinten nem mehet az épületen kívül: a kinyert maszkon
+     a homlokzat előtt egy cella széles járható gyűrű fut, és az ablakrésein át
+     a szobákba is bevezet. Egy korábbi változat így kötött be három KH-szobát
+     (az útvonal a fal túloldalán ért célba, vagy ablakon át ment be), és a
+     egyenes szakaszt néző ellenőrzés ezt nem látta. Ez itt nem az app raszterével,
+     hanem pontos geometriával méri: a célszinti útszakasz minden sokszögön
+     kívüli pontjából nyolc irányba húzott sugár közül legfeljebb kettő juthat
+     ki a tervlap széléig helyiség- vagy falél metszése nélkül. Csak a
+     célszintet nézi: az FK-ban minden útvonal a porta utáni négy cellán, a
+     bejárat sokszög nélküli előterén indul (az FK két új kötésének útja is),
+     az nem a kötés műve. */
   const kotesHiba = p => p.evaluate(() => {
     const bent = (P, x, y) => { let be = false; for (let e = 0, o = P.length - 1; e < P.length; o = e++) { const a = P[o], b = P[e];
       if ((a[1] > y) !== (b[1] > y) && x < (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]) + a[0]) be = !be; } return be; };
+    const metsz = (x, y, ex, ey, a, b) => { const d1x = ex - x, d1y = ey - y, d2x = b[0] - a[0], d2y = b[1] - a[1], de = d1x * d2y - d1y * d2x;
+      if (!de) return false; const u = ((a[0] - x) * d2y - (a[1] - y) * d2x) / de, v = ((a[0] - x) * d1y - (a[1] - y) * d1x) / de;
+      return u > 0 && u <= 1 && v >= 0 && v <= 1; };
+    const sokszogek = lv => D.rooms.filter(q => q.level === lv).map(q => q.poly).concat((D.walls && D.walls[lv]) || []);
+    const L = Math.hypot(GW, GH) * RES;
+    const kint = (P, x, y) => {
+      if (P.some(Q => bent(Q, x, y))) return false;
+      let n = 0;
+      for (let a = 0; a < 8; a++) { const ex = x + Math.cos(a * Math.PI / 4) * L, ey = y + Math.sin(a * Math.PI / 4) * L;
+        if (!P.some(Q => Q.some((q, e) => metsz(x, y, ex, ey, Q[(e + Q.length - 1) % Q.length], q)))) n++; }
+      return n >= 3;
+    };
+    const r1 = ROOM[START], kk = dijkstra(r1, PORTAL, null);
     const hiba = []; let db = 0;
     for (const r of D.rooms) {
       const cs = RCELL[r.id]; if (!cs || cs.length < 2 || (r.doors || []).length) continue;
       db++;
+      const rt = routeTo(kk, r1, r);
+      if (rt) { const P = sokszogek(r.level), cel = LVI[r.level];
+        let n0 = rt.path.length; while (n0 > 0 && ((rt.path[n0 - 1] / CELLS) | 0) === cel) n0--;
+        const ki = rt.path.slice(n0).map(nXY).filter(q => kint(P, q.x, q.y));
+        if (ki.length) hiba.push(`${r.code}: az útvonal ${ki.length} ponton az épületen kívül`); }
       const k = cs[cs.length - 1], i = k % GW, j = (k - i) / GW, x = (i + .5) * RES, y = (j + .5) * RES;
       if (bent(r.poly, x, y)) continue;
       let m = 1e9, pt = null;
@@ -298,14 +328,20 @@ run("épületválasztó", async ({ t, ctx, browser, base }) => {
     await p4.evaluate(k => epuletValt(k), kod); await kesz(p4, kod);
     const m = await meres(p4); kapott[kod] = m.ep === kod ? aranyOf(m) : "nem nyílt meg";
     kotesek[kod] = await kotesHiba(p4);
-    if (kod === "KH") kotesek.KHpince = await p4.evaluate(() => !!findRoute(ROOM.KHX1PK2, ROOM.KHX1P03, PORTAL));
+    if (kod === "KH") kotesek.KHpince = await p4.evaluate(() => {
+      const r1 = ROOM[START], k = dijkstra(r1, PORTAL, null);
+      return { pince: !!findRoute(ROOM.KHX1PK2, ROOM.KHX1P03, PORTAL),
+        kint: ["KH00F36", "KH00F37", "KH00F42"].filter(c => routeTo(k, r1, ROOM[c])) };
+    });
   }
-  t("a kötés minden épületben csak egy élen át, egy falnyira köt, harmadik helyiség nélkül (OD 2, FK 2, KH 7, KT 3 új kötés)",
-    Object.values(kotesek).every(v => typeof v !== "object" || !v.hiba.length) &&
-    [kotesek.OD.db, kotesek.FK.db, kotesek.KH.db, kotesek.KT.db, kotesek.OA.db, kotesek.OC.db].join() === "2,2,7,3,0,0",
-    JSON.stringify(kotesek));
-  t("a régi kötés megmarad: a KH pincéjében a folyosóról a műhelyhez továbbra is van út (KHX1PK2 → KHX1P03)",
-    kotesek.KHpince === true);
+  const db = {}; for (const kod of Object.keys(ARANY)) db[kod] = kotesek[kod].db;
+  t("a kötés minden épületben csak egy élen át, egy falnyira köt, harmadik helyiség nélkül, és a célszinten az épületen belül",
+    Object.keys(ARANY).every(k => !kotesek[k].hiba.length), JSON.stringify(kotesek));
+  t.eq("új kötés épületenként (OD 2, FK 2, KH 4, KT 3)", db, { OA: 0, FF: 0, FK: 2, KH: 4, KT: 3, OC: 0, OD: 2 });
+  t("a régi kötés megmarad: a KH pincéjében az előtérből a műhelyhez továbbra is van út (KHX1PK2 → KHX1P03)",
+    kotesek.KHpince.pince === true);
+  t("a homlokzat előtti gyűrűn vagy ablakrésen át nincs útvonal (KH00F36, KH00F37, KH00F42)",
+    !kotesek.KHpince.kint.length, kotesek.KHpince.kint.join());
   t.eq("minden megnyitható épületben a portától mért aranyértékek (elérhetetlen, összhossz, élek)", kapott, ARANY);
   const nyithato = await p4.evaluate(() => Object.keys(EPULETEK.epuletek).filter(k => EPULETEK.epuletek[k].navigalhato).sort());
   t("a nyilvántartás pontosan ezeket az épületeket nyitja meg (új épületnél az aranyérték is kell)",

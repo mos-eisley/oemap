@@ -84,7 +84,7 @@ visszarontva a teszt elbukik); az eszközök javítása nem, lásd a pont végé
 - **A váltás mércéje valódi épületeken mér** (`tests/epuletek.js`): az addigi
   „OA más kód alatt” mérce ugyanazt a rácsot adta, és akkor is átment, ha
   váltáskor semmi nem épült újra. Most épületenként négy szám a portától az
-  aranyérték: az elérhetetlen helyiségek (OA 3, FF 3, FK 11, KH 11, KT 8, OC
+  aranyérték: az elérhetetlen helyiségek (OA 3, FF 3, FK 11, KH 14, KT 8, OC
   6, OD 12), az útvonalak összhossza és a lépcsős meg a liftes gráf élszáma —
   új épületnél vagy adatjavításnál itt kell átírni. Mellette a váltás után
   egyetlen tárolóban sem maradhat régi bejegyzés: bármelyik ürítő ciklus
@@ -190,11 +190,13 @@ KD 70%), de navigálhatónak még egyik sem jó.
 
 ### 4. A kimaradó helyiségek
 
-A megnyitott épületekben 54 kódolt helyiséghez nincs út a portától (a
+A megnyitott épületekben 57 kódolt helyiséghez nincs út a portától (a
 kötés javítása előtt 68 volt, lásd lejjebb), ebből 26 pinceszinti (`X1`,
 `X2`): az OD −2. szintje teljesen elvágva, az FF, FK, KH pincéje részben, az
-OA-ban egy alagsori helyiség. A KT-ben és az OC-ben viszont egy sem
-pinceszinti. A KT-ben a földszinti TMK-blokk (három műhely, közlekedő, mosdó, öltöző, zuhanyzó) és
+OA-ban egy alagsori helyiség. A KH földszintjén hat helyiség (`KH00F36`–`F39`,
+`F41`, `F42`) a homlokzat felőli oldalon áll, és a maszk csak a homlokzat
+előtti gyűrűn és az ablakréseken át érné el őket — oda a kötés szándékosan
+nem köt. A KT-ben és az OC-ben viszont egy sem pinceszinti. A KT-ben a földszinti TMK-blokk (három műhely, közlekedő, mosdó, öltöző, zuhanyzó) és
 egy I. emeleti szoba (`KT10E99`): az előtere és a WC-je a kötéssel elérhető
 lett, maga a szoba az előtéren át nyílik — ez `via`-adat volna, nem kötés. Az
 OC-ben egy földszinti mosdóblokk (NŐI WC, BETEG WC, KÉZMOSÓ, ELŐTÉR) és két
@@ -204,10 +206,14 @@ utána a `tests/epuletek.js` aranyértékét átírni.
 
 Az **OD**-ben az ok nem egy hiányzó nyílás. A −2. szint lépcsője megvan, de a
 −1-es vége 8,9 m-re esik a járható maszktól (a `nodesOf()` 7 m-nél
-kiejti); kilenc elvágott földszinti helyiségből nyolc két, a fő hálózattól
-elvágott foltban áll, egynek (`OD00F28`) cellája sincs — a maszkról egy egész
-térrész hiányzik. Ugyanígy esik ki a földszint–félemelet közti 2-es lépcső
-(`OD00F15` ↔ `OD05E04`), aminek elérhetőségi hatása nincs.
+kiejti). A kilenc elvágott földszinti helyiségből hét a nyugati szárny 123
+cellás foltjában áll — a szárny `OD00FK4` közlekedője megvan és járható,
+csak semmi nem köti a fő hálózathoz (köztük a könyvtár helyiségei állnak, a
+bejárata valószínűleg azokon át vezet: `via`- vagy ajtóadat) —, az `OD00F03`
+a saját, 33 cellás foltjában, a fő hálózatot csak a sarkánál közelítve meg,
+egynek (`OD00F28`) pedig 6 m-en belül cellája sincs. Ugyanígy esik ki a
+földszint–félemelet közti 2-es lépcső (`OD00F15` ↔ `OD05E04`), aminek
+elérhetőségi hatása nincs.
 
 **Javítva (2026-10-21): a kötés.** Két OD-helyiség — az `OD00F02` rajzterem
 és az `OD35E04` iroda — a fő folyosó mellett áll (a fő hálózat cellái a
@@ -215,21 +221,32 @@ sokszögüket érintik), mégsem volt elérhető: az `epuletRcell()` ajtóadat
 nélkül a csúcsokhoz legközelebbi cellához kötötte őket, és az egy leszakadt,
 4, illetve 32 cellás szilánkba esett. Most ha a cella nincs a fő
 úthálózaton, a régi cella mellé a fő hálózat legközelebbi cellája is
-bekerül, ha egy élétől (nem a sarkától) legfeljebb egy falnyira (1,2 m) van.
-Ez 14 helyiséget kötött be (OD 2, FK 2, KH 7 — köztük a két tetőtéri vizes
-helyiség —, KT 3), az OC-ben egyet sem; a helyiségpárok közti utakból egy
-sem veszett el, és az OA kötései mérve azonosak maradtak. A részletek a
-CLAUDE.md-ben. Az OD maradék 12 helyisége az adaton múlik: a nyugati szárny
-folyosója (`OD00FK4`) megvan, de a foltja 21,6 m-re van a fő hálózattól, és
-semmi nem köti hozzá (a bejárat valószínűleg helyiségeken át: `via`- vagy
-ajtóadat); a −2. szint lépcsőjének −1-es vége 8,9 m-re esik a maszktól; az
-`OD00F03` pedig csak a sarkával érintkezik a fő hálózattal.
+bekerül, ha egy élétől (nem a sarkától) legfeljebb egy falnyira (1,2 m) van,
+és onnan a szintjén az épületen belül is el lehet jutni a portáig vagy egy
+lépcsőig. Ez 11 helyiséget kötött be (OD 2, FK 2, KH 4 — köztük a két
+tetőtéri vizes helyiség —, KT 3), az OC-ben egyet sem; a helyiségpárok közti
+utakból egy sem veszett el, és az OA kötései mérve azonosak maradtak. Az első
+változat a KH-ban még három szobát a homlokzat előtti gyűrűn és ablakrésen át
+kötött be; ezt az átnézés fogta meg, és a teszt most külön méri. A részletek
+a CLAUDE.md-ben. Az OD maradék 12 helyisége az adaton múlik, nem a kötésen
+(lásd fent).
 
 Ami elérhető, az is mehet rossz úton, ha a rács kettévág egy szintet: a **KT
 földszintje** ilyen. A portától (KT00F22) a földszinti női és férfi mosdó
 légvonalban 37–40 m, az útvonal mégis a II. emeleten át vezet (44 m, 122 s,
 0→1→2→1→0), ezért a mosdóválasztó az I. emeletieket ajánlja. Valószínűleg itt
 is egy hiányzó nyílás; a tervlapon kell megkeresni.
+
+Rossz úton megy az is, ami **az épületen kívül fut**: a kinyert maszkon a
+homlokzat előtt egy cella széles járható gyűrű van, és a Dijkstra ezt is
+használja. Mérve (pontos geometriával, mint a `tests/epuletek.js`, a
+portától): a KH-ban 11 földszinti helyiség útvonala fut 1–45 cellányit
+(legfeljebb ~20 m) a homlokzat előtt (pl. `KH00F01`, `KH00F40`,
+`KH00F43`–`F45`); az FK-ban minden útvonal a porta utáni 4 cellán (a
+bejárat sokszög nélküli előtere), a pincei `FKX1P11` és `FKX1P12` pedig
+hosszan is. Az OA-ban, OD-ben, FF-ben, KT-ben és OC-ben egy sem. A gyűrű a
+kinyerés mellékterméke; a javítása az eszközben van (a maszkot a helyiségek
+és falak burkára kell vágni), nem az appban.
 
 ### 5. Amit csak ember tud megszerezni
 
@@ -251,8 +268,9 @@ is egy hiányzó nyílás; a tervlapon kell megkeresni.
   fülke, és használhatják-e a hallgatók, az helyszíni ellenőrzés kérdése —
   addig ezekben az épületekben nincs lépcső nélküli útvonal, és az app ezt
   meg is mondja.
-- **Ajtók**: IFC-modell csak az OA-hoz van, ezért máshol az útvonal a
-  legközelebbi cellánál ér véget, nem az ajtónál.
+- **Ajtók**: IFC-modell csak az OA-hoz van, ezért máshol az útvonal nem az
+  ajtónál ér véget, hanem a legközelebbi cellánál, vagy ha az leszakadt
+  foltban áll, a fő hálózat egy falnyira eső cellájánál.
 
 ### 6. Amit a mostani forrásokból sosem lehet megcsinálni
 

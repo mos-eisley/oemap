@@ -90,7 +90,7 @@ Két dolog, amit itt el lehet rontani:
 
 A váltás mércéje a `tests/epuletek.js`-ben **valódi épületeken mért aranyérték**,
 épületenként négy szám a portától: hány kódolt helyiséghez nincs út (OA 3, FF
-3, FK 11, KH 11, KT 8, OC 6, OD 12), az elérhetők útvonalainak összhossza
+3, FK 11, KH 14, KT 8, OC 6, OD 12), az elérhetők útvonalainak összhossza
 méterre, és a lépcsős meg a liftes gráf élszáma. Pontos egyezést kér, mint a
 `tests/eler.js` kivétellistája — ha egy adatjavítás bekötött egy helyiséget,
 vagy új épület nyílik meg, ott kell átírni. Az élszám a `D.stairs`-ből
@@ -129,8 +129,10 @@ nem azt jelenti, hogy van tervlap**, hanem hogy az app adata kész.
 FF, FK, KH, KT és OC** (a tervlapokból gépi úton kinyerve, lásd `docs/ATADAS.md`).
 Az OD volt az első. Ami mind a hatra áll:
 
-- **Ajtóadat nincs** (IFC csak az OA-hoz van), ezért az útvonal a helyiséghez
-  legközelebbi cellánál ér véget, nem az ajtajánál — ahogy az OA-nál is volt az
+- **Ajtóadat nincs** (IFC csak az OA-hoz van), ezért az útvonal nem az
+  ajtónál ér véget, hanem a helyiséghez legközelebbi cellánál — ha az egy
+  leszakadt foltban áll, a fő hálózat egy falnyira eső cellájánál (lásd „A
+  helyiség kötése ajtóadat nélkül”) —, ahogy az OA-nál is volt az
   `ifc-ajtok.py` előtt.
 - **Lift sincs az adatban**: a tervlap helyiségnevei közt nem volt azonosítható
   liftfülke, így liftes alternatíva sincs. Ez ellenőrizendő a helyszínen; ha
@@ -154,34 +156,55 @@ szintenkénti 4-szomszédos foltok, amelyeket a `D.stairs` a porta foltjával
 egy rendszerbe köt; porta nélkül a legnagyobb rendszer), a régi cella MELLÉ
 felveszi a fő hálózat legközelebbi celláját, ha az a helyiség egy élének
 belsejétől legfeljebb `KOTES_TAV` = 1,2 m-re van (a sokszögön belüli cella
-0), vagyis egy falnyira. Amit tudni kell:
-- **A régi cella marad.** Kicserélve elveszett volna minden út, ami a
-  szilánkon belül a helyiséghez vezetett (a KH pincéjében a `KHX1PK2`
-  folyosóról a `KHX1P03` műhelybe); a `tests/epuletek.js` ezt külön méri.
-- **Csak él, csúcs nem.** A csúcs mellől a fal sarkán túlra, egy szomszéd
-  helyiségbe vagy folyosóra kötne: az `OD00F03` legközelebbi fő hálózati
-  cellája 1,05 m-re van, de a sarkánál, és oda nem köt (a KH-ban a
-  `KHX1PK1` ugyanígy marad ki).
+0), vagyis egy falnyira, és ha onnan a saját szintjén az épületen belül is
+el lehet jutni a portáig vagy egy lépcsőig (`bentrolVizsgalo()`). Amit tudni
+kell:
+- **A régi cella marad.** Kicserélve elveszett volna minden út, ami a saját
+  foltján belül vezetett a helyiséghez (a KH pincéjének nagyobbik, 497
+  cellás, a lépcsőháztól egyetlen falcellával elvágott részén a `KHX1PK2`
+  előtérből a `KHX1P03` műhelybe); a `tests/epuletek.js` ezt külön méri.
+- **Kívülről nem köt.** A kinyert maszkon az épület körül egy cella széles
+  járható gyűrű fut, és a homlokzat ablakrésein át a szobákba is bevezet; a
+  fő hálózatnak ez is része. Egy korábbi változat így kötött be három
+  KH-szobát (`KH00F36`, `KH00F37`, `KH00F42`): az útvonal a fal túloldalán,
+  a homlokzat előtt ért célba, vagy ablakon át ment be. Kint az a sokszögön
+  kívüli járható cella, amelyikből nyolc irányból legalább háromban semmibe
+  nem ütközve ki lehet látni a tervlap széléig (`kintVizsgalo()`); a két fal
+  közti sáv (a KT lakóegységei előtt) és a sokszög nélküli belső csarnokrész
+  (az OD előcsarnokában) így bent marad. Egy 6 m-es sugár ez utóbbit még
+  kintnek vette; a kötéseken nem változtatott, de a szabály így pontosabb.
+- **Csak él, csúcs nem.** A sarkon túli cella többnyire olyan helyiségben
+  áll, amellyel a célnak nincs (`KHX1PK1` folyosó, `KHX1PL1` lépcsőház) vagy
+  csak arasznyi közös fala (az `OC00F32` BETEG WC a zsibongóval 0,5 m-en; a
+  bejárata az előtere). Az `OD00F03` rajzteremnél viszont túl szigorú: ott a
+  sarki cella abban az `OD00FK2` előcsarnokban van, amellyel 7 m-en közös a
+  körvonala. Ha ezt lazítani kell, a közös körvonal hossza a jó mérce, nem a
+  távolság.
 - **A küszöb 1,2 m.** A leghosszabb bekötés 1,18 m (KT10E97/98, egyetlen
   fal), a következő jelölt 1,385 m-en már egy másik helyiség túloldala lett
   volna, és az útvonal hamisan érne célba. Az 1,2 m óvatos választás e kettő
   közt, nem levezetett érték.
 - **Az ajtós és a `via`-n át megközelíthető helyiséghez nem nyúl.** Az OA 68
-  ajtó nélküli helyiségére viszont lefut; ott mérve egyetlen kötés sem
-  változott (az OA és az FF `RCELL`-je bájtra azonos) — ez mérés, nem
-  szerkezeti garancia: egy OA-adatjavítás után az aranyérték mutatja meg.
-- Elérhető lett az OD-ben 2, az FK-ban 2, a KH-ban 7, a KT-ban 3 helyiség, az
+  olyan helyiségére, amelynek se ajtaja, se `via`-ja nincs (ajtó nélküli 94
+  van), viszont lefut; ott mérve egyetlen kötés sem változott (az OA és az FF
+  `RCELL`-je bájtra azonos) — ez mérés, nem szerkezeti garancia: egy
+  OA-adatjavítás után az aranyérték mutatja meg.
+- Elérhető lett az OD-ben 2, az FK-ban 2, a KH-ban 4, a KT-ban 3 helyiség, az
   OC-ben egy sem; a helyiségpárok közti utak közül (mind a hét épületben,
   minden kódolt helyiségből mindegyikbe) egy sem veszett el, és a
   mosdóválasztó sorai a portától nem változtak.
 - A fő hálózatot épületenként egyszer számolja (2–8 ms); egy korábbi,
   helyiségenkénti foltkeresés az OA indulását +60 ms-mal lassította. Most az
   OA hideg indulása ~18 ms-mal hosszabb (öt váltakozó kör mediánja a
-  tesztgépen, a DOMContentLoaded a válasz végétől).
+  tesztgépen, a DOMContentLoaded a válasz végétől). A kint-vizsgálat csak
+  akkor fut, ha egy jelölt már a fő hálózaton van: az OA-ban egy sincs ilyen,
+  máshol a váltás 3–40 ms-mal hosszabb (a KH-ban a legtöbb, a tesztgépen).
 - A `tests/epuletek.js` minden többcellás kötést ellenőriz: a felvett cella a
-  helyiségen belül vagy egy élétől legfeljebb `KOTES_TAV`-ra van, és a kettő
-  közt nincs harmadik, nem közlekedő helyiség; és épületenként a bekötések
-  száma is rögzített.
+  helyiségen belül vagy egy élétől legfeljebb `KOTES_TAV`-ra van, a kettő
+  közt nincs harmadik, nem közlekedő helyiség, és a portától odavezető út a
+  célszinten nem megy az épületen kívül (ezt az app raszterétől függetlenül,
+  pontos geometriával méri); épületenként mind a hétben rögzített a
+  bekötések száma, és a három KH-szobához nincs útvonal.
 
 Ami csak az OD-re áll: **a 229 helyiségből 217-hez van út a portától.** Ami
 kimarad (a valódi appban mérve):
@@ -195,8 +218,9 @@ kimarad (a valódi appban mérve):
   közlekedő sem köti hozzá: a bejárat valószínűleg helyiségeken át vezet, ami
   `via`- vagy ajtóadat kérdése, nem a kötésé; az `OD00F28`-nak 6 m-en belül
   egyetlen járható cellája sincs; az `OD00F03` rajzterem saját, 33 cellás
-  foltja el van vágva, és a fő hálózat legközelebbi cellája 1,05 m-re, de a
-  sarkánál van, ahová a kötés nem nyúl (lásd fent).
+  foltja (az alsó éle mentén, az előcsarnok körvonalán belül) el van vágva,
+  és a fő hálózat legközelebbi cellája 1,05 m-re, de a sarkánál van, ahová a
+  kötés nem nyúl — itt a szabály a szigorúbb oldalon téved (lásd fent).
 Az OD 2-es lépcsője (`OD00F15` ↔ `OD05E04`, földszint–félemelet) is kiesik a
 gráfból: mindkét vége 7 m-nél messzebb van a maszktól (9,2 és 7,7 m). Mivel
 két, egyébként elérhető labort köt össze, elérhetőségi hatása nincs. Ezt mérni
@@ -299,7 +323,7 @@ hagytak egy hibás kódot.
 | `tests/totem.js` | totem mód: egy perc tétlenség után alaphelyzet, tíz másodperccel előtte szól, gesztus közben soha, naponta újratölt — a Playwright órájával, percekig várás nélkül; a link végére, a # után írt `?totem` is bekapcsolja — **élesben bejelentett: „nem működik az alaphelyzet"** |
 | `tests/kuld.js` | telefonra küldés: a QR-kódot a képernyőképből olvassa vissza (jsQR), a csendzónát és a sérült kódot külön méri, sötét témában is; a beolvasott link telefonon ugyanazt az útvonalat nyitja meg, lifttel; a totemről `?totem` nélkül |
 | `tests/meres.js` | a telefonos mérőlap (`meres.html`) végigfut a valódi appon |
-| `tests/epuletek.js` | épületválasztó és **épületváltás**: mind a 39 épület bent van, de csak az nyitható meg, aminek kész az adata; a Tervtár adatai a soron; más épület kódjára mutató link megnevezi az épületet, nem tűnik el csendben; a váltás mércéje **valódi épületeken mért aranyérték** (épületenként az elérhetetlen helyiségek, az útvonalak összhossza és a gráf élszáma a portától), a váltás utáni **tisztaság** (egyetlen tárolóban, a szintdobozokban sem marad régi bejegyzés), OD → KT → OD (a KT betöltésével); a fő folyosó mellé, de leszakadt szilánkhoz kötött OD-helyiségek (OD00F02, OD35E04) elérhetők, a csak sarkával érintkező OD00F03 nem; minden többcellás kötés egy falnyira van, harmadik helyiség nélkül, a bekötések száma épületenként rögzített, és a szilánkon belüli út (KHX1PK2 → KHX1P03) megmarad; offline vissza az OA-ra; az `epuletKesz()` egyenként mind a hét kötelező elemre és a portára; a nem elérhető adat üzenete angolul is a kóddal; **nyilvántartás nélkül** (első indulás, letiltott kérés) a gomb el sem jelenik meg, és az app elindul |
+| `tests/epuletek.js` | épületválasztó és **épületváltás**: mind a 39 épület bent van, de csak az nyitható meg, aminek kész az adata; a Tervtár adatai a soron; más épület kódjára mutató link megnevezi az épületet, nem tűnik el csendben; a váltás mércéje **valódi épületeken mért aranyérték** (épületenként az elérhetetlen helyiségek, az útvonalak összhossza és a gráf élszáma a portától), a váltás utáni **tisztaság** (egyetlen tárolóban, a szintdobozokban sem marad régi bejegyzés), OD → KT → OD (a KT betöltésével); a fő folyosó mellé, de leszakadt szilánkhoz kötött OD-helyiségek (OD00F02, OD35E04) elérhetők, a csak sarkával érintkező OD00F03 nem; minden többcellás kötés egy falnyira van, harmadik helyiség nélkül, és odáig a célszinten az épületen belül vezet az út (pontos geometriával mérve); a homlokzat előtti gyűrűn és ablakrésen át nincs útvonal (KH00F36, KH00F37, KH00F42); a bekötések száma mind a hét épületben rögzített, és a saját foltján belüli út (KHX1PK2 → KHX1P03) megmarad; offline vissza az OA-ra; az `epuletKesz()` egyenként mind a hét kötelező elemre és a portára; a nem elérhető adat üzenete angolul is a kóddal; **nyilvántartás nélkül** (első indulás, letiltott kérés) a gomb el sem jelenik meg, és az app elindul |
 | `tests/masepulet.js` | más épületben nincs OA-ra szabott dolog: a foglalható termek (az OA órarendje) nincs kint, a Büfé gomb csak ahol van büfé (OA, FK; az OD-ben nincs); a szintnév és az emeletszám az épület saját szintjeiből (KT I. és IV. emelet, KH tetőtér, OD V. emelet, egy félszint és egy „Pince”, angolul is), a név az elsődleges (a KD-alak félemelete a földszint fölött, a kötőjel nélküli „Pince 2”), de ahol a név és a kód ellentmond (KD, TA) vagy két földszint jönne ki (BA), az épület nem nyílik meg; a 3D-s szintfelirat és a felolvasói név angolul (OA, KT); a liftes megjegyzés a lift nélküli szöveg; a nemre nem jelölt WC nem „Női” és „Férfi” mosdó, hanem semleges sor; a mosdónevek írásmódjai, a kategória nélküli OC-mosdók, a személyzeti WC kizárása; a KH és a KT akadálymentes mosdója ott van; vissza az OA-ra minden OA-s dolog visszajön |
 | `tests/csomag.js` | a Pages-re publikált csomag (`tools/pages-csomag.js`): csak engedélylistás fájl, belső anyag és fejlesztői fájl nincs benne, minden, amire a lapok és a manifest hivatkoznak, benne van; a célkönyvtár nem lehet a repó, a szülője, egy forráskönyvtár, sem egy csomagnevű, de idegen tartalmú könyvtár (a repó-szabály külön is mérve); és az app ebből a csomagból minden épületen végigváltva, a service workerrel együtt egyetlen sikertelen kérés nélkül fut |
 

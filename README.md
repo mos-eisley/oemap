@@ -48,12 +48,14 @@ odavisz: átvált arra az épületre, és kiválasztja a termet. Az OA adata be�
 marad, így arra hálózat nélkül is vissza lehet váltani.
 
 Az OA-n kívüli alaprajzok a tervlapokból gépi úton készültek, ajtóadat és lift
-nélkül: az útvonal a helyiséghez legközelebbi folyosópontnál ér véget, és
+nélkül: az útvonal a helyiséghez legközelebbi folyosópontnál (ha az egy
+leszakadt darabon áll, a fal túloldalán futó folyosón) ér véget, és
 lépcső nélküli útvonalat ott még nem tudunk ajánlani. Az OD 229 helyiségéből
 **217-hez van útvonal** a portától; ami kimarad, az a −2. szint és kilenc
-földszinti helyiség (egy rajzterem, raktárak, öltöző és vizes helyiségek):
-ezeknél a kinyert járható terület hiányos (a −2. szint lépcsőjének vége
-kimaradt róla, a nyugati szárny folyosója pedig el van vágva a többitől).
+földszinti helyiség (egy rajzterem, raktárak, öltöző, vizes helyiségek és a
+nyugati szárny közlekedője): a −2. szint lépcsőjének vége kimaradt a járható
+területről, a nyugati szárny folyosóját pedig semmi nem köti a többihez (a
+bejárata valószínűleg helyiségeken át vezet).
 A részletek a CLAUDE.md-ben. A foglalható termek
 órarendi adata csak az OA-é, ezért más épületben ez a gomb nincs kint.
 
