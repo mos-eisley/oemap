@@ -50,11 +50,11 @@ marad, így arra hálózat nélkül is vissza lehet váltani.
 Az OA-n kívüli alaprajzok a tervlapokból gépi úton készültek, ajtóadat és lift
 nélkül: az útvonal a helyiséghez legközelebbi folyosópontnál ér véget, és
 lépcső nélküli útvonalat ott még nem tudunk ajánlani. Az OD 229 helyiségéből
-**215-höz van útvonal** a portától; ami kimarad, az a −2. szint, kilenc
-földszinti helyiség (rajztermek, raktárak, öltöző) — ezeknél a kinyert járható
-terület hiányos (a lépcső vége és egy földszinti térrész kimaradt róla) —, és
-egy előadóterem meg egy iroda, amelyeket az app egy leszakadt folyosódarabhoz
-köt. A részletek a CLAUDE.md-ben. A foglalható termek
+**217-hez van útvonal** a portától; ami kimarad, az a −2. szint és kilenc
+földszinti helyiség (egy rajzterem, raktárak, öltöző és vizes helyiségek):
+ezeknél a kinyert járható terület hiányos (a −2. szint lépcsőjének vége
+kimaradt róla, a nyugati szárny folyosója pedig el van vágva a többitől).
+A részletek a CLAUDE.md-ben. A foglalható termek
 órarendi adata csak az OA-é, ezért más épületben ez a gomb nincs kint.
 
 Ha egy link vagy QR-kód egy még nem megnyitható épület helyiségére mutat

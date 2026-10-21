@@ -1158,8 +1158,81 @@ function clearance(lv){
    amelyekre az ajtaja nyílik (`doors`, az épület IFC-modelljéből:
    tools/ifc-ajtok.py) — így az útvonal az ajtónál ér véget, több ajtó közül a
    közelebbinél. Ahol nincs ajtóadat, ott a legközelebbi cella; az nem
-   feltétlenül az a folyosó, amelyikre az ajtó nyílik. */
-const RCELL={};
+   feltétlenül az a folyosó, amelyikre az ajtó nyílik.
+   A legközelebbi cella egy leszakadt, pár cellás foltba is eshet — a kinyert
+   maszk szilánkjába —, akkor is, ha a fő folyosó a fal túloldalán áll: az OD
+   OD00F02 rajzterme így nem volt elérhető, pedig a folyosó 3 cm-re van tőle
+   (egy 4 cellás szilánk volt hozzá közelebb). Ezért ha a cella nincs a fő
+   úthálózaton (`foHalozat()`), a helyiség MELLÉ a fő hálózat legközelebbi
+   cellája is felkerül, ha az legfeljebb KOTES_TAV-ra van a körvonal egy
+   élétől — vagyis egy falnyira. A régi cella marad: a saját foltjában álló
+   többi helyiségből (egy lakóegység, egy pincesor) továbbra is oda vezet az
+   út. Csak az él számít, a csúcs nem: egy sarkon túl álló cella egy olyan
+   szomszéd helyiségben van, amelyiknek nincs közös fala a céllal. Az ajtós és
+   a `via`-n át megközelíthető helyiséghez ez nem nyúl. */
+const RCELL={}, KOTES_TAV=1.2;
+const nodesOf=st=>st.pts.slice().sort((a,b)=>a[0]-b[0])
+  .map(p=>({lv:p[0],c:nearestCell(p[0],p[1],p[2]),code:p[3],x:p[1],y:p[2]}))
+  .filter(p=>p.c>=0);
+/* A fő úthálózat: a szintenkénti (4-szomszédos) járható foltok közül azok,
+   amelyeket a lépcsők a porta foltjával összekötnek (porta nélkül a
+   legnagyobb ilyen rendszer). Csak a lépcső: a lépcsős útvonal a PORTAL-on
+   fut, és az elérhetőséget is az méri. Az átlós lépés két járható ortogonális
+   szomszédot kér, ezért a 4-szomszédság pontosan a Dijkstra összefüggősége. */
+function foHalozat(d,porta){
+  const folt={}, par=[], meret=[], q=new Int32Array(CELLS);
+  for(const lv of LV){
+    // -2: nem járható, -1: járható, még nincs foltja
+    const a=new Int32Array(CELLS).fill(-2), list=CELLLIST[lv]||[]; folt[lv]=a;
+    for(let n=0;n<list.length;n++) a[list[n]]=-1;
+    for(let n=0;n<list.length;n++){
+      const k0=list[n]; if(a[k0]!==-1) continue;
+      const id=par.length; par.push(id); a[k0]=id;
+      let h=0, t=0; q[t++]=k0;
+      while(h<t){
+        const k=q[h++], i=k%GW;
+        if(i>0&&a[k-1]===-1){ a[k-1]=id; q[t++]=k-1; }
+        if(i<GW-1&&a[k+1]===-1){ a[k+1]=id; q[t++]=k+1; }
+        if(k>=GW&&a[k-GW]===-1){ a[k-GW]=id; q[t++]=k-GW; }
+        if(k+GW<CELLS&&a[k+GW]===-1){ a[k+GW]=id; q[t++]=k+GW; }
+      }
+      meret.push(t);
+    }
+  }
+  const f=x=>par[x]===x?x:(par[x]=f(par[x]));
+  for(const st of d.stairs){
+    const pts=nodesOf(st);
+    for(let i=0;i+1<pts.length;i++) par[f(folt[pts[i].lv][pts[i].c])]=f(folt[pts[i+1].lv][pts[i+1].c]);
+  }
+  let fo=-1;
+  if(porta&&folt[porta.lv]&&folt[porta.lv][porta.c]>=0) fo=f(folt[porta.lv][porta.c]);
+  else { const ossz={}; meret.forEach((n,id)=>{ const g=f(id); ossz[g]=(ossz[g]||0)+n; });
+    for(const g in ossz) if(fo<0||ossz[g]>ossz[fo]) fo=+g; }
+  return (lv,k)=>!!folt[lv]&&k>=0&&folt[lv][k]>=0&&f(folt[lv][k])===fo;
+}
+/* A helyiség körvonalától KOTES_TAV-on belüli járható cellák, a távolsággal.
+   A távolság egy él belső pontjáig számít (a csúcsig nem), a helyiségen belüli
+   cellánál 0. */
+function kotesJeloltek(r){
+  const P=r.poly, L=P.length, xs=P.map(p=>p[0]), ys=P.map(p=>p[1]), E=1e-6;
+  const x0=Math.min(...xs)-KOTES_TAV, x1=Math.max(...xs)+KOTES_TAV, y0=Math.min(...ys)-KOTES_TAV, y1=Math.max(...ys)+KOTES_TAV;
+  const ki=[], list=CELLLIST[r.level]||[];
+  for(let n=0;n<list.length;n++){
+    const k=list[n], i=k%GW, j=(k-i)/GW, x=(i+.5)*RES, y=(j+.5)*RES;
+    if(x<x0||x>x1||y<y0||y>y1) continue;
+    let m=1e9, be=false;
+    for(let e=0,o=L-1;e<L;o=e++){
+      const a=P[o], b=P[e], dx=b[0]-a[0], dy=b[1]-a[1], l=dx*dx+dy*dy;
+      if((a[1]>y)!==(b[1]>y)&&x<(b[0]-a[0])*(y-a[1])/(b[1]-a[1])+a[0]) be=!be;
+      if(!l) continue;
+      const t=((x-a[0])*dx+(y-a[1])*dy)/l;
+      if(t>E&&t<1-E) m=Math.min(m,Math.abs((x-a[0])*dy-(y-a[1])*dx)/Math.sqrt(l));
+    }
+    const tav=be?0:m;
+    if(tav<=KOTES_TAV) ki.push([k,tav]);
+  }
+  return ki;
+}
 function epuletRcell(d){
   for(const k of Object.keys(RCELL)) delete RCELL[k];
   for(const r of d.rooms){
@@ -1171,6 +1244,20 @@ function epuletRcell(d){
     for(let n=0;n<list.length;n++){const k=list[n],i=k%GW,j=(k-i)/GW,x=(i+.5)*RES,y=(j+.5)*RES;
       for(const p of cs){const dd=(p[0]-x)**2+(p[1]-y)**2;if(dd<bd){bd=dd;best=k;}}}
     if(best>=0&&bd<36)RCELL[r.id]=[best];
+  }
+  /* Második menet: a fő hálózat épületenként egyszer számolódik (a hét
+     épületben 2–8 ms), utána helyiségenként egy kikeresés dönt. A szobánként
+     külön bejárt folt ennél jóval drágább volt (az OA indulásakor +60 ms). */
+  const pr=ROOM[START], pc=pr&&RCELL[pr.id]&&RCELL[pr.id][0];
+  let fo=null;
+  for(const r of d.rooms){
+    if((r.doors||[]).length||r.via) continue;
+    const c=RCELL[r.id]?RCELL[r.id][0]:-1;
+    fo=fo||foHalozat(d,pc>=0?{lv:pr.level,c:pc}:null);
+    if(c>=0&&fo(r.level,c)) continue;
+    let uj=-1, ud=1e9;
+    for(const [k,tav] of kotesJeloltek(r)) if(tav<ud&&fo(r.level,k)){ ud=tav; uj=k; }
+    if(uj>=0) RCELL[r.id]=c>=0?[c,uj]:[uj];
   }
 }
 epuletRcell(D);
@@ -1208,10 +1295,6 @@ const link=(map,A,B,w,meta)=>{
   if(!map.has(A))map.set(A,[]); if(!map.has(B))map.set(B,[]);
   map.get(A).push({to:B,w,meta}); map.get(B).push({to:A,w,meta});
 };
-const nodesOf=st=>st.pts.slice().sort((a,b)=>a[0]-b[0])
-  .map(p=>({lv:p[0],c:nearestCell(p[0],p[1],p[2]),code:p[3],x:p[1],y:p[2]}))
-  .filter(p=>p.c>=0);
-
 function epuletPortal(d){
   PORTAL.clear(); PORTAL_LIFT.clear(); LIFT_LEVELS.clear();
   for(const k of Object.keys(STAIRXY)) delete STAIRXY[k];

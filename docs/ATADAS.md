@@ -84,8 +84,8 @@ visszarontva a teszt elbukik); az eszközök javítása nem, lásd a pont végé
 - **A váltás mércéje valódi épületeken mér** (`tests/epuletek.js`): az addigi
   „OA más kód alatt” mérce ugyanazt a rácsot adta, és akkor is átment, ha
   váltáskor semmi nem épült újra. Most épületenként négy szám a portától az
-  aranyérték: az elérhetetlen helyiségek (OA 3, FF 3, FK 13, KH 18, KT 11, OC
-  6, OD 14), az útvonalak összhossza és a lépcsős meg a liftes gráf élszáma —
+  aranyérték: az elérhetetlen helyiségek (OA 3, FF 3, FK 11, KH 11, KT 8, OC
+  6, OD 12), az útvonalak összhossza és a lépcsős meg a liftes gráf élszáma —
   új épületnél vagy adatjavításnál itt kell átírni. Mellette a váltás után
   egyetlen tárolóban sem maradhat régi bejegyzés: bármelyik ürítő ciklus
   hiányán elbukik. Ez meg is fogott egyet: a szintdobozok tábláját (`FLOOR`)
@@ -190,13 +190,17 @@ KD 70%), de navigálhatónak még egyik sem jó.
 
 ### 4. A kimaradó helyiségek
 
-A megnyitott épületekben 68 kódolt helyiséghez nincs út a portától, ebből 29
-pinceszinti (`X1`, `X2`): az OD −2. szintje teljesen elvágva, az FF, FK, KH
-pincéje részben. A KT-ben és az OC-ben viszont egy sem pinceszinti (KT: TMK
-műhelyek a földszinten; OC: földszinti WC-k), a KH-ban két tetőtéri vizes
-helyiség is elvágott. Ez tehát nem egy ok — épületenként a hiányzó nyílást
-vagy lépcsőt kell megtalálni, és utána a `tests/epuletek.js` aranyértékét
-átírni.
+A megnyitott épületekben 54 kódolt helyiséghez nincs út a portától (a
+kötés javítása előtt 68 volt, lásd lejjebb), ebből 26 pinceszinti (`X1`,
+`X2`): az OD −2. szintje teljesen elvágva, az FF, FK, KH pincéje részben, az
+OA-ban egy alagsori helyiség. A KT-ben és az OC-ben viszont egy sem
+pinceszinti. A KT-ben a földszinti TMK-blokk (három műhely, közlekedő, mosdó, öltöző, zuhanyzó) és
+egy I. emeleti szoba (`KT10E99`): az előtere és a WC-je a kötéssel elérhető
+lett, maga a szoba az előtéren át nyílik — ez `via`-adat volna, nem kötés. Az
+OC-ben egy földszinti mosdóblokk (NŐI WC, BETEG WC, KÉZMOSÓ, ELŐTÉR) és két
+üzemeltetési helyiség (KAPCSOLÓTÉR, ELMŰ). Ez tehát nem
+egy ok — épületenként a hiányzó nyílást vagy lépcsőt kell megtalálni, és
+utána a `tests/epuletek.js` aranyértékét átírni.
 
 Az **OD**-ben az ok nem egy hiányzó nyílás. A −2. szint lépcsője megvan, de a
 −1-es vége 8,9 m-re esik a járható maszktól (a `nodesOf()` 7 m-nél
@@ -205,16 +209,21 @@ elvágott foltban áll, egynek (`OD00F28`) cellája sincs — a maszkról egy eg
 térrész hiányzik. Ugyanígy esik ki a földszint–félemelet közti 2-es lépcső
 (`OD00F15` ↔ `OD05E04`), aminek elérhetőségi hatása nincs.
 
-**Két OD-helyiség viszont a kötés miatt elérhetetlen, és ez az app hibája,
-nem az adaté**: az `OD00F02` előadóterem és az `OD35E04` iroda közvetlenül a
-fő folyosó mellett áll (0,03 és 0,05 m), az `epuletRcell()` azonban ajtóadat
-nélkül egyetlen, a csúcsokhoz legközelebbi cellához köti őket, és az egy
-leszakadt, 4, illetve 32 cellás szilánkba esik. Ez a **következő javítandó**:
-a kötés a sokszög élétől számolt közelségben több cellát vegyen fel, vagy a
-legnagyobb összefüggő komponenst részesítse előnyben. Valószínűleg a többi
-gépi kinyerésű épület elérhetetlen helyiségeinek egy részét is ez tartja
-vissza; az aranyértékek ettől elmozdulnak, ezért mérve kell bevezetni (és az
-ajtóadatos OA-t nem szabad érintenie). A részletek a CLAUDE.md-ben.
+**Javítva (2026-10-21): a kötés.** Két OD-helyiség — az `OD00F02` rajzterem
+és az `OD35E04` iroda — a fő folyosó mellett áll (a fő hálózat cellái a
+sokszögüket érintik), mégsem volt elérhető: az `epuletRcell()` ajtóadat
+nélkül a csúcsokhoz legközelebbi cellához kötötte őket, és az egy leszakadt,
+4, illetve 32 cellás szilánkba esett. Most ha a cella nincs a fő
+úthálózaton, a régi cella mellé a fő hálózat legközelebbi cellája is
+bekerül, ha egy élétől (nem a sarkától) legfeljebb egy falnyira (1,2 m) van.
+Ez 14 helyiséget kötött be (OD 2, FK 2, KH 7 — köztük a két tetőtéri vizes
+helyiség —, KT 3), az OC-ben egyet sem; a helyiségpárok közti utakból egy
+sem veszett el, és az OA kötései mérve azonosak maradtak. A részletek a
+CLAUDE.md-ben. Az OD maradék 12 helyisége az adaton múlik: a nyugati szárny
+folyosója (`OD00FK4`) megvan, de a foltja 21,6 m-re van a fő hálózattól, és
+semmi nem köti hozzá (a bejárat valószínűleg helyiségeken át: `via`- vagy
+ajtóadat); a −2. szint lépcsőjének −1-es vége 8,9 m-re esik a maszktól; az
+`OD00F03` pedig csak a sarkával érintkezik a fő hálózattal.
 
 Ami elérhető, az is mehet rossz úton, ha a rács kettévág egy szintet: a **KT
 földszintje** ilyen. A portától (KT00F22) a földszinti női és férfi mosdó

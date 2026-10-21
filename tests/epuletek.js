@@ -157,9 +157,9 @@ run("épületválasztó", async ({ t, ctx, browser, base }) => {
      itt kell átírni. */
   const ARANY = {
     OA: { ki: 3, hossz: 13223, el: 26, lel: 30 }, FF: { ki: 3, hossz: 1003, el: 18, lel: 0 },
-    FK: { ki: 13, hossz: 3611, el: 8, lel: 0 }, KH: { ki: 18, hossz: 7140, el: 22, lel: 0 },
-    KT: { ki: 11, hossz: 14891, el: 86, lel: 0 }, OC: { ki: 6, hossz: 2466, el: 28, lel: 0 },
-    OD: { ki: 14, hossz: 4073, el: 14, lel: 0 }
+    FK: { ki: 11, hossz: 3686, el: 8, lel: 0 }, KH: { ki: 11, hossz: 7430, el: 22, lel: 0 },
+    KT: { ki: 8, hossz: 15059, el: 86, lel: 0 }, OC: { ki: 6, hossz: 2466, el: 28, lel: 0 },
+    OD: { ki: 12, hossz: 4103, el: 14, lel: 0 }
   };
   const aranyOf = m => ({ ki: m.ki, hossz: m.hossz, el: m.el, lel: m.lel });
   const p4 = await open(ctx, base + "#from=OA00FK1&to=OA10E18", { settle: 1500 });
@@ -240,6 +240,20 @@ run("épületválasztó", async ({ t, ctx, browser, base }) => {
   t("OD: a porta a sajátja, és mind a 229 kódolt helyiség bent van", od1.porta === "OD00F01" && od1.kodolt === 229,
     JSON.stringify({ porta: od1.porta, kodolt: od1.kodolt }));
   t.eq("OD: a portától mért aranyértékek, az OA után", aranyOf(od1), ARANY.OD);
+  /* Ajtóadat nélkül a helyiség a legközelebbi cellához kötődik, és az egy
+     leszakadt szilánkba is eshet: az OD00F02 rajzterem és az OD35E04 iroda
+     így nem volt elérhető, pedig a fő folyosó ott van mellettük (3 cm-re,
+     illetve az iroda sokszögébe nyúlva). Most a fő hálózat egy cellája is
+     melléjük kerül, de csak egy él mentén, egy falnyira (KOTES_TAV). Az
+     OD00F03 rajzterem fő hálózati cellája viszont csak a sarkánál áll: az egy
+     közös fal nélküli szomszéd helyiség, oda nem köt. */
+  const kotes = await p4.evaluate(() => {
+    const r1 = ROOM[START], k = dijkstra(r1, PORTAL, null);
+    return ["OD00F02", "OD35E04", "OD00F03"].map(c => { const r = ROOM[c], cs = RCELL[r.id] || [];
+      return { kod: c, ut: !!routeTo(k, r1, r), cellak: cs.length }; });
+  });
+  t("OD: a fő folyosó mellett álló rajzterem és iroda (OD00F02, OD35E04) elérhető; a csak sarkával érintkező OD00F03 nem",
+    kotes[0].ut && kotes[1].ut && !kotes[2].ut && kotes[2].cellak === 1, JSON.stringify(kotes));
   t("a szintválasztó az OD kilenc szintjét mutatja, a lista az OD-t jelöli", od1.rail === 9 && od1.itt === "OD",
     `${od1.rail} szint, itt: ${od1.itt}`);
   t("az aktív szint az OD egyik szintje, és látszik", String(od1.szintek || "").split(",").includes(String(od1.szint)) && od1.aktivLatszik,
@@ -253,11 +267,45 @@ run("épületválasztó", async ({ t, ctx, browser, base }) => {
   await valtUI(p4, "OD");
   t.eq("OD → KT → OD: a második látogatás ugyanazt méri, a gráffal együtt", await meres(p4), od1);
 
-  const kapott = {};
+  /* A kötés szabálya minden épületben, az összes új kötésre: a második
+     cella a helyiség egy élétől legfeljebb KOTES_TAV-ra (vagy a helyiségen
+     belül) áll, és a kettő közé nem esik harmadik, nem közlekedő helyiség —
+     különben az útvonal egy másik helyiség túloldalán érne célba. A régi cella
+     is megmarad (a saját foltjából oda vezet az út). */
+  const kotesHiba = p => p.evaluate(() => {
+    const bent = (P, x, y) => { let be = false; for (let e = 0, o = P.length - 1; e < P.length; o = e++) { const a = P[o], b = P[e];
+      if ((a[1] > y) !== (b[1] > y) && x < (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]) + a[0]) be = !be; } return be; };
+    const hiba = []; let db = 0;
+    for (const r of D.rooms) {
+      const cs = RCELL[r.id]; if (!cs || cs.length < 2 || (r.doors || []).length) continue;
+      db++;
+      const k = cs[cs.length - 1], i = k % GW, j = (k - i) / GW, x = (i + .5) * RES, y = (j + .5) * RES;
+      if (bent(r.poly, x, y)) continue;
+      let m = 1e9, pt = null;
+      for (let e = 0, o = r.poly.length - 1; e < r.poly.length; o = e++) { const a = r.poly[o], b = r.poly[e], dx = b[0] - a[0], dy = b[1] - a[1], l = dx * dx + dy * dy;
+        const tt = l ? ((x - a[0]) * dx + (y - a[1]) * dy) / l : -1;
+        if (tt > 1e-6 && tt < 1 - 1e-6) { const d = Math.abs((x - a[0]) * dy - (y - a[1]) * dx) / Math.sqrt(l); if (d < m) { m = d; pt = [a[0] + tt * dx, a[1] + tt * dy]; } } }
+      if (!(m <= KOTES_TAV)) { hiba.push(`${r.code}: ${m === 1e9 ? "csak sarkon" : m.toFixed(2) + " m"}`); continue; }
+      const sajat = D.rooms.filter(q => q.level === r.level && q !== r && bent(q.poly, x, y));
+      for (let s = 1; s < 20; s++) { const sx = x + (pt[0] - x) * s / 20, sy = y + (pt[1] - y) * s / 20;
+        const q = D.rooms.find(q => q.level === r.level && q !== r && !sajat.includes(q) && q.cat !== "KÖZLEKEDŐK" && bent(q.poly, sx, sy));
+        if (q) { hiba.push(`${r.code}: közte ${q.code || q.name}`); break; } }
+    }
+    return { db, hiba };
+  });
+  const kapott = {}, kotesek = {};
   for (const kod of Object.keys(ARANY)) {
     await p4.evaluate(k => epuletValt(k), kod); await kesz(p4, kod);
     const m = await meres(p4); kapott[kod] = m.ep === kod ? aranyOf(m) : "nem nyílt meg";
+    kotesek[kod] = await kotesHiba(p4);
+    if (kod === "KH") kotesek.KHpince = await p4.evaluate(() => !!findRoute(ROOM.KHX1PK2, ROOM.KHX1P03, PORTAL));
   }
+  t("a kötés minden épületben csak egy élen át, egy falnyira köt, harmadik helyiség nélkül (OD 2, FK 2, KH 7, KT 3 új kötés)",
+    Object.values(kotesek).every(v => typeof v !== "object" || !v.hiba.length) &&
+    [kotesek.OD.db, kotesek.FK.db, kotesek.KH.db, kotesek.KT.db, kotesek.OA.db, kotesek.OC.db].join() === "2,2,7,3,0,0",
+    JSON.stringify(kotesek));
+  t("a régi kötés megmarad: a KH pincéjében a folyosóról a műhelyhez továbbra is van út (KHX1PK2 → KHX1P03)",
+    kotesek.KHpince === true);
   t.eq("minden megnyitható épületben a portától mért aranyértékek (elérhetetlen, összhossz, élek)", kapott, ARANY);
   const nyithato = await p4.evaluate(() => Object.keys(EPULETEK.epuletek).filter(k => EPULETEK.epuletek[k].navigalhato).sort());
   t("a nyilvántartás pontosan ezeket az épületeket nyitja meg (új épületnél az aranyérték is kell)",

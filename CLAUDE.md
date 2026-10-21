@@ -90,7 +90,7 @@ Két dolog, amit itt el lehet rontani:
 
 A váltás mércéje a `tests/epuletek.js`-ben **valódi épületeken mért aranyérték**,
 épületenként négy szám a portától: hány kódolt helyiséghez nincs út (OA 3, FF
-3, FK 13, KH 18, KT 11, OC 6, OD 14), az elérhetők útvonalainak összhossza
+3, FK 11, KH 11, KT 8, OC 6, OD 12), az elérhetők útvonalainak összhossza
 méterre, és a lépcsős meg a liftes gráf élszáma. Pontos egyezést kér, mint a
 `tests/eler.js` kivétellistája — ha egy adatjavítás bekötött egy helyiséget,
 vagy új épület nyílik meg, ott kell átírni. Az élszám a `D.stairs`-ből
@@ -142,29 +142,61 @@ Az OD volt az első. Ami mind a hatra áll:
   ugyanaz a minta, mint az OA-é); ahol nincs, a bejárati tér (az FF-ben a
   szélfogó, `FF00FK1`).
 
-Ami csak az OD-re áll: **a 229 helyiségből 215-höz van út a portától.** Ami
+**A helyiség kötése ajtóadat nélkül** (`epuletRcell()`): a helyiség a
+csúcsaihoz vagy a középpontjához legközelebbi járható cellához kötődik. Ez a
+cella egy leszakadt, pár cellás foltba is eshet — a kinyert maszk
+szilánkjába —, akkor is, ha a fő folyosó a fal túloldalán áll. Az OD-ben az
+`OD00F02` rajzterem és az `OD35E04` iroda így nem volt elérhető, pedig a fő
+hálózat cellái a sokszögüket érintik, az `OD35E04`-ébe bele is nyúlnak (egy
+4, illetve 32 cellás szilánk csúcsa volt hozzájuk közelebb). Ezért egy
+második menet: ha a cella nincs a **fő úthálózaton** (`foHalozat()`: a
+szintenkénti 4-szomszédos foltok, amelyeket a `D.stairs` a porta foltjával
+egy rendszerbe köt; porta nélkül a legnagyobb rendszer), a régi cella MELLÉ
+felveszi a fő hálózat legközelebbi celláját, ha az a helyiség egy élének
+belsejétől legfeljebb `KOTES_TAV` = 1,2 m-re van (a sokszögön belüli cella
+0), vagyis egy falnyira. Amit tudni kell:
+- **A régi cella marad.** Kicserélve elveszett volna minden út, ami a
+  szilánkon belül a helyiséghez vezetett (a KH pincéjében a `KHX1PK2`
+  folyosóról a `KHX1P03` műhelybe); a `tests/epuletek.js` ezt külön méri.
+- **Csak él, csúcs nem.** A csúcs mellől a fal sarkán túlra, egy szomszéd
+  helyiségbe vagy folyosóra kötne: az `OD00F03` legközelebbi fő hálózati
+  cellája 1,05 m-re van, de a sarkánál, és oda nem köt (a KH-ban a
+  `KHX1PK1` ugyanígy marad ki).
+- **A küszöb 1,2 m.** A leghosszabb bekötés 1,18 m (KT10E97/98, egyetlen
+  fal), a következő jelölt 1,385 m-en már egy másik helyiség túloldala lett
+  volna, és az útvonal hamisan érne célba. Az 1,2 m óvatos választás e kettő
+  közt, nem levezetett érték.
+- **Az ajtós és a `via`-n át megközelíthető helyiséghez nem nyúl.** Az OA 68
+  ajtó nélküli helyiségére viszont lefut; ott mérve egyetlen kötés sem
+  változott (az OA és az FF `RCELL`-je bájtra azonos) — ez mérés, nem
+  szerkezeti garancia: egy OA-adatjavítás után az aranyérték mutatja meg.
+- Elérhető lett az OD-ben 2, az FK-ban 2, a KH-ban 7, a KT-ban 3 helyiség, az
+  OC-ben egy sem; a helyiségpárok közti utak közül (mind a hét épületben,
+  minden kódolt helyiségből mindegyikbe) egy sem veszett el, és a
+  mosdóválasztó sorai a portától nem változtak.
+- A fő hálózatot épületenként egyszer számolja (2–8 ms); egy korábbi,
+  helyiségenkénti foltkeresés az OA indulását +60 ms-mal lassította. Most az
+  OA hideg indulása ~18 ms-mal hosszabb (öt váltakozó kör mediánja a
+  tesztgépen, a DOMContentLoaded a válasz végétől).
+- A `tests/epuletek.js` minden többcellás kötést ellenőriz: a felvett cella a
+  helyiségen belül vagy egy élétől legfeljebb `KOTES_TAV`-ra van, és a kettő
+  közt nincs harmadik, nem közlekedő helyiség; és épületenként a bekötések
+  száma is rögzített.
+
+Ami csak az OD-re áll: **a 229 helyiségből 217-hez van út a portától.** Ami
 kimarad (a valódi appban mérve):
 - a −2. szint három helyisége. A `D.stairs`-ben VAN lépcső a −2. és a −1.
   szint közt (`ODX2PK1` → `ODX1P09`), de a −1-es vége 8,9 m-re esik a
   legközelebbi járható cellától, és a `nodesOf()` 7 m-es korlátja kiejti; az
   `ODX2P01`-nek 6 m-en belül cellája sincs;
 - kilenc földszinti helyiség: hét nyugati (F22–F26, a `OD00FK4` közlekedő és
-  az `OD00FK5` raktár) egy 123 cellás, a fő hálózattól elvágott foltban, az
-  `OD00F03` egy 33 cellásban; az `OD00F28`-nak 6 m-en belül egyetlen járható
-  cellája sincs. Itt a maszkról egy egész térrész hiányzik, egy nyílás nem
-  kötné be őket;
-- **két helyiség, amely a fő hálózat mellett áll, mégsem érhető el**: az
-  `OD00F02` előadóterem és a III. emeleti `OD35E04` iroda. A fő folyosó
-  cellái 0,03, illetve 0,05 m-re vannak a sokszögüktől, az `epuletRcell()`
-  viszont ajtóadat nélkül egyetlen cellához köti a helyiséget — a csúcsaihoz
-  vagy a középpontjához legközelebbihez —, és ez egy leszakadt, 4, illetve 32
-  cellás szilánkba esik (a fő hálózatot csak átlósan érinti, a Dijkstra pedig
-  átlósan csak két járható ortogonális szomszéddal lép). Ez a kötés hibája,
-  nem a maszké; ugyanez tarthatja vissza a többi gépi kinyerésű épület
-  elérhetetlen helyiségeinek egy részét is. Javítási irány: a kötés a
-  sokszög élétől számolt közelségben több cellát vegyen fel, vagy a
-  legnagyobb összefüggő komponenst részesítse előnyben — ez az aranyértékeket
-  is elmozdítja, ezért mérve kell bevezetni.
+  az `OD00FK5` raktár) egy 123 cellás foltban. A szárny `OD00FK4` közlekedője
+  megvan és járható, de a foltja 21,6 m-re van a fő hálózattól, és egyetlen
+  közlekedő sem köti hozzá: a bejárat valószínűleg helyiségeken át vezet, ami
+  `via`- vagy ajtóadat kérdése, nem a kötésé; az `OD00F28`-nak 6 m-en belül
+  egyetlen járható cellája sincs; az `OD00F03` rajzterem saját, 33 cellás
+  foltja el van vágva, és a fő hálózat legközelebbi cellája 1,05 m-re, de a
+  sarkánál van, ahová a kötés nem nyúl (lásd fent).
 Az OD 2-es lépcsője (`OD00F15` ↔ `OD05E04`, földszint–félemelet) is kiesik a
 gráfból: mindkét vége 7 m-nél messzebb van a maszktól (9,2 és 7,7 m). Mivel
 két, egyébként elérhető labort köt össze, elérhetőségi hatása nincs. Ezt mérni
@@ -267,7 +299,7 @@ hagytak egy hibás kódot.
 | `tests/totem.js` | totem mód: egy perc tétlenség után alaphelyzet, tíz másodperccel előtte szól, gesztus közben soha, naponta újratölt — a Playwright órájával, percekig várás nélkül; a link végére, a # után írt `?totem` is bekapcsolja — **élesben bejelentett: „nem működik az alaphelyzet"** |
 | `tests/kuld.js` | telefonra küldés: a QR-kódot a képernyőképből olvassa vissza (jsQR), a csendzónát és a sérült kódot külön méri, sötét témában is; a beolvasott link telefonon ugyanazt az útvonalat nyitja meg, lifttel; a totemről `?totem` nélkül |
 | `tests/meres.js` | a telefonos mérőlap (`meres.html`) végigfut a valódi appon |
-| `tests/epuletek.js` | épületválasztó és **épületváltás**: mind a 39 épület bent van, de csak az nyitható meg, aminek kész az adata; a Tervtár adatai a soron; más épület kódjára mutató link megnevezi az épületet, nem tűnik el csendben; a váltás mércéje **valódi épületeken mért aranyérték** (épületenként az elérhetetlen helyiségek, az útvonalak összhossza és a gráf élszáma a portától), a váltás utáni **tisztaság** (egyetlen tárolóban, a szintdobozokban sem marad régi bejegyzés), OD → KT → OD (a KT betöltésével), offline vissza az OA-ra; az `epuletKesz()` egyenként mind a hét kötelező elemre és a portára; a nem elérhető adat üzenete angolul is a kóddal; **nyilvántartás nélkül** (első indulás, letiltott kérés) a gomb el sem jelenik meg, és az app elindul |
+| `tests/epuletek.js` | épületválasztó és **épületváltás**: mind a 39 épület bent van, de csak az nyitható meg, aminek kész az adata; a Tervtár adatai a soron; más épület kódjára mutató link megnevezi az épületet, nem tűnik el csendben; a váltás mércéje **valódi épületeken mért aranyérték** (épületenként az elérhetetlen helyiségek, az útvonalak összhossza és a gráf élszáma a portától), a váltás utáni **tisztaság** (egyetlen tárolóban, a szintdobozokban sem marad régi bejegyzés), OD → KT → OD (a KT betöltésével); a fő folyosó mellé, de leszakadt szilánkhoz kötött OD-helyiségek (OD00F02, OD35E04) elérhetők, a csak sarkával érintkező OD00F03 nem; minden többcellás kötés egy falnyira van, harmadik helyiség nélkül, a bekötések száma épületenként rögzített, és a szilánkon belüli út (KHX1PK2 → KHX1P03) megmarad; offline vissza az OA-ra; az `epuletKesz()` egyenként mind a hét kötelező elemre és a portára; a nem elérhető adat üzenete angolul is a kóddal; **nyilvántartás nélkül** (első indulás, letiltott kérés) a gomb el sem jelenik meg, és az app elindul |
 | `tests/masepulet.js` | más épületben nincs OA-ra szabott dolog: a foglalható termek (az OA órarendje) nincs kint, a Büfé gomb csak ahol van büfé (OA, FK; az OD-ben nincs); a szintnév és az emeletszám az épület saját szintjeiből (KT I. és IV. emelet, KH tetőtér, OD V. emelet, egy félszint és egy „Pince”, angolul is), a név az elsődleges (a KD-alak félemelete a földszint fölött, a kötőjel nélküli „Pince 2”), de ahol a név és a kód ellentmond (KD, TA) vagy két földszint jönne ki (BA), az épület nem nyílik meg; a 3D-s szintfelirat és a felolvasói név angolul (OA, KT); a liftes megjegyzés a lift nélküli szöveg; a nemre nem jelölt WC nem „Női” és „Férfi” mosdó, hanem semleges sor; a mosdónevek írásmódjai, a kategória nélküli OC-mosdók, a személyzeti WC kizárása; a KH és a KT akadálymentes mosdója ott van; vissza az OA-ra minden OA-s dolog visszajön |
 | `tests/csomag.js` | a Pages-re publikált csomag (`tools/pages-csomag.js`): csak engedélylistás fájl, belső anyag és fejlesztői fájl nincs benne, minden, amire a lapok és a manifest hivatkoznak, benne van; a célkönyvtár nem lehet a repó, a szülője, egy forráskönyvtár, sem egy csomagnevű, de idegen tartalmú könyvtár (a repó-szabály külön is mérve); és az app ebből a csomagból minden épületen végigváltva, a service workerrel együtt egyetlen sikertelen kérés nélkül fut |
 
