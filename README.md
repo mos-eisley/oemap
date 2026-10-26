@@ -32,10 +32,29 @@ oldal külső szolgáltató nélkül működik, és offline is: az OA mindig, a 
 
 ## Az egyetem épületei
 
-A fejlécben az épület neve egyben választógomb: alatta az egyetem **mind a 39
-épülete**, a cím irányítószáma szerint csoportosítva (például Budapest 1034: a
-Bécsi út és a Doberdó út), a cím nélküliek a végén, mindegyiknél a címe, a
-szintek és a helyiségek száma, az alapterülete — az Egyetemi Tervtár adataiból.
+A fejlécben az épület neve egyben választógomb: egy térkép nyílik meg az
+egyetem **mind a 39 épületével**. Előbb Magyarország, rajta a települések
+(Budapest, Székesfehérvár, Nagymaros); egy településre koppintva annak térképe
+jön, az épületekkel a valódi helyükön (Budapesten kerületenként csoportosítva),
+és egy épületre koppintva megnyílik az alaprajza. A térkép mellett mindig ott a
+lista is, mindegyik épületnél a címe, a szintek és a helyiségek száma, az
+alapterülete — az Egyetemi Tervtár adataiból. Az épületek helye az
+OpenStreetMapből jön (© OpenStreetMap-közreműködők, ODbL); hét épületnek
+(FA, FB, KM, SA, SB, SC, UV) nincs azonosítható helye, ezek a listában „Hely
+nélkül” alatt állnak.
+
+**Alapértelmezett épület.** Egy megnyitható épület adatlapján „Legyen ez az alapértelmezett”:
+onnantól az app ezzel indul, és a fejléc házikója bárhonnan visszavisz rá. A
+beállítás ezen a készüléken él (a böngésző tárolójában); ha az nem érhető el,
+az OA az alapértelmezett. Egy link (`…#OD20E01`) mindig erősebb, és amit az
+induláskori betöltés közben magad választasz (egy termet, egy másik épületet),
+az is. A totemen nem állítható be: az a saját helyére áll vissza.
+
+**Hol vagyok?** A választóban a GPS alapján javaslatot kérhetsz: az app a
+legközelebbi épületet ajánlja (ha benne vagy, azt), a közelben lévőket mellé.
+Engedélyt csak erre a koppintásra kér. Épületen belül a GPS tíz métereket is
+téved, ezért ez csak javaslat — a pontos helyet a falra ragasztott QR-kód adja
+(lásd lejjebb).
 
 **Megnyitni azt az épületet lehet, amelyiknek kész az alaprajza** (most hetet:
 OA, OC, OD, FF, FK, KH, KT). A többi épület sora adatlap: látszik, hogy létezik és hol van, de nem nyitható meg, mert nincs mit
@@ -60,8 +79,8 @@ A részletek a CLAUDE.md-ben. A foglalható termek
 órarendi adata csak az OA-é, ezért más épületben ez a gomb nincs kint.
 
 Ha egy link vagy QR-kód egy még nem megnyitható épület helyiségére mutat
-(például `…#BA00F01`), az app megnyitja a listát, és megnevezi, melyik épületé
-a kód — korábban az ilyen cím csendben ugyanezt az OA-alaprajzot hozta be.
+(például `…#BA00F01`), az app megnyitja annak az épületnek az adatlapját, és
+megnevezi, melyik épületé a kód — korábban az ilyen cím csendben ugyanezt az OA-alaprajzot hozta be.
 
 ## Nézetek
 
@@ -259,7 +278,7 @@ Ha a kód ebben az épületben nem létezik (elírás, például `#OA99X99`), a 
 elhagyja: az app elindul, csak épp kiválasztás nélkül. Egy megnyitható másik
 épület kódjánál átvált arra az épületre (lásd „Az egyetem épületei”); egy még
 nem megnyitható épület kódjánál, vagy ha a kód egyik ismert épülethez sem
-tartozik, megnyílik az épületlista, és megmondja, miért nem nyílt meg. A panelben a megosztás gomb a pillanatnyi állapot linkjét adja —
+tartozik, megnyílik az épületválasztó, és megmondja, miért nem nyílt meg. A panelben a megosztás gomb a pillanatnyi állapot linkjét adja —
 `navigator.share`-rel, ahol van, különben vágólapra.
 
 ## „Itt vagyok" QR-kódok
@@ -411,7 +430,7 @@ python3 -m http.server 8000
 
 ```
 npm install     # playwright
-npm test        # mind a 25 tesztfájl
+npm test        # mind a 26 tesztfájl
 ```
 
 A tesztek maguk indítanak szervert és böngészőt szabad porton, így nem kell

@@ -8,9 +8,10 @@ const CACHE = "oemap-v4";
 const SHELL = [
   /* Az épület-nyilvántartás is a telepített készlet része: nélküle az
      épületválasztó offline el sem jelenik meg. Kicsi (12 KB), és a /data/
-     ágon amúgy is hálózat-először frissül. */
+     ágon amúgy is hálózat-először frissül. A választó térképe (helyek.json,
+     28 KB) ugyanígy: nélküle a választó listákkal működik, vele térképpel. */
   "./", "./index.html", "./manifest.webmanifest", "./data/termek.json",
-  "./data/epuletek.json",
+  "./data/epuletek.json", "./data/helyek.json",
   "./icons/icon-192.png", "./icons/icon-512.png",
   "./icons/icon-maskable-192.png", "./icons/icon-maskable-512.png",
   "./fonts/metropolis-latin-400-normal.woff2",

@@ -1,8 +1,8 @@
 /* Épületválasztó: az egyetem mind a 39 épülete bekerül, de megnyitni csak azt
    lehet, aminek kész az adata (most hetet). Három dolgot őriz ez a fájl.
 
-   Az egyik, hogy a lista NEM mossa össze a kettőt: aminek nincs alaprajza, az
-   látszik (cím, szintek, helyiségek), de nem nyitható meg — különben a
+   Az egyik, hogy a választó NEM mossa össze a kettőt: aminek nincs alaprajza,
+   az látszik (cím, szintek, helyiségek), de nem nyitható meg — különben a
    hallgató hiába kattintana rá, és azt hinné, elromlott az app. Ha pedig ki
    sem írnánk, azt hihetné, nincs is ilyen épület.
 
@@ -12,32 +12,42 @@
    épületnév marad — pontosan a nyilvántartás előtti viselkedés.
 
    A harmadik, hogy a váltás a teljes állapotot újraépíti: ezt valódi
-   épületeken mért aranyértékekkel nézzük (lent). */
+   épületeken mért aranyértékekkel nézzük (lent). A térkép maga, az
+   alapértelmezett épület és a GPS-javaslat a tests/valaszto.js-ben. */
 const { run, open, DESKTOP } = require("./lib");
 
-const lista = page => page.evaluate(() => {
-  const sorok = [...document.querySelectorAll("#epvlist .epvrow")];
-  return {
-    nyitva: document.getElementById("epvlist").classList.contains("open"),
-    gomb: !document.getElementById("epvBtn").hidden,
-    statikus: !document.getElementById("epvStat").hidden,
-    nev: document.getElementById("epvNev").textContent.trim(),
-    db: sorok.length,
-    telephely: [...document.querySelectorAll("#epvlist h4")].map(h => h.textContent.trim()),
-    nyithato: sorok.filter(b => !b.classList.contains("off")).map(b => b.dataset.ep),
-    itt: sorok.filter(b => b.getAttribute("aria-current") === "true").map(b => b.dataset.ep),
-    tiltott: sorok.filter(b => b.getAttribute("aria-disabled") === "true").length,
-    szoveg: Object.fromEntries(sorok.map(b => [b.dataset.ep, b.textContent.replace(/\s+/g, " ").trim()])),
-    uzenet: (document.getElementById("epvMsg") || {}).hidden === false
-      ? document.getElementById("epvMsg").textContent.trim() : ""
-  };
-});
+/* A választó Magyarország térképéről indul: település → épület. A felületet
+   úgy járjuk be, ahogy a hallgató: a településsorokra kattintva, és minden
+   településen összeszedjük az épületsorokat. Így az is kiderül, ha egy épület
+   egyik településhez sem kerülne (és sehonnan nem lehetne elérni). */
+const allapot = page => page.evaluate(() => ({
+  nyitva: document.getElementById("epvlist").open,
+  gomb: !document.getElementById("epvBtn").hidden,
+  statikus: !document.getElementById("epvStat").hidden,
+  nev: document.getElementById("epvNev").textContent.trim(),
+  cim: ((document.getElementById("epvCim") || {}).textContent || "").trim(),
+  telepulesek: [...document.querySelectorAll('#epvlist .epvsor[data-epv^="tel:"]')].map(b => b.dataset.epv.slice(4)),
+  uzenet: (document.getElementById("epvMsg") || {}).hidden === false
+    ? document.getElementById("epvMsg").textContent.trim() : ""
+}));
+const sorok = page => page.evaluate(() => [...document.querySelectorAll("#epvlist .epvrow")].map(b => ({
+  kod: b.dataset.ep, off: b.classList.contains("off"), most: b.getAttribute("aria-current") === "true",
+  szoveg: b.textContent.replace(/\s+/g, " ").trim() })));
+async function bejar(page) {
+  const { telepulesek } = await allapot(page), ki = {};
+  for (const tl of telepulesek) {
+    await page.click(`#epvlist [data-epv="tel:${tl}"]`); await page.waitForTimeout(80);
+    for (const s of await sorok(page)) (ki[s.kod] = ki[s.kod] || []).push({ ...s, tel: tl });
+    await page.click('#epvlist [data-epv="vissza"]'); await page.waitForTimeout(80);
+  }
+  return ki;
+}
 
 run("épületválasztó", async ({ t, ctx, browser, base }) => {
   const p = await open(ctx, base);
 
   // a nyilvántartás megjött: a gomb veszi át a statikus név helyét
-  let L = await lista(p);
+  let L = await allapot(p);
   t("a nyilvántartás betöltött, és a gomb vette át a fejlécet",
     L.gomb && !L.statikus, `gomb=${L.gomb}, statikus=${L.statikus}`);
   t("a gomb a mostani épületet mutatja", L.nev === "OA épület", L.nev);
@@ -45,13 +55,10 @@ run("épületválasztó", async ({ t, ctx, browser, base }) => {
 
   await p.click("#epvBtn");
   await p.waitForTimeout(250);
-  L = await lista(p);
-  t("kattintásra kinyílik", L.nyitva);
-  t("mind a 39 épület bent van", L.db === 39, L.db + " sor");
-  t("telephely szerint csoportosít", L.telephely.length === 8,
-    L.telephely.join(" | "));
-  t("a Bécsi úti telephely is ott van",
-    L.telephely.some(s => /1034/.test(s)), L.telephely.join(" | "));
+  L = await allapot(p);
+  t("kattintásra kinyílik, Magyarországgal", L.nyitva && L.cim === "Épület választása", L.cim);
+  t("a települések: Budapest, Székesfehérvár, Nagymaros és a hely nélküliek",
+    L.telepulesek.join("|") === "Budapest|Székesfehérvár|Nagymaros|", L.telepulesek.join("|"));
 
   /* Ez a lényeg: akinek kész az adata, az megnyitható, a többi csak adatlap.
      A listát nem írjuk be kézzel — az épületek száma nő, ahogy a geometriájuk
@@ -61,56 +68,80 @@ run("épületválasztó", async ({ t, ctx, browser, base }) => {
     require("path").join(__dirname, "..", "data", "epuletek.json"), "utf8"));
   const navReg = Object.values(reg.epuletek).filter(e => e.navigalhato)
     .map(e => e.kod).sort();
-  // a lista telephely szerint csoportosít, nem ábécé szerint: a halmaz számít
+  const B = await bejar(p);
+  const egyszer = Object.keys(B).filter(k => B[k].length === 1);
+  t("mind a 39 épület pontosan egy településnél van (sehonnan nem hiányzik, kétszer sem áll)",
+    Object.keys(reg.epuletek).every(k => B[k] && B[k].length === 1) && egyszer.length === 39,
+    Object.keys(reg.epuletek).filter(k => !B[k] || B[k].length !== 1).join(", ") || egyszer.length);
+  const sor = k => (B[k] || [{}])[0];
   t.eq("pontosan a nyilvántartás szerinti épületek nyithatók meg",
-    L.nyithato.slice().sort(), navReg);
-  t.eq("és az OA van megjelölve mostaniként", L.itt, ["OA"]);
-  t("a többi sor tiltott", L.tiltott === L.db - navReg.length,
-    `${L.tiltott} tiltott, ${L.db} sorból ${navReg.length} nyitható`);
-
-  t("az OA sora az „itt vagy”-ot mondja", /itt vagy/.test(L.szoveg.OA || ""), L.szoveg.OA);
-  t("az OD soráról lekerült az „alaprajz még nincs”",
-    !/alaprajz még nincs/.test(L.szoveg.OD || ""), L.szoveg.OD);
+    Object.keys(B).filter(k => !sor(k).off).sort(), navReg);
+  t.eq("és az OA van megjelölve mostaniként", Object.keys(B).filter(k => sor(k).most), ["OA"]);
+  t("az OA sora mondja, hogy most az van nyitva", /most ez van nyitva/.test(sor("OA").szoveg || ""), sor("OA").szoveg);
+  t("az OD sorában nincs „alaprajz még nincs”", !/alaprajz még nincs/.test(sor("OD").szoveg || ""), sor("OD").szoveg);
   /* SA-nak csak helyszínrajza van, alaprajza sosem lesz ezekből a forrásokból:
      ezért biztos mérce arra, hogy a „nincs alaprajz” állapot kiíródik. */
-  t("akinek nincs adata, annál ott marad (SA)",
-    /alaprajz még nincs/.test(L.szoveg.SA || ""), L.szoveg.SA);
-
+  t("akinek nincs adata, annál ott áll (SA), és a hely nélküliek közt van",
+    /alaprajz még nincs/.test(sor("SA").szoveg || "") && sor("SA").tel === "", JSON.stringify(sor("SA")));
   // a Tervtár adatai: cím, szint, helyiség — ezért érdemes kiírni a sort
-  t("az OD sorában ott a címe és a méretei",
-    /Doberdó/.test(L.szoveg.OD || "") && /9 szint/.test(L.szoveg.OD || "")
-      && /231 helyiség/.test(L.szoveg.OD || ""), L.szoveg.OD);
-  t("amiről csak helyszínrajz van, az is ott van (SA)",
-    !!L.szoveg.SA && /alaprajz még nincs/.test(L.szoveg.SA), L.szoveg.SA);
+  t("az OD sorában ott a címe és a méretei, és Budapestnél áll",
+    /Doberdó/.test(sor("OD").szoveg || "") && /9 szint/.test(sor("OD").szoveg || "")
+      && /231 helyiség/.test(sor("OD").szoveg || "") && sor("OD").tel === "Budapest", JSON.stringify(sor("OD")));
 
-  // a megnyitható sor bezárja a listát (ma ez mindig a mostani épület)
+  /* Ami nem nyitható meg, annak az adatlapja jön (cím, szintek), megnyitó gomb
+     nélkül; különben a hallgató hiába kattintana, és azt hinné, elromlott. */
+  await p.click('#epvlist [data-epv="tel:Budapest"]'); await p.waitForTimeout(100);
+  await p.click('#epvlist .epvrow[data-ep="KB"]'); await p.waitForTimeout(150);
+  const kb = await p.evaluate(() => ({ cim: document.getElementById("epvCim").textContent,
+    nyit: !!document.querySelector('#epvlist [data-epv^="nyit:"]'), alap: !!document.querySelector('#epvlist [data-epv^="alap:"]'),
+    szoveg: document.querySelector("#epvlist .epvkartya").textContent.replace(/\s+/g, " ") }));
+  t("a megnyithatatlan épület sora az adatlapját nyitja, megnyitó és alapértelmezett-gomb nélkül",
+    kb.cim === "KB épület" && !kb.nyit && !kb.alap && /Bécsi út 104/.test(kb.szoveg) && /nincs alaprajz/.test(kb.szoveg), JSON.stringify(kb));
+  t("és az épület semmit nem váltott", (await p.evaluate(() => epItt())) === "OA");
+
+  // a megnyitható sor bezárja a választót (ma ez a mostani épület)
+  await p.click('#epvlist [data-epv="vissza"]'); await p.waitForTimeout(100);
   await p.click('#epvlist .epvrow[data-ep="OA"]');
   await p.waitForTimeout(250);
-  t("a megnyitható sorra kattintva bezárul", !(await lista(p)).nyitva);
+  t("a mostani épület sorára kattintva bezárul", !(await allapot(p)).nyitva);
 
-  // Escape és kívülre kattintás is zár
+  /* Az Esc csak az ablakot zárja: a kiválasztott terem marad. Korábban a lista
+     Esc-je a globális kezelőig jutott, és a termet is törölte. */
+  await p.evaluate(() => select("OA10E18")); await p.waitForTimeout(150);
   await p.click("#epvBtn"); await p.waitForTimeout(200);
   await p.keyboard.press("Escape"); await p.waitForTimeout(200);
-  t("Escape zárja", !(await lista(p)).nyitva);
+  const esc = await p.evaluate(() => ({ nyitva: document.getElementById("epvlist").open, sel: S.sel,
+    fokusz: document.activeElement && document.activeElement.id }));
+  t("Escape zárja, a kiválasztott terem marad, a fókusz a gombra kerül vissza",
+    !esc.nyitva && esc.sel === "OA10E18" && esc.fokusz === "epvBtn", JSON.stringify(esc));
+  // a háttérre kattintva is zár (asztalon a doboz körül; telefonon a doboz az egész kép, ott a ×)
+  await p.click("#epvBtn"); await p.waitForTimeout(200);
+  await p.click('#epvlist [data-epv="zar"]'); await p.waitForTimeout(200);
+  t("a × zárja", !(await allapot(p)).nyitva);
 
   // nyelvvel együtt újraépül
+  await p.click("#langEn").catch(() => p.evaluate(() => { S.lang = "en"; applyLang(); }));
+  await p.evaluate(() => { if (S.lang !== "en") { S.lang = "en"; applyLang(); } });
   await p.click("#epvBtn"); await p.waitForTimeout(150);
-  await p.click("#langEn"); await p.waitForTimeout(250);
-  L = await lista(p);
-  t("angolul is a saját szövegét adja",
-    /no floor plan yet/.test(L.szoveg.SA || ""), L.szoveg.SA);
-  await p.click("#langHu"); await p.waitForTimeout(200);
+  await p.click('#epvlist [data-epv="tel:"]'); await p.waitForTimeout(150);
+  const en = await p.evaluate(() => ({ cim: document.getElementById("epvCim").textContent,
+    sa: (document.querySelector('#epvlist .epvrow[data-ep="SA"]') || {}).textContent || "" }));
+  t("angolul is a saját szövegét adja", en.cim === "No location" && /no floor plan yet/.test(en.sa), JSON.stringify(en));
+  await p.click('#epvlist [data-epv="zar"]'); await p.waitForTimeout(150);
+  await p.evaluate(() => { S.lang = "hu"; applyLang(); });
+  t("nincs JS hiba a választóban", p.jsErrors.length === 0, p.jsErrors.join(" | "));
   await p.close();
 
   /* Egy másik épület helyiségkódjára mutató link eddig csendben eltűnt: az
      applyUrl() elhagyta az ismeretlen kódot, és a hallgató ugyanezt az
      alaprajzot látta, minden jelzés nélkül. Amelyik épület nem nyitható meg,
-     ott legalább megnevezzük. */
+     ott legalább megnevezzük, és az adatlapját mutatjuk. */
   const p2 = await open(ctx, base + "#SA00F01");
-  const L2 = await lista(p2);
-  t("nem megnyitható épület kódjára mutató link megnyitja a listát", L2.nyitva);
-  t("és megmondja, melyik épületé a kód",
-    /SA épület/.test(L2.uzenet), L2.uzenet || "(nincs üzenet)");
+  await p2.waitForFunction(() => document.getElementById("epvlist").open, null, { timeout: 8000 }).catch(() => {});
+  const L2 = await allapot(p2);
+  t("nem megnyitható épület kódjára mutató link megnyitja a választót", L2.nyitva);
+  t("és megmondja, melyik épületé a kód", /SA épület/.test(L2.uzenet), L2.uzenet || "(nincs üzenet)");
+  t("az adatlapján", L2.cim === "SA épület", L2.cim);
   t("a saját alaprajz közben megmarad",
     (await p2.evaluate(() => document.querySelectorAll(".floor").length)) > 0);
   t("nincs JS hiba a linkes úton", p2.jsErrors.length === 0, p2.jsErrors.join(" | "));
@@ -170,8 +201,11 @@ run("épületválasztó", async ({ t, ctx, browser, base }) => {
   const kesz = (pg, kod) => pg.waitForFunction(k => epItt() === k && !epvTolt &&
       [...document.querySelectorAll(".floor")].map(f => f.dataset.lv).join() === LV.join(),
     kod, { timeout: 15000 }).then(() => pg.waitForTimeout(300).then(() => true), () => false);
+  // a felületen át: a település sora, aztán az épületé (ami megnyitható, rögtön nyílik)
   const valtUI = async (pg, kod) => {
     await pg.click("#epvBtn"); await pg.waitForTimeout(200);
+    const tel = await pg.evaluate(k => epvTel(EPULETEK.epuletek[k]), kod);
+    await pg.click(`#epvlist [data-epv="tel:${tel}"]`); await pg.waitForTimeout(100);
     await pg.click(`#epvlist .epvrow[data-ep="${kod}"]`);
     return kesz(pg, kod);
   };
@@ -186,7 +220,7 @@ run("épületválasztó", async ({ t, ctx, browser, base }) => {
       el: elek(PORTAL), lel: elek(PORTAL_LIFT),
       graf: [...PORTAL].map(([c, v]) => c + ":" + v.length).sort().join(","),
       szint: S.level, szintek: LV.join(","), rail: document.getElementById("rail").children.length,
-      itt: [...document.querySelectorAll('#epvlist .epvrow[aria-current="true"]')].map(b => b.dataset.ep).join(),
+      itt: epItt(),
       aktivLatszik: !!(FLOOR[S.level] && FLOOR[S.level].box.isConnected
         && FLOOR[S.level].box.getAttribute("aria-hidden") !== "true") };
   });
@@ -230,7 +264,7 @@ run("épületválasztó", async ({ t, ctx, browser, base }) => {
   await valtUI(p4, "OD");
   const u = await p4.evaluate(() => ({
     nev: document.getElementById("epvNev").textContent.trim(),
-    from: S.from, to: S.to, hash: location.hash, lista: document.getElementById("epvlist").classList.contains("open")
+    from: S.from, to: S.to, hash: location.hash, lista: document.getElementById("epvlist").open
   }));
   t("a váltás után az OD van betöltve", (await epOf(p4)) === "OD", await epOf(p4));
   t("a fejléc az új épületet mondja", /OD/.test(u.nev), u.nev);
@@ -397,11 +431,12 @@ run("épületválasztó", async ({ t, ctx, browser, base }) => {
   await p4.evaluate(() => { PORTA.OC = "OCX1A02";
     EPULETEK.epuletek.OC.navigalhato = true; epvRender(); });
   await p4.click("#epvBtn"); await p4.waitForTimeout(250);
+  await p4.click('#epvlist [data-epv="tel:Budapest"]'); await p4.waitForTimeout(100);
   await p4.click('#epvlist .epvrow[data-ep="OC"]');
   // a hibaüzenetet várjuk meg, nem egy rögzített időt: a lassú gépen a letöltés tovább tart
   await p4.waitForFunction(() => { const m = document.getElementById("epvMsg"); return m && !m.hidden && m.textContent.trim(); },
     null, { timeout: 15000 }).catch(() => {});
-  const L4 = await lista(p4);
+  const L4 = await allapot(p4);
   t("hiányos adattal nem vált át", (await epOf(p4)) === "OA", await epOf(p4));
   t("és megmondja, hogy nem érhető el",
     /nem érhető el/.test(L4.uzenet), L4.uzenet || "(nincs üzenet)");
@@ -409,7 +444,7 @@ run("épületválasztó", async ({ t, ctx, browser, base }) => {
   await p4.evaluate(() => { S.lang = "en"; applyLang(); epuletValt("OC"); });
   await p4.waitForFunction(() => /building OC/.test((document.getElementById("epvMsg") || {}).textContent || ""),
     null, { timeout: 15000 }).catch(() => {});
-  const L4en = await lista(p4);
+  const L4en = await allapot(p4);
   await p4.evaluate(() => { S.lang = "hu"; applyLang(); });
   t("angolul is: „The floor plan of building OC is not available…”", /^The floor plan of building OC is not available/.test(L4en.uzenet),
     L4en.uzenet || "(nincs üzenet)");
@@ -425,7 +460,7 @@ run("épületválasztó", async ({ t, ctx, browser, base }) => {
   const ctx3 = await browser.newContext({ ...DESKTOP, serviceWorkers: "block" });
   await ctx3.route("**/data/epuletek.json", r => r.fulfill({ status: 404, body: "" }));
   const p3 = await open(ctx3, base);
-  const L3 = await lista(p3);
+  const L3 = await allapot(p3);
   t("nyilvántartás nélkül nincs gomb, marad a statikus név",
     !L3.gomb && L3.statikus, `gomb=${L3.gomb}, statikus=${L3.statikus}`);
   t("és az app ettől még elindul",

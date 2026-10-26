@@ -6,6 +6,10 @@
 const { run } = require("./lib");
 
 run("telefonos mérőlap", async ({ t, ctx, url }) => {
+  /* A mérőlap az OA-n mér (hét szint, lent kéri). Egy beállított
+     alapértelmezett épület (ugyanaz az origin, ugyanaz a localStorage) ezt
+     csendben a saját épületére cserélte volna. */
+  await ctx.addInitScript(() => { try { localStorage.setItem("oemap-alap", "OD"); } catch (e) {} });
   const p = await ctx.newPage(), errs = [];
   p.on("pageerror", e => errs.push(e.message));
   await p.goto(url + "meres.html?korok=1&lepes=3", { waitUntil: "load" });

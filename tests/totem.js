@@ -57,6 +57,35 @@ run("totem-mód", async ({ t, ctx, base }) => {
   t("a felület is magyarul áll, a gyorsgombokkal", /helyiség/.test(panel.cim) && panel.gyors && panel.angol === "false",
     JSON.stringify(panel));
 
+  /* Az épületválasztó modális, és telefonnyi szélességen az egész képernyő:
+     nyitva hagyva a következő látogató az előző választóját látta volna a
+     térkép helyett. A totem közös készülék, ezért alapértelmezett épületet és
+     GPS-t nem kínál, és a forrásmegjelölés nem visz el a kioszkról. */
+  await p.waitForFunction(() => EPULETEK && HELYEK, null, { timeout: 10000 });
+  await p.click("#epvBtn"); await p.waitForTimeout(300);
+  const valaszto = await p.evaluate(() => ({ doboz: !!document.querySelector("#epvlist .epvdoboz"),
+    gps: !!document.querySelector('#epvlist [data-epv="gps"]'), link: !!document.querySelector("#epvlist .epvforras a"),
+    forras: (document.querySelector("#epvlist .epvforras") || {}).textContent || "" }));
+  t("a totem választójában nincs alapértelmezett és GPS, a forrás (OSM, ODbL) szöveg, nem hivatkozás",
+    !valaszto.doboz && !valaszto.gps && !valaszto.link && /OpenStreetMap/.test(valaszto.forras) && /ODbL/.test(valaszto.forras),
+    JSON.stringify(valaszto));
+  await p.click('#epvlist .epvsor[data-epv="tel:Budapest"]'); await p.waitForTimeout(200);
+  await p.click('#epvlist [data-epv="kartya:OD"]'); await p.waitForTimeout(200);
+  t("az adatlapon sincs „Legyen ez az alapértelmezett”", await p.evaluate(() => !document.querySelector('#epvlist [data-epv^="alap:"]')));
+  await p.mouse.move(700, 400);
+  await p.clock.fastForward(51000); await p.waitForTimeout(300);
+  /* A felirat nem kap kattintást (pointer-events:none), így az elementFromPoint
+     sosem találná meg: a mérés idejére visszakapcsoljuk — a találat sorrendje a
+     rajzolásé, ebből látszik, mi van felül. */
+  const figyel = await p.evaluate(() => { const el = document.querySelector("#toast.on"); if (!el) return "nincs";
+    el.style.pointerEvents = "auto";
+    const r = el.getBoundingClientRect(), x = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+    el.style.pointerEvents = "";
+    return x && (x === el || el.contains(x)) ? "látszik" : "takarja: " + (x && x.className); });
+  t("a nyitott választó fölött is látszik, hogy 10 másodperc múlva visszaáll", figyel === "látszik", figyel);
+  await p.clock.fastForward(10000); await p.waitForTimeout(1500);
+  t("egy perc tétlenség után a választó is bezárul", await p.evaluate(() => !document.getElementById("epvlist").open));
+
   // gesztus közben soha: a lenyomott, mozgó egér alatt nem áll vissza
   await hasznal(p);
   const box = await p.evaluate(() => { const b = document.getElementById("stage").getBoundingClientRect();

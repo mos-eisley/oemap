@@ -7,7 +7,7 @@ hogy mi a következő lépés.
 
 Állapot (2026-10-20, egy teljes átnézés és javítás után): **39 épület a
 nyilvántartásban, ebből 7 megnyitható** (OA, OD, FF, FK, KH, KT, OC),
-összesen 1515 helyiséggel. Mind a 25 tesztfájl zöld.
+összesen 1515 helyiséggel. Mind a 26 tesztfájl zöld.
 
 ## Egy mondatban
 
@@ -19,10 +19,26 @@ adata — és a `PORTA` táblában a portája —, az megnyithatóvá válik.
 
 **Az app oldalán** (`index.html`):
 
-- **Épületválasztó**: a fejléc épületneve a nyitógomb, a lista a cím
-  irányítószáma szerint csoportosít. Aminek kész az adata, az megnyitható; a
-  többi adatlap (cím, szintek, helyiségszám, terület). A kettőt nem szabad
-  összemosni.
+- **Épületválasztó, térképpel** (2026-10-26): a fejléc épületneve a
+  nyitógomb, egy modális ablakot nyit. Magyarország térképe a települések
+  jelölőivel → a település térképe az épületekkel a valódi helyükön
+  (Budapesten kerületenként csoportosítva) → az épület. Mellette mindig a
+  lista. Aminek kész az adata, az megnyitható; a többi adatlap (cím, szintek,
+  helyiségszám, terület, kar). A kettőt nem szabad összemosni.
+- **Az épületek helye** a `data/helyek.json` (`tools/helyek.py`): 32 épület az
+  OSM-ből (Nominatim, kézzel rögzített OSM-azonosítókkal), a közös telken
+  állóknál a helyszínrajzokból számolt eltolással; hét épületnek (FA, FB, KM,
+  SA, SB, SC, UV) nincs helye. Az FC és az FS nem különíthető el (közös pont),
+  az OB becsült. A térkép ODbL-es, a forrásmegjelölés a választó alján.
+- **Alapértelmezett épület** (`localStorage`): induláskor ez nyílik meg, a
+  fejléc házikója visszavisz rá; a link, a totem, a párosító és a mérő mód
+  előbbre való, és amit a hallgató a betöltés közben választ, az is. A
+  totemen nincs. **GPS-javaslat** koppintásra: a legközelebbi épület az
+  OSM-körvonaltól mérve, 250 m-en belül.
+- Az átnézésben (2026-10-26) talált hibák a választóban mind javítva, köztük
+  a korábban itt nyitottként felsorolt **két épületet vegyítő link** végtelen
+  ingázása (`#from=OD…&to=OA…`) is: most egyszer vált, a másik épület kódja
+  elmarad.
 - **Futásidejű épületváltás**: a `D`-ből huszonkét modulszintű érték épül, és
   váltáskor mind újraépül öt függvénnyel (`epuletGeo`, `epuletStart`,
   `epuletRacs`, `epuletRcell`, `epuletPortal`). A részletek és a buktatók a
@@ -47,7 +63,7 @@ visszarontva a teszt elbukik); az eszközök javítása nem, lásd a pont végé
   `tests/pwa.js`: hibát, átirányítást és megszakadó telepítést adó saját
   szerverrel; a „hálózat nélküli” próbák a service worker saját kéréseit is
   elvágják, mert a `setOffline` magában azokat nem mind).
-- **A deploy engedélylistát publikál** (`tools/pages-csomag.js`, 31 fájl,
+- **A deploy engedélylistát publikál** (`tools/pages-csomag.js`, 32 fájl,
   `tests/csomag.js`), nem a repó gyökerét a `forras/` nélkül. Az összeállító
   azt is ellenőrzi, hogy minden, amire a lapok és a manifest hivatkoznak,
   bekerült-e (az `icon-180.png`-t a böngészős teszt nem kéri le), és nem ír
@@ -291,18 +307,10 @@ de új funkció.
 Ezek az átnézésben megerősített hibák, súlyosság szerint; egyik sem az OA
 alapműködését érinti.
 
-- **Két épület kódját vegyítő link** (`#from=OD00F01&to=OA10E18`) végtelen
-  épület-ingázást indít (8 s alatt 57 letöltés, a history megtelik). Az app
-  maga ilyen linket nem állít elő.
 - **A választott épület nincs a címben**: újratöltéskor, a lap eldobása vagy
-  a PWA újraindítása után mindig az OA jön (a kiválasztott terem kódja
-  visszavisz). Totem módban ez helyes, máshol nem.
-- **A választó kezelése**: a zárt lista 39 láthatatlan tab-állomás (és a
-  felolvasó is látja); billentyűs váltás után a fókusz a `<body>`-ra esik; az
-  Esc a nyitott listával együtt a kiválasztott termet is törli; telefonon
-  teljes panelállásban az alsó panel eltakarja a listát; nincs töltésjelzés,
-  és egy soha le nem záruló kérés a választót az újratöltésig letiltja; a nem
-  megnyitható sorok kattinthatónak látszanak.
+  a PWA újraindítása után az alapértelmezett épület jön (ha nincs beállítva,
+  az OA), nem az utoljára nézett (a kiválasztott terem kódja visszavisz).
+  Totem módban ez helyes; máshol az alapértelmezett épület enyhíti.
 - **A Büfé gomb csak a pontosan „BÜFÉ” nevű helyiséget ismeri**: ma az OA-ban
   és az FK-ban (`FKX1P10`) van kint, a KT kávézója (és más néven futó büfé)
   nem számít.
@@ -372,7 +380,7 @@ Ezeket ne kelljen újra végiggondolni:
 git clone <repó>
 npm install                               # playwright
 pip install -r tools/requirements.txt     # a tools/ szkriptjeihez
-npm test                                  # mind a 25 tesztfájl
+npm test                                  # mind a 26 tesztfájl
 node tools/epulet-ellenoriz.js            # minden megnyitható épület mérése
 ```
 

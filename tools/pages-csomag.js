@@ -23,7 +23,7 @@ const fs = require("fs"), path = require("path");
 const ROOT = path.resolve(__dirname, "..");
 // egyenként felsorolt fájlok, és könyvtárak a bennük engedett fájlfajtákkal
 const FAJLOK = ["index.html", "sw.js", "manifest.webmanifest", "meres.html",
-                "data/termek.json", "data/epuletek.json"];
+                "data/termek.json", "data/epuletek.json", "data/helyek.json"];
 const KONYVTARAK = [["icons", /\.png$/], ["fonts", /\.(woff2|txt)$/], ["data/epuletek", /\.json$/]];
 /* Második védvonal, ha valaki a fenti listába mégis belső fájlt venne fel:
    ezek a fájlfajták és a forras/ biztosan nem mehetnek ki. Egy forras/-on

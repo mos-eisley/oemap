@@ -226,12 +226,14 @@ mindkét érték jobb, és a kettő aránya is eltolódhat. Mielőtt a fenti
 döntést meghozzuk, érdemes valódi eszközön megmérni.
 
 **Épületválasztó.** A meetingen eldőlt, hogy GPS-alapú épületválasztó kell,
-ha lesz több épület. Most hét épület nyitható meg, és van választó — de
-listából, nem GPS-ből: a fejléc épületneve a nyitógomb (lásd `docs/ATADAS.md`).
-A GPS-es kiválasztás tehát még hátravan; a helyszínrajzokból 34 épület helye
-megvan méterben (`forras/kivonat/helyszinrajz.json`), de egy lapon belüli
-koordinátaként, nem földrajzi helyként. A beltéri „hol vagyok?" kérdést a
-QR-kódok már megoldják.
+ha lesz több épület. Ez elkészült (2026-10-26): a választó térképes, és a
+„Hol vagyok?" gomb a GPS alapján a legközelebbi épületet ajánlja. Az épületek
+földrajzi helye az OpenStreetMapből jön (`data/helyek.json`, 32 épület); hét
+épületé (FA, FB, KM, SA, SB, SC, UV) se ott, se a helyszínrajzokon nem
+azonosítható, és az FC meg az FS egy telken, közös ponton áll — **ezek helyét a
+helyszínen vagy az üzemeltetéstől kellene megtudni**. A beltéri „hol vagyok?"
+kérdést (emelet, terem) továbbra is a QR-kódok oldják meg: a GPS ott tíz
+métereket téved.
 
 ---
 

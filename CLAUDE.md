@@ -47,13 +47,133 @@ aktuális épület nem az `S`-ben van, hanem a `D`-ben és a `ROOM`-ban (`epItt(
 **A `D` EGY épület, az egyetemnek viszont 39 van.** A `data/epuletek.json`
 (12 KB, `tools/tervlap-epuletek.py`) a nyilvántartás mind a 39-ről: név, cím,
 telephely, szintek és helyiségek száma, terület. A fejléc épületneve maga a
-választógomb, a lista telephely szerint csoportosít — és **nem mossa össze a
+választógomb — és a választó **nem mossa össze a
 „van alaprajza” és a „létezik” állapotot**: amelyik épületnek nincs geometriája
 az appban, az adatlapként látszik, megnyitás nélkül (`navigalhato` — ezt a
 `tervlap-epuletek.py` abból állítja elő, hogy létezik-e a
 `data/epuletek/<kód>.json`, nem kézi listából). Ha ki sem
 írnánk, a hallgató azt hihetné, nincs is ilyen épület; ha megnyithatónak
 látszana, hiába kattintana.
+
+**A választó térképes** (`epvRender()`, egy natív `<dialog>`): Magyarország
+térképe a települések jelölőivel, egy településre koppintva annak térképe az
+épületekkel a valódi helyükön. Budapesten a jelölők kerületenként (az
+irányítószám 2–3. jegye), máshol 80 egységen belül egy csoportba állnak; a
+jelölőre koppintva a lista a csoport épületeire szűkül, és az épület sora
+nyitja meg az alaprajzot (vagy az adatlapot). A térkép mellett mindig ott a
+lista is, ugyanazokkal a sorokkal; fekvő telefonon is egymás mellett, mert
+egymás alatt a négyzetes Budapest-térkép két képernyőnyi lett. A helyek a `data/helyek.json`-ból
+jönnek (28 KB, `tools/helyek.py`): az OSM épületkörvonalai és címpontjai
+(Nominatim), a közös telken álló épületeknél a helyszínrajzokból számolt
+eltolással, a határ, a Duna és a Margit-sziget egyszerűsítve. Amit tudni kell:
+- **A térkép OSM-adat, tehát kötelező a forrásmegjelölés**, a licenccel:
+  „© OpenStreetMap-közreműködők (ODbL)”, a választó alján (`.epvforras`),
+  az openstreetmap.org/copyright oldalra mutatva. **A totemen nem
+  hivatkozás** (`epvOsm()`): egy koppintás elvinné a kioszkot az appról, és
+  onnan a tétlenségi alaphelyzet már nem hozná vissza.
+- **A címkék helyét a kirajzolt képen méri** (`epvCimkek()`: jobbra, balra,
+  fölé vagy alá, az első helyre, ahol nem takar jelet vagy címkét és nem lóg
+  ki). Egy becsült térképszélesség (asztalon 620 px) alacsony ablakban, ahol a
+  magasság köti a térképet, a felére tévedett, és a címkék a szomszéd jelére
+  estek. Zárt `<dialog>` nem mérhető, ezért a megnyitás, minden újrarajzolás
+  és átméretezés után fut. A `tests/valaszto.js` hat képernyőméreten,
+  mindhárom térképen nézi.
+- **Hét épületnek nincs helye** (FA, FB, KM, SA, SB, SC, UV): se OSM-ben, se a
+  helyszínrajzokon nem azonosítható. Ezek a listában „Hely nélkül” alatt
+  állnak, a térképen nem. Az OB helye becsült (a szomszédos házszámokból), az
+  FC és az FS ugyanazon a telken áll, közös ponton (`pont:"telek"`), a BC és a
+  BD címpont. A `pont` mező mondja meg, melyik melyik.
+- **Az OSM a Neptun-kódokat használja** („… (BA épület)”), nem a tervtáriakat:
+  az OA ott BA. Ezért a `helyek.py` OSM-azonosítókat rögzít kézzel (`OSM`
+  tábla), nem név szerint keres; az FK és az FF párosítását a h12-es
+  helyszínrajz dönti el (3,3 m eltérés, fordítva 171 m — a futás kiírja, és
+  elbukik, ha nem így jön ki).
+- **`helyek.json` nélkül csak a lista van** (`.epvtest.egy`): a fájl
+  hálózat-először jön, első offline indulásra hiányozhat.
+- **GPS csak koppintásra** (`epvGps()`, „Hol vagyok?”): az engedélykérés nem
+  ugorhat fel magától. A távolság az OSM-körvonaltól számít (benne 0),
+  különben a ponttól; 250 m-en belül javasol, azon túl a legközelebbit
+  távolsággal mondja. Csak javasol: beltérben a GPS tíz métereket téved, a
+  pontos helyet a QR-kód adja. Minden kérésnek sorszáma van: a bezárt
+  választónál késve érkező helyet eldobja (különben órákkal később egy régi
+  „a közeledben” jött elő). A gomb és az eredmény ugyanazt az id-t kapja
+  (`epvGps`), így a fókusz az eredményre megy át — előtte a Bezárásra esett, és
+  a következő Enter bezárta a választót; a javaslat megnyitó gombja is saját
+  id-t kap (`epvGpsNyit`), mert az alapértelmezett doboz gombja ugyanazt a
+  `data-epv`-t viseli. A totemen nincs GPS.
+- **Alapértelmezett épület** (`alapEpulet()`, `localStorage` `oemap-alap`):
+  az adatlapon állítható be, induláskor ez nyílik meg (csendben, felirattal),
+  és a fejléc házikója (`#epvHaza`) bárhonnan visszavisz rá. Nem nyit meg
+  induláskor, ha a cím mond valamit (hash, kiválasztás, indulás, cél), totem,
+  párosító vagy mérő (`?meres`) módban, és ha az adata nem jön le, az OA
+  marad. Ha a tároló nem érhető el, az OA az alapértelmezett. **A totem közös
+  készülék**: ott se házikó, se csillag, se alapértelmezett-doboz — egy arra
+  járó beállítása minden későbbi látogatónak megmaradna.
+- **A csendes betöltés alatt a hallgató az erősebb** (`epuletValt()`,
+  `epvKeres`): lassú hálózaton a betöltés másodpercekig tart. Egy közben
+  választott másik épület leváltja (a letöltést megszakítja), a házikó
+  ugyanarra az épületre kifejezetté teszi (nem tölt újra); ha pedig közben
+  termet választott, linket nyitott, nyitva a választó, vagy **bármilyen
+  valódi bevitel** volt (koppintás, csippentés, görgetés, billentyű, gépelés:
+  `epvHasznalt`), a csendes eredmény eldobódik (`epvMegelozte()`), és az
+  alapértelmezettre a házikó visz. Korábban a betöltés vége mindent
+  felülírt — a keze alól rántotta ki a képet, a keresőbe gépeltet törölte —,
+  és addig minden kifejezett váltást elnyelt. A csendes betöltést a választó
+  nem mutatja „Betöltés…”-nek (`epvToltKi()`): nyitott választónál úgyis
+  eldobódik, a hallgató hiába várna rá.
+- **Két kifejezett váltás közül az első nyer**: amíg egy fut (legfeljebb
+  20 s), a többi kérés elmarad, nem indul párhuzamos letöltés. A „Betöltés…”
+  minden gombon látszik, amelyik ezt az épületet nyitja (lista, adatlap, az
+  alapértelmezett doboza, a GPS-javaslat).
+- **Egy linkről indult váltás** (beírt cím, Vissza gomb) megjegyzi, honnan
+  indult (`ker.hely`): ha a hallgató a betöltés alatt továbblépett (termet
+  választott, másik címre ment), az eredmény eldobódik. Különben a késő
+  betöltés az újabb állapotát és — a link útján nincs közbülső bejegyzés —
+  az újabb history-bejegyzését is felülírta.
+- **Egy linkről indult, elakadt váltás** a címét megjegyzi (`epvUjra`): az
+  adatlapról újra megnyitva a QR-kód terme is kiválasztva nyílik. A cím a
+  hibát mutató választóhoz tartozik: bezárva elfelejtődik, különben órákkal
+  később egy régi QR-kód „itt vagyok”-ja jött vissza.
+- **Két épületet vegyítő link** (`#from=OD…&to=OA…`): visszajátszáskor a másik
+  épület kódja elmarad (`epvVisszajatszas`), nem indít újabb váltást —
+  korábban a két épület közt ingázott a végtelenségig. A link útján a váltás
+  nem tesz közbülső bejegyzést a history-ba, és utána a cím a tényleges
+  állapotot mondja (`urlOf()`): a bejegyzésben maradt idegen kód miatt a
+  Vissza gomb újra átváltott.
+- **A választó modális** (`showModal()`): a háttér inert, az Esc csak a
+  választót zárja (a globális billentyűkezelő ilyenkor kiszáll), a kijelölés
+  marad, a fókusz a nyitógombra tér vissza (ha az a gomb, ahonnan nyílt,
+  azóta rejtve van, a választó gombjára). A zárt választó nem tab-állomás.
+  Ami ebből következik:
+  - **A felirat (`toast()`) nyitott modális ablakban az ablakba kerül**:
+    a body-ban a felső réteg alatt állna (telefonon a választó az egész
+    képernyő), és a felolvasó sem mondaná be. Az `epvRender()` az
+    újrarajzoláskor visszateszi (ugyanaz az élő régió marad). Méréskor
+    vigyázz: a felirat `pointer-events:none`, az `elementFromPoint` sosem
+    találja meg — a mérés idejére kapcsold vissza.
+  - **A háttérre kattintás a hely szerint zár**, nem a cél szerint: telefonon
+    a teljes képernyős választó biztonsági sávja (a doboz saját margója) is a
+    `<dialog>` maga, és oda egy koppintás a semmiből bezárta. És csak ha a
+    lenyomás is kint volt (`epvLentKint`): a dobozban kezdett, kint
+    elengedett húzás (szövegjelölés) a böngészőnek a `<dialog>`-ra eső
+    kattintás.
+  - **Ugyanazon a nézeten újrarajzolva a görgetés marad** (töltés,
+    GPS-eredmény): az innerHTML a görgető dobozokat újraépíti, és a Safari a
+    megnyomott gombot nem fókuszálja, így a fókusz sem hozza vissza.
+  - **Fekvő telefonon** a térkép és a lista egymás mellett, egyetlen görgető
+    tömbben, a térkép ragad (`position:sticky`): két külön görgető oszlopnál
+    egy GPS-eredmény a listát nullára nyomta. A fekvő telefon nem csak a
+    900 px alatti: a nagy iPhone-ok és Pixelek fekve 915–956 px szélesek, ezért
+    a szabály a magasságra is figyel (`(orientation:landscape) and
+    (max-height:500px)`); a térkép magasságából a biztonsági sávok is levonódnak.
+  - **A totem alaphelyzete a választót is bezárja** (`totemAlap()`): nyitva
+    a következő látogató az előző választóját látta volna a térkép helyett.
+  - A térkép jele és a lista sora ugyanazt a `data-epv`-t viseli; a
+    `fokuszElotte()` a kettőt megkülönbözteti, különben újrarajzoláskor a
+    fókusz a sorról a jelre ugrott. Töltés közben a gomb `aria-disabled`,
+    nem `disabled`: a letiltott gombról a fókusz a `<body>`-ra esne.
+- Egy épület letöltése 20 s után feladja (`EPV_VARAKOZAS`), és üzenetet ad,
+  különben egy elakadt kérés örökre „Betöltés…”-en hagyná.
 
 A nyilvántartás a `/data/` ágon hálózat-először jön, tehát **meg sem érkezhet**
 (offline első indulás). Ezért a fejlécben a gomb mellett ott a statikus
@@ -289,7 +409,7 @@ vitte rossz helyre a hallgatót vagy hagyta segítség nélkül, mind javítva, 
 
 ```
 npm install          # playwright (a böngésző a képen már megvan)
-npm test             # mind a 25 tesztfájl
+npm test             # mind a 26 tesztfájl
 pip install -r tools/requirements.txt   # csak a tools/ szkriptjeihez
 node tests/run.js url share     # csak egy-kettő
 ```
@@ -320,10 +440,11 @@ hagytak egy hibás kódot.
 | `tests/lepcsok.js` | a lépcsőkarok rajza: minden lépcsőház minden szintváltásánál ott a kar, karonként egy kis path a falak alatt, és a vonalára kattintva a lépcsőház jön elő, nem törlődik a kijelölés |
 | `tests/ikonok.js` | mosdó-, lépcső- és liftjel: minden mosdón és lépcsőházon a jó jel, a teremszám helyett, a feliratpontján; Épület nézetben magonként egy jelvény, alapnagyításon mind kint, teremszámra nem lógva |
 | `tests/sharp.js` | Épület nézet asztalon, nagyítva: éles-e a kép, nem mozdul-e a sűrűségtől, nem vált-e mozgás közben, csak az aktív szintnél, telefonon és más motorban nem, Firefoxban a saját kódútján (3D-ben minden szint saját transzformmal, a lapos alaprajzon egyik sem) — **élesben bejelentett „irgalmatlan életlen" asztali 3D, Chrome-ban és Firefoxban, és a Firefoxos „éles, homályos, megint éles" váltás** |
-| `tests/totem.js` | totem mód: egy perc tétlenség után alaphelyzet, tíz másodperccel előtte szól, gesztus közben soha, naponta újratölt — a Playwright órájával, percekig várás nélkül; a link végére, a # után írt `?totem` is bekapcsolja — **élesben bejelentett: „nem működik az alaphelyzet"** |
+| `tests/totem.js` | totem mód: egy perc tétlenség után alaphelyzet, tíz másodperccel előtte szól, gesztus közben soha, naponta újratölt — a Playwright órájával, percekig várás nélkül; a nyitott épületválasztót is bezárja, a figyelmeztetés a választó fölött is látszik, a totem választójában nincs alapértelmezett, csillag és GPS, és a forrás nem hivatkozás; a link végére, a # után írt `?totem` is bekapcsolja — **élesben bejelentett: „nem működik az alaphelyzet"** |
 | `tests/kuld.js` | telefonra küldés: a QR-kódot a képernyőképből olvassa vissza (jsQR), a csendzónát és a sérült kódot külön méri, sötét témában is; a beolvasott link telefonon ugyanazt az útvonalat nyitja meg, lifttel; a totemről `?totem` nélkül |
-| `tests/meres.js` | a telefonos mérőlap (`meres.html`) végigfut a valódi appon |
-| `tests/epuletek.js` | épületválasztó és **épületváltás**: mind a 39 épület bent van, de csak az nyitható meg, aminek kész az adata; a Tervtár adatai a soron; más épület kódjára mutató link megnevezi az épületet, nem tűnik el csendben; a váltás mércéje **valódi épületeken mért aranyérték** (épületenként az elérhetetlen helyiségek, az útvonalak összhossza és a gráf élszáma a portától), a váltás utáni **tisztaság** (egyetlen tárolóban, a szintdobozokban sem marad régi bejegyzés), OD → KT → OD (a KT betöltésével); a fő folyosó mellé, de leszakadt szilánkhoz kötött OD-helyiségek (OD00F02, OD35E04) elérhetők, a csak sarkával érintkező OD00F03 nem; minden többcellás kötés egy falnyira van, harmadik helyiség nélkül, és odáig a célszinten az épületen belül vezet az út (pontos geometriával mérve); a homlokzat előtti gyűrűn és ablakrésen át nincs útvonal (KH00F36, KH00F37, KH00F42); a bekötések száma mind a hét épületben rögzített, és a saját foltján belüli út (KHX1PK2 → KHX1P03) megmarad; offline vissza az OA-ra; az `epuletKesz()` egyenként mind a hét kötelező elemre és a portára; a nem elérhető adat üzenete angolul is a kóddal; **nyilvántartás nélkül** (első indulás, letiltott kérés) a gomb el sem jelenik meg, és az app elindul |
+| `tests/meres.js` | a telefonos mérőlap (`meres.html`) végigfut a valódi appon, az OA-n akkor is, ha a készüléken más az alapértelmezett épület |
+| `tests/epuletek.js` | épületválasztó és **épületváltás**: mind a 39 épület bent van (településenként végigjárva, mindegyik pontosan egyszer), de csak az nyitható meg, aminek kész az adata; a Tervtár adatai a soron, az adatlapon a nem megnyithatónál nincs megnyitó és alapértelmezett gomb; az Esc csak a választót zárja, a kijelölés marad; más épület kódjára mutató link megnevezi az épületet, nem tűnik el csendben; a váltás mércéje **valódi épületeken mért aranyérték** (épületenként az elérhetetlen helyiségek, az útvonalak összhossza és a gráf élszáma a portától), a váltás utáni **tisztaság** (egyetlen tárolóban, a szintdobozokban sem marad régi bejegyzés), OD → KT → OD (a KT betöltésével); a fő folyosó mellé, de leszakadt szilánkhoz kötött OD-helyiségek (OD00F02, OD35E04) elérhetők, a csak sarkával érintkező OD00F03 nem; minden többcellás kötés egy falnyira van, harmadik helyiség nélkül, és odáig a célszinten az épületen belül vezet az út (pontos geometriával mérve); a homlokzat előtti gyűrűn és ablakrésen át nincs útvonal (KH00F36, KH00F37, KH00F42); a bekötések száma mind a hét épületben rögzített, és a saját foltján belüli út (KHX1PK2 → KHX1P03) megmarad; offline vissza az OA-ra; az `epuletKesz()` egyenként mind a hét kötelező elemre és a portára; a nem elérhető adat üzenete angolul is a kóddal; **nyilvántartás nélkül** (első indulás, letiltott kérés) a gomb el sem jelenik meg, és az app elindul |
+| `tests/valaszto.js` | a térképes választó: minden címmel bíró épület helye a saját települése és az ország határán belül; Budapesten a jelölők a Duna jó oldalán, a Buda és a Pest felirat is, a III. kerület csoportja a hét óbudai épület; a címkék hat képernyőméreten (telefon, keskeny, fekvő, asztal, alacsony és kis asztali ablak), mindhárom térképen nem fedik egymást és más jelét, és nem lógnak ki; fekve a térkép elfér; az OSM-forrás (ODbL, hivatkozással) a felületen; **alapértelmezett épület**: beállítás, a házikó, induláskor megnyílik, a link, a totem (cím nélkül is) és a párosító mód elsőbbsége, kikapcsolás, hálózat nélkül az OA marad, letiltott tárolóval is fut; **a csendes betöltés közben** választott terem marad, a választott másik épület nyílik meg, a nyitott választó nem csukódik be (és nem mutat „Betöltés…”-t), egy görgetés a térképen megállítja, a házikó nem tölt újra; **GPS**: az OD körvonalán belül, a faltól 9 m-re „itt vagy”, előtte a körvonaltól mért távolság, a már nyitott épületnél nincs megnyitás, az YA-nál az YB is, messziről km, letiltott engedélynél üzenet, a bezárt választónál késve jött hely eldobódik; `helyek.json` nélkül csak a lista; a fókusz (zárt választóban nincs tab-állomás, nyitva bent marad, zárva visszatér, a sorról nem ugrik a jelre, a GPS-eredményre megy, a házikó és a töltés után sem esik a `<body>`-ra); angolul „1 building”; a felirat a teljes képernyős választó fölött látszik, és újrarajzolás után is megvan; a választó saját szélére koppintva nem zárul be, asztalon a háttérre igen; fekvő telefonon (844×340 és a 900 px-nél szélesebb 932×380) a GPS-eredmény után is elérhető a lista; a dobozban kezdett, kint elengedett húzás nem zár; ugyanazon a nézeten újrarajzolva a görgetés marad; az alapértelmezett doboz gombja „Betöltés…”-t mutat; a linkről indult betöltés alatt választott terem marad; egy soha be nem fejeződő letöltés 20 s után üzenetet ad; az elakadt linkes váltás újrapróbálva a link termét nyitja, a hibalap bezárása után már nem; a két épületet vegyítő link egyszer vált, és a címben sem marad a másik épület kódja |
 | `tests/masepulet.js` | más épületben nincs OA-ra szabott dolog: a foglalható termek (az OA órarendje) nincs kint, a Büfé gomb csak ahol van büfé (OA, FK; az OD-ben nincs); a szintnév és az emeletszám az épület saját szintjeiből (KT I. és IV. emelet, KH tetőtér, OD V. emelet, egy félszint és egy „Pince”, angolul is), a név az elsődleges (a KD-alak félemelete a földszint fölött, a kötőjel nélküli „Pince 2”), de ahol a név és a kód ellentmond (KD, TA) vagy két földszint jönne ki (BA), az épület nem nyílik meg; a 3D-s szintfelirat és a felolvasói név angolul (OA, KT); a liftes megjegyzés a lift nélküli szöveg; a nemre nem jelölt WC nem „Női” és „Férfi” mosdó, hanem semleges sor; a mosdónevek írásmódjai, a kategória nélküli OC-mosdók, a személyzeti WC kizárása; a KH és a KT akadálymentes mosdója ott van; vissza az OA-ra minden OA-s dolog visszajön |
 | `tests/csomag.js` | a Pages-re publikált csomag (`tools/pages-csomag.js`): csak engedélylistás fájl, belső anyag és fejlesztői fájl nincs benne, minden, amire a lapok és a manifest hivatkoznak, benne van; a célkönyvtár nem lehet a repó, a szülője, egy forráskönyvtár, sem egy csomagnevű, de idegen tartalmú könyvtár (a repó-szabály külön is mérve); és az app ebből a csomagból minden épületen végigváltva, a service workerrel együtt egyetlen sikertelen kérés nélkül fut |
 
@@ -918,6 +1039,7 @@ Neptun kurzusórarend-export (xlsx)           --parse-neptun.py--> /tmp/neptun.j
 Tervtár OA épületadatok (xls)          --tervtar-ajtoszam.py--> az index.html NEPTUN táblája
 Tervtár épületadatok, mind (xls/xlsx)     --tervtar-leltar.py--> leltár: 29 épület, 4643 helyiség (belső)
     a leltár + a tervlapok fejbélyegzője --tervlap-epuletek.py--> data/epuletek.json (39 épület)
+    epuletek.json + OSM (Nominatim) + helyszínrajzok --helyek.py--> data/helyek.json (32 épület helye)
 Tervtár helyszínrajzok (PDF)              --helyszinrajz.py--> melyik épület hol áll (belső)
 Tervtár tervtári alaprajz (PDF) + tábla     --tervlap-uj.py--> helyiség-sokszögek
     a sokszögek + a tábla                 --epulet-json.py--> data/epuletek/<kód>.json
@@ -1132,7 +1254,7 @@ Actions → Deploy to GitHub Pages → Run workflow.
 URL-jéről, akkor is, ha a repóhoz nincs hozzáférése. **Ezért csak egy
 engedélylista kerül ki** (`tools/pages-csomag.js`, a workflow ezzel állítja
 össze a `_site`-ot): az app, a service worker, a manifest, a mérőlap, a betűk,
-az ikonok és a `data/` futásidejű fájljai — 31 fájl, 1,7 MB. Ami nincs a
+az ikonok és a `data/` futásidejű fájljai — 32 fájl, 1,8 MB. Ami nincs a
 listán (CLAUDE.md, `docs/`, `tools/`, `tests/`, `.claude/`, `forras/`), az nem
 kerül ki. **Korábban a munkafa ment ki** (`path: .`), amíg a Pages élt; a
 `forras/` akkor még nem volt a repóban. Az utolsó sikeres, 040a474-es deploy
