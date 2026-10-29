@@ -3632,9 +3632,10 @@ document.addEventListener("click",e=>{
    az épület létezik, hol van, és hogy ott még nincs térkép; ha ki sem írnánk,
    azt hihetné, hogy nincs is ilyen épület.
 
-   A választó térképről indul: Magyarország, rajta a települések; Budapestre
-   koppintva a városé, rajta az épületek csoportjai; az épületre koppintva
-   megnyílik az alaprajza (aminek nincs, annak az adatlapja). A hely a
+   A választó térképről indul: Magyarország, rajta a települések; egy
+   településre koppintva a városé, rajta az épületek csoportjai (Budapesten
+   kerületenként); a csoport jelére koppintva a lista az épületeire szűkül, és
+   az épület sora nyitja meg az alaprajzot (aminek nincs, annak az adatlapját). A hely a
    `data/helyek.json`-ból jön (`tools/helyek.py`: OpenStreetMap, a közös
    telkeken a Tervtár helyszínrajzai). Ha az nem érkezik meg, ugyanez a sorrend
    térkép nélkül, listákból megy — a térkép csak ráadás, a választás nem múlik
@@ -3698,9 +3699,6 @@ function epvAblak(gyuruk,hs){
   return [lon(cx-o),lat(cy+o),lon(cx+o),lat(cy-o)];
 }
 const epvUt=(v,pts,zart)=>"M"+pts.map(([x,y])=>v.p(x,y).map(n=>n.toFixed(1)).join(" ")).join("L")+(zart?"Z":"");
-/* A település térképén a közeli épületek egy jelbe olvadnak (a kép
-   szélességének 7%-án belül): Budapest egészén az óbudai campus hét épülete
-   egy pont, és egyenként egymásra esnének. */
 /* Budapesten a kerület a csoport (a hallgató így ismeri: „a VIII.-ban”);
    másutt a közeli épületek olvadnak egy jelbe (a kép szélességének 8%-án
    belül), különben egymásra esnének. */
@@ -3970,6 +3968,11 @@ function epvNyit(msg,kod){
 function epvZar(){ const d=$("epvlist"); if(d.open) d.close(); }
 $("epvlist").addEventListener("close",()=>{
   const d=$("epvlist");
+  /* A close esemény később fut, mint a close() hívás: ha a választót azóta
+     ugyanabban a lépésben újra megnyitották (a totem alaphelyzete bezárja, a
+     címe pedig egy alaprajz nélküli épület kódjával rögtön újranyitja), a
+     takarítás az új, nyitott választó üzenetét és állapotát vinné el. */
+  if(d.open) return;
   /* Az elakadt link címe (epvUjra) a hibát mutató választóhoz tartozik:
      bezárva elfelejtjük, különben órákkal később, a házikóval vagy a listából
      ugyanazt az épületet nyitva egy régi QR-kód „itt vagyok”-ja jött vissza. */
@@ -4185,7 +4188,11 @@ function epuletValt(kod,hashMegtart,opt){
   if(epvKeres){
     if(!epvKeres.csendes||csendes) return;
     // ugyanarra az épületre nem kell újra letölteni, elég, ha már nem csendes
-    if(epvKeres.kod===kod){ epvKeres.csendes=false; if(hashMegtart) epvKeres.hash=hashMegtart;
+    /* A linket átvéve a kiindulási címet is át kell venni: különben a betöltés
+       végén a hely (a link előtti, hash nélküli cím) eltér, és a link
+       eredményét „továbblépésnek” véve eldobná. */
+    if(epvKeres.kod===kod){ epvKeres.csendes=false;
+      if(hashMegtart){ epvKeres.hash=hashMegtart; epvKeres.hely=location.href; }
       if($("epvlist").open) epvRender(); return; }
     if(epvKeres.ac) epvKeres.ac.abort();
     epvKeres=null; epvTolt=false;

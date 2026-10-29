@@ -59,9 +59,11 @@ OSM = {
     "NB": "N5237896219", # címpont, Váci út 139
 }
 # A Budai út 45-ön két egyforma nevű OSM-épület áll. A helyszínrajzon az FK-tól
-# az FF felé mutató vektor (-77,7; 35,3) m, a két OSM-épület közt
-# W211951358 → W211951356 (-76,1; 40,8) m: ez a párosítás, a fordított 85 m-t
-# tévedne. A futás ezt újraszámolja, és ha elromlik, leáll.
+# az FF felé mutató vektor (-77,7; 35,3) m, a két OSM-épület súlypontja közt
+# W211951358 → W211951356 (-76,8; 38,5) m: ez a párosítás 3,3 m-re egyezik, a
+# fordított 171 m-re (a két épület 86 m-re áll egymástól). A futás ezt
+# újraszámolja és kiírja, és leáll, ha a jó párosítás nincs 15 m-en belül,
+# vagy a fordított is belül van.
 HELYSZINRAJZ_DONT = [("h12", "FK", "FF")]
 
 # Ugyanazon a telken, saját OSM-objektum nélkül: a hely a lapon mért eltolásból

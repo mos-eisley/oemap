@@ -109,7 +109,7 @@ run("térképes választó", async ({ t, ctx, browser, base }) => {
   t("és a választó bezárul", !(await nyitva(p)));
   await p.close();
 
-  /* ---- a címkék a térkép tényleges méretén ----
+  /* ---- a címkék a térkép tényleges méretén (mind a négy térképen) ----
      A címke helyét a kód választja ki (jobbra, balra, fölé, alá), a térkép
      képpontszélességéből. Egy állandó becslés alacsony asztali ablakban, ahol
      a magasság köti a térképet, a felére tévedett, és a címkék egymásra meg a
@@ -140,7 +140,7 @@ run("térképes választó", async ({ t, ctx, browser, base }) => {
     await g.click("#epvBtn"); await g.waitForTimeout(250);
     const h = [];
     let magas = null;
-    for (const tel of [null, "Budapest", "Székesfehérvár"]) {
+    for (const tel of [null, "Budapest", "Székesfehérvár", "Nagymaros"]) {
       if (tel) { await g.click(`#epvlist .epvsor[data-epv="tel:${tel}"]`); await g.waitForTimeout(200); }
       h.push(...(await cimkeHiba(g)).map(x => (tel || "ország") + ": " + x));
       if (tel === "Budapest") magas = await g.evaluate(() => ({ h: document.querySelector("#epvlist .epvmap").getBoundingClientRect().height, ih: innerHeight }));
@@ -164,6 +164,9 @@ run("térképes választó", async ({ t, ctx, browser, base }) => {
     && await q.evaluate(() => document.querySelector('#epvlist [data-epv="alap:OD"]').getAttribute("aria-pressed") === "true"));
   t("és a házikó megjelenik (most az OA van nyitva)", await q.evaluate(() => !document.getElementById("epvHaza").hidden
     && /OD/.test(document.getElementById("epvHaza").textContent)));
+  // a fejléc alcímét telefonon rejtő szabály (.brand span) korábban a házikó feliratát is elrejtette
+  t("telefonon is látszik, melyik épületre visz (a felirata nem rejtett)", await q.evaluate(() => {
+    const s = document.querySelector("#epvHaza span"); return getComputedStyle(s).display !== "none" && s.getBoundingClientRect().width > 0; }));
   await q.click('#epvlist [data-epv="zar"]'); await q.waitForTimeout(150);
   await q.click("#epvHaza");
   t("a házikó az alapértelmezettre visz", await varEp(q, "OD"));
@@ -242,6 +245,12 @@ run("térképes választó", async ({ t, ctx, browser, base }) => {
   await q.waitForTimeout(3800);
   t("a betöltés közben megnyitott választó nyitva marad, és nem vált alatta", (await nyitva(q)) && (await ep(q)) === "OA",
     `${await nyitva(q)} ${await ep(q)}`);
+  await q.close();
+  // ugyanarra az épületre mutató link a betöltés közben (beírt cím): a link érvényesül, nem dobódik el
+  q = await tolt();
+  await q.evaluate(() => { location.hash = "#OD10E05"; });
+  t("az alapértelmezett betöltése közben érkező, ugyanarra az épületre mutató link érvényesül",
+    (await varEp(q, "OD", 8000)) && (await q.evaluate(() => S.sel)) === "OD10E05", JSON.stringify(await q.evaluate(() => ({ ep: epItt(), sel: S.sel }))));
   await q.close();
   // a választó dobozában megnyomva a csendes betöltés kifejezett lesz: a gomb ezt mutatja is
   q = await tolt();
@@ -401,6 +410,51 @@ run("térképes választó", async ({ t, ctx, browser, base }) => {
   t("asztalon a háttérre kattintva bezárul", !(await nyitva(q)));
   await q.close(); await cB.close();
 
+  // átméretezett ablakban a címkék helye újramérődik (a térkép mérete a CSS-ből változik)
+  const cW = await browser.newContext(DESKTOP);
+  q = await open(cW, base, { settle: 600 });
+  await q.waitForFunction(() => EPULETEK && HELYEK, null, { timeout: 10000 });
+  await q.click("#epvBtn"); await q.waitForTimeout(200);
+  await q.click('#epvlist .epvpin[data-epv="tel:Budapest"]'); await q.waitForTimeout(250);
+  await q.setViewportSize({ width: 1100, height: 560 }); await q.waitForTimeout(500);
+  const atmer = await cimkeHiba(q);
+  t("átméretezés után is: a címkék nem fedik egymást és más jelét", !atmer.length, atmer.join("; "));
+  await q.close(); await cW.close();
+
+  /* A biztonsági sávok (iPhone: kivágás, kezdősáv) a választó dobozából vesznek
+     el: a forrásmegjelölés nem kerülhet a kezdősáv alá, fekve pedig a ragadó
+     térkép és jelmagyarázata nem lóghat ki a görgető tömbből. A Chromium
+     magától nem ad biztonsági sávot: CDP-vel adjuk meg. */
+  for (const [nev, vp, sav] of [["álló telefon", { width: 390, height: 844 }, { top: 47, bottom: 34, left: 0, right: 0 }],
+    ["fekvő telefon", { width: 844, height: 390 }, { top: 0, bottom: 21, left: 47, right: 47 }]]) {
+    const cS = await browser.newContext({ ...PHONE, viewport: vp });
+    q = await open(cS, base, { settle: 600 });
+    const cdp = await cS.newCDPSession(q);
+    await cdp.send("Emulation.setSafeAreaInsetsOverride", { insets: sav });
+    await q.waitForFunction(() => EPULETEK && HELYEK, null, { timeout: 10000 });
+    await q.click("#epvBtn"); await q.waitForTimeout(250);
+    const savos = await q.evaluate(sav => { const f = document.querySelector("#epvlist .epvforras").getBoundingClientRect();
+      const T = document.querySelector("#epvlist .epvtest").getBoundingClientRect(), K = document.querySelector("#epvlist .epvterkep").getBoundingClientRect();
+      return { forrasAlja: Math.round(f.bottom), hatar: innerHeight - sav.bottom, terkepAlja: Math.round(K.bottom), tombAlja: Math.round(T.bottom) }; }, sav);
+    t(`${nev}, biztonsági sávokkal: a forrás a kezdősáv fölött, a térkép a görgető tömbön belül`,
+      savos.forrasAlja <= savos.hatar + 1 && savos.terkepAlja <= savos.tombAlja + 1, JSON.stringify(savos));
+    await q.close(); await cS.close();
+  }
+
+  // ha a választót nyitó gomb azóta rejtve van (a házikó: sikertelen váltás, majd sikeres újrapróbálás), a fókusz a választó gombjára kerül
+  const cR2 = await browser.newContext({ ...DESKTOP, serviceWorkers: "block" });
+  await cR2.addInitScript(() => { try { localStorage.setItem("oemap-alap", "OD"); } catch (e) {} });
+  let odElso = true;
+  await cR2.route("**/data/epuletek/od.json", r => { if (odElso) { odElso = false; r.abort(); } else r.continue(); });
+  q = await open(cR2, base + "#OA10E18", { settle: 1200 });
+  await q.focus("#epvHaza"); await q.keyboard.press("Enter");
+  await q.waitForFunction(() => document.getElementById("epvlist").open, null, { timeout: 10000 }).catch(() => {});
+  await q.focus('#epvlist [data-epv="nyit:OD"]'); await q.keyboard.press("Enter");
+  await varEp(q, "OD");
+  t("a rejtetté vált nyitógomb helyett a fókusz a választó gombjára kerül, nem a <body>-ra",
+    await q.evaluate(() => document.activeElement.id === "epvBtn"), await q.evaluate(() => document.activeElement.tagName + "#" + document.activeElement.id));
+  await q.close(); await cR2.close();
+
   // a GPS-javaslat gombja töltés közben is fókuszban marad (az alapértelmezett doboz gombja ugyanazt teszi, oda nem ugorhat)
   const cJ = await browser.newContext({ ...DESKTOP, serviceWorkers: "block", geolocation: { latitude: 47.533321, longitude: 19.033662, accuracy: 20 }, permissions: ["geolocation"] });
   await cJ.addInitScript(() => { try { localStorage.setItem("oemap-alap", "OD"); } catch (e) {} });
@@ -413,6 +467,8 @@ run("térképes választó", async ({ t, ctx, browser, base }) => {
   await q.focus("#epvGpsNyit"); await q.keyboard.press("Enter"); await q.waitForTimeout(300);
   t("a GPS-javaslat megnyitó gombja töltés közben is fókuszban marad (nem ugrik az alapértelmezett doboz gombjára)",
     await q.evaluate(() => document.activeElement.id === "epvGpsNyit"), await q.evaluate(() => document.activeElement.outerHTML.slice(0, 90)));
+  t("és „Betöltés…”-t mutat", await q.evaluate(() => { const b = document.getElementById("epvGpsNyit");
+    return !!b && /Betöltés/.test(b.textContent) && b.getAttribute("aria-disabled") === "true"; }));
   await varEp(q, "OD");
   await q.close(); await cJ.close();
 
@@ -569,7 +625,11 @@ run("térképes választó", async ({ t, ctx, browser, base }) => {
      elmarad. */
   const cP = await browser.newContext({ ...PHONE, serviceWorkers: "block" });
   let odKer = 0; cP.on("request", r => { if (/od\.json/.test(r.url())) odKer++; });
+  const h0 = await (async () => { const g = await open(cP, base, { settle: 300 }); const n = await g.evaluate(() => history.length); await g.close(); return n; })();
+  odKer = 0;
   q = await open(cP, base + "#from=OD00F02&to=OA10E18", { settle: 4000 });
+  t("a link útján a váltás nem tesz közbülső bejegyzést a history-ba (a Vissza nem váltana vissza)",
+    (await q.evaluate(() => history.length)) === h0, `${await q.evaluate(() => history.length)} vs ${h0}`);
   const veg = await q.evaluate(() => ({ ep: epItt(), from: S.from, to: S.to, hash: location.hash }));
   t("a két épületet vegyítő link egyszer vált, és ott marad", odKer === 1 && veg.ep === "OD" && veg.from === "OD00F02" && !veg.to,
     JSON.stringify({ odKer, ...veg }));

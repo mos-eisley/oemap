@@ -1,8 +1,9 @@
 # Nyitott kérdések
 
-Öt pont maradt nyitva. Valódi funkcióhiányt a 4. okoz (más karok órái a
-közös termekben); az 5. egy telefonos mérésre vár, a többi apróság vagy
-döntés, amihez külső információ kell.
+Hat pont maradt nyitva. Valódi funkcióhiányt a 4. okoz (más karok órái a
+közös termekben); az 5. egy telefonos mérésre vár, a 6. hét épület helyére a
+térképes választóban, a többi apróság vagy döntés, amihez külső információ
+kell.
 Mindegyiknél ott van, hogy **mi hiányzik**, **kitől**, és **mit kell majd
 csinálni**, ha megjön.
 
@@ -183,6 +184,36 @@ rajzán kell faragni.
 
 ---
 
+## 6. Hét épület helye a térképes választóban
+
+**Mi van.** Az épületválasztó térképes (2026-10-26), a „Hol vagyok?" gomb a
+GPS alapján a legközelebbi épületet ajánlja. A helyek a `data/helyek.json`-ban
+vannak (`tools/helyek.py`): 39 épületből 32-é, 22 egyenesen az
+OpenStreetMapből, hét a közös telkeken a Tervtár helyszínrajzairól számolva.
+
+**Mi hiányzik.**
+- Az FA, FB, KM, SA, SB és SC a helyszínrajzokon szerepel, de a lapjukon nincs
+  OSM-ben azonosított épület, amihez illeszteni lehetne, és a
+  nyilvántartásban címük sincs: a térképen nem állnak, csak a listában („Hely
+  nélkül”).
+- Az UV a táblája szerint valószínűleg azonos az NA-val (nagymarosi szállás,
+  lásd a CLAUDE.md-ben): ha igen, az NA helyét kaphatja, vagy a nyilvántartásban
+  össze kell vonni őket.
+- Az FC és az FS egy telken (Budai út 43) két egyforma nevű OSM-épületben áll;
+  hogy melyik melyik, nem tudni, ezért közös ponton vannak. Az OB helye a
+  szomszédos házszámokból becsült.
+
+**Kitől kell.** A hat épület címe vagy helye és az FC/FS beosztása az
+üzemeltetéstől (vagy a helyszínen); az UV és az NA azonosságát a Tervtár tudja.
+
+**Mit kell csinálni, ha megjön.** Cím vagy OSM-azonosító esetén a
+`tools/helyek.py` `OSM` táblájába kell felvenni, és újrafuttatni (a
+Nominatim-válaszok gyorsítótárazva vannak); pontos koordinátánál a `BECSULT`
+táblába. A `tests/valaszto.js` ellenőrzi, hogy minden címmel bíró épület a saját
+települése határán belül áll.
+
+---
+
 ## Ami nem külső információra vár — ezeket bármikor meg lehet csinálni
 
 **~~Akadálymentesség.~~ Kész.** A térkép billentyűzettel bejárható és
@@ -225,15 +256,11 @@ A számok szoftveres renderelőből (SwiftShader) jönnek — valódi GPU-n
 mindkét érték jobb, és a kettő aránya is eltolódhat. Mielőtt a fenti
 döntést meghozzuk, érdemes valódi eszközön megmérni.
 
-**Épületválasztó.** A meetingen eldőlt, hogy GPS-alapú épületválasztó kell,
-ha lesz több épület. Ez elkészült (2026-10-26): a választó térképes, és a
-„Hol vagyok?" gomb a GPS alapján a legközelebbi épületet ajánlja. Az épületek
-földrajzi helye az OpenStreetMapből jön (`data/helyek.json`, 32 épület); hét
-épületé (FA, FB, KM, SA, SB, SC, UV) se ott, se a helyszínrajzokon nem
-azonosítható, és az FC meg az FS egy telken, közös ponton áll — **ezek helyét a
-helyszínen vagy az üzemeltetéstől kellene megtudni**. A beltéri „hol vagyok?"
-kérdést (emelet, terem) továbbra is a QR-kódok oldják meg: a GPS ott tíz
-métereket téved.
+**~~Épületválasztó.~~ Kész** (2026-10-26). A meetingen eldőlt, hogy
+GPS-alapú épületválasztó kell, ha lesz több épület: a választó térképes, és a
+„Hol vagyok?" gomb a GPS alapján a legközelebbi épületet ajánlja. A hiányzó
+hét épülethelyről a 6. pont szól. A beltéri „hol vagyok?" kérdést (emelet,
+terem) továbbra is a QR-kódok oldják meg: a GPS ott tíz métereket téved.
 
 ---
 
@@ -254,7 +281,7 @@ search("audmax").length;            // most: 1 (az OA10E18)
 
 //   akadálymentességi számlálók
 document.querySelectorAll("[aria-live]").length;          // most: 1
-document.querySelectorAll("[tabindex]").length;           // most: 223
+document.querySelectorAll("[tabindex]").length;           // most: 224 (222 helyiség, a térkép, az épületválasztó címe)
 document.querySelectorAll(".room[role='button']").length; // most: 222
 document.querySelectorAll("#stage [tabindex='0']").length;// most: 0 — egy tab-állomás
 ```

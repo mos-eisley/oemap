@@ -129,6 +129,21 @@ run("totem-mód", async ({ t, ctx, base }) => {
     await r.close();
   }
 
+  /* Egy alaprajz nélküli épület totemje (#from=BA…): az alaphelyzet bezárja a
+     választót, a címe pedig ugyanabban a lépésben újranyitja. A close esemény
+     később fut: korábban az új, nyitott választó üzenetét és állapotát vitte el. */
+  const b = await nyit(base + "?totem#from=BA00F01");
+  await b.waitForFunction(() => document.getElementById("epvlist").open, null, { timeout: 10000 }).catch(() => {});
+  await b.click("#epvCim"); await b.mouse.move(700, 400);
+  await b.clock.fastForward(61000); await b.waitForTimeout(1500);
+  await b.evaluate(() => epvRender());
+  const ba = await b.evaluate(() => ({ nyitva: document.getElementById("epvlist").open, osztaly: document.getElementById("epvlist").className,
+    kibontva: document.getElementById("epvBtn").getAttribute("aria-expanded"), uzenet: (document.getElementById("epvMsg") || {}).textContent || "" }));
+  t("alaprajz nélküli épület totemjén az alaphelyzet után a választó nyitva, az üzenetével (BA)",
+    ba.nyitva && /open/.test(ba.osztaly) && ba.kibontva === "true" && /BA/.test(ba.uzenet), JSON.stringify(ba));
+  t("nincs JS hiba a BA-totemen", b.jsErrors.length === 0, b.jsErrors.join(" | "));
+  await b.close();
+
   // totem-mód nélkül soha nem áll vissza, és nem is szól róla
   const q = await nyit(base + "#from=OA00FK1");
   const csendes = await q.evaluate(() => (document.querySelector("#toast.on") || {}).textContent || "");

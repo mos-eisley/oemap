@@ -5,8 +5,8 @@ A projekt általános tudnivalói a [CLAUDE.md](../CLAUDE.md)-ben vannak — azt
 olvasd el először. Ez itt csak azt rögzíti, ami ebben a munkában történt, és
 hogy mi a következő lépés.
 
-Állapot (2026-10-20, egy teljes átnézés és javítás után): **39 épület a
-nyilvántartásban, ebből 7 megnyitható** (OA, OD, FF, FK, KH, KT, OC),
+Állapot (2026-10-29, a térképes épületválasztó és annak átnézése után): **39
+épület a nyilvántartásban, ebből 7 megnyitható** (OA, OD, FF, FK, KH, KT, OC),
 összesen 1515 helyiséggel. Mind a 26 tesztfájl zöld.
 
 ## Egy mondatban
@@ -28,8 +28,9 @@ adata — és a `PORTA` táblában a portája —, az megnyithatóvá válik.
 - **Az épületek helye** a `data/helyek.json` (`tools/helyek.py`): 32 épület az
   OSM-ből (Nominatim, kézzel rögzített OSM-azonosítókkal), a közös telken
   állóknál a helyszínrajzokból számolt eltolással; hét épületnek (FA, FB, KM,
-  SA, SB, SC, UV) nincs helye. Az FC és az FS nem különíthető el (közös pont),
-  az OB becsült. A térkép ODbL-es, a forrásmegjelölés a választó alján.
+  SA, SB, SC, UV) nincs helye (a hat a helyszínrajzon szerepel, de nincs mihez
+  illeszteni, az UV valószínűleg az NA; lásd `docs/NYITOTT-KERDESEK.md`, 6.).
+  Az FC és az FS nem különíthető el (közös pont), az OB becsült. A térkép ODbL-es, a forrásmegjelölés a választó alján.
 - **Alapértelmezett épület** (`localStorage`): induláskor ez nyílik meg, a
   fejléc házikója visszavisz rá; a link, a totem, a párosító és a mérő mód
   előbbre való, és amit a hallgató a betöltés közben választ, az is. A
@@ -120,6 +121,7 @@ visszarontva a teszt elbukik); az eszközök javítása nem, lásd a pont végé
 | épületek geometriája | `data/epuletek/<kód>.json` | tervtári alaprajz + tábla |
 | 4643 helyiség leltára | `forras/kivonat/leltar.json` | 25 épületadat-tábla |
 | 34 épület helye | `forras/kivonat/helyszinrajz.json` | 18 helyszínrajz |
+| 32 épület földrajzi helye, a választó térképei | `data/helyek.json` | OSM (Nominatim) + a helyszínrajzok eltolása |
 
 **Eszközök** (`tools/`, mind dokumentált docstringgel):
 
@@ -127,6 +129,10 @@ visszarontva a teszt elbukik); az eszközök javítása nem, lásd a pont végé
   parancs a CLAUDE.md „Adatfolyam” szakaszában, a várt eredménnyel)
 - `tervlap-epuletek.py` — a 39 épület nyilvántartása, a kar a funkció lapról
 - `helyszinrajz.py` — melyik épület hol áll a telephelyen
+- `helyek.py` — az épületek földrajzi helye (OSM, a közös telkeken a
+  helyszínrajzokból) és a választó térképei; a Nominatim-válaszokat
+  gyorsítótárazza, és a Nominatim szabálya szerint másodpercenként legfeljebb
+  egyszer kérdez
 - `tervlap-uj.py` + `epulet-json.py` + `tervlap-batch.py` — geometria a
   tervlapokból, üres lapról, önkalibrálóan
 - `epulet-ellenoriz.js` — betölti az appot, végigvált minden megnyitható

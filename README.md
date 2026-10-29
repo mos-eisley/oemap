@@ -15,7 +15,7 @@ fájl — nincs build lépés, nincs függőség, nincs csomagkezelő.
 | `icons/` | Alkalmazásikonok (a Metropolisszal generálva) |
 | `manifest.webmanifest` | PWA leíró — telepíthetőség |
 | `sw.js` | Service worker — offline működés |
-| `data/` | Foglalható termek és foglaltságuk, az egyetem épület-nyilvántartása és a többi megnyitható épület alaprajza (`data/epuletek/`) — mind generált |
+| `data/` | Foglalható termek és foglaltságuk, az egyetem épület-nyilvántartása, az épületek földrajzi helye és a választó térképei (`data/helyek.json`, OpenStreetMap) és a többi megnyitható épület alaprajza (`data/epuletek/`) — mind generált |
 | `tools/` | Az adatot előállító szkriptek és a QR-ív generátora |
 | `tests/` | Böngészős regressziós tesztek (`npm test`) |
 | `meres.html` | Telefonos mérőlap: az Épület nézet mozdulatainak képkockaideje egy valódi telefonon |
@@ -24,9 +24,11 @@ fájl — nincs build lépés, nincs függőség, nincs csomagkezelő.
 | `.github/workflows/deploy-pages.yml` | Automatikus deploy GitHub Pages-re |
 | `.nojekyll` | Az Actions-ös deploy mellett fölösleges (az nem futtat Jekyllt), és a csomagba sem kerül bele |
 
-**Nincs külső hivatkozás.** Az OA alaprajza és az útvonalkeresés az
-`index.html`-en belül van, a betűtípusok a `fonts/`, a teremadat és a többi
-épület alaprajza a `data/` mappából jön — mind ugyanarról a címről. Így az
+**Nincs külső erőforrás.** Az OA alaprajza és az útvonalkeresés az
+`index.html`-en belül van, a betűtípusok a `fonts/`, a teremadat, a többi
+épület alaprajza és az épületválasztó térképe a `data/` mappából jön — mind
+ugyanarról a címről. Az egyetlen kifelé mutató hivatkozás az OpenStreetMap
+forrásmegjelölése az épületválasztó alján (a totemen az sem). Így az
 oldal külső szolgáltató nélkül működik, és offline is: az OA mindig, a többi
 épület akkor, ha egyszer már megnyitottad.
 
@@ -35,13 +37,15 @@ oldal külső szolgáltató nélkül működik, és offline is: az OA mindig, a 
 A fejlécben az épület neve egyben választógomb: egy térkép nyílik meg az
 egyetem **mind a 39 épületével**. Előbb Magyarország, rajta a települések
 (Budapest, Székesfehérvár, Nagymaros); egy településre koppintva annak térképe
-jön, az épületekkel a valódi helyükön (Budapesten kerületenként csoportosítva),
-és egy épületre koppintva megnyílik az alaprajza. A térkép mellett mindig ott a
+jön, rajta az épületek csoportjai: Budapesten kerületenként, máshol
+környékenként egy jel, az épületeik közepén. A jelre koppintva a lista az ott álló épületekre
+szűkül, és az épület sora nyitja meg az alaprajzot. A térkép mellett mindig ott a
 lista is, mindegyik épületnél a címe, a szintek és a helyiségek száma, az
 alapterülete — az Egyetemi Tervtár adataiból. Az épületek helye az
-OpenStreetMapből jön (© OpenStreetMap-közreműködők, ODbL); hét épületnek
-(FA, FB, KM, SA, SB, SC, UV) nincs azonosítható helye, ezek a listában „Hely
-nélkül” alatt állnak.
+OpenStreetMapből jön (© OpenStreetMap-közreműködők, ODbL), a közös telken
+állóknál a Tervtár helyszínrajzaiból számolva; hét épületnek (FA, FB, KM, SA,
+SB, SC, UV) nincs helye a térképen — a nyilvántartásban címük sincs —, ezek a
+listában „Hely nélkül” alatt állnak.
 
 **Alapértelmezett épület.** Egy megnyitható épület adatlapján „Legyen ez az alapértelmezett”:
 onnantól az app ezzel indul, és a fejléc házikója bárhonnan visszavisz rá. A
