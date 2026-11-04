@@ -68,7 +68,8 @@ run("térképes választó", async ({ t, ctx, browser, base }) => {
   t.eq("Magyarország térképén a három település jele", orszag.sort(), ["tel:Budapest", "tel:Nagymaros", "tel:Székesfehérvár"]);
   const helyNelkul = await p.evaluate(() => (document.querySelector('#epvlist .epvsor[data-epv="tel:"]') || {}).textContent || "");
   // az UV egyik helyszínrajzon sincs rajta: a felirat mindegyikükre igaz legyen
-  t("a hely nélküli épületek csoportja azt mondja, ami mindegyikre igaz (nincs címük)", /nincs címük/.test(helyNelkul), helyNelkul);
+  // (korábban „a nyilvántartásban nincs címük” — igaz, de hivatali; a hallgatónak az számít, hogy a térképen nincsenek rajta)
+  t("a hely nélküli épületek csoportja azt mondja, ami mindegyikre igaz (a térképen nem szerepelnek)", /térképen még nem szerepelnek/.test(helyNelkul), helyNelkul);
   await p.click('#epvlist .epvpin[data-epv="tel:Budapest"]'); await p.waitForTimeout(250);
   const part = await p.evaluate(() => {
     const svg = document.querySelector("#epvlist .epvmap svg"), d = [...svg.querySelectorAll("path.d")];
@@ -220,6 +221,10 @@ run("térképes választó", async ({ t, ctx, browser, base }) => {
   await cR.route("**/data/epuletek/od.json", r => setTimeout(() => r.continue().catch(() => {}), 3000));
   const tolt = async () => { const g = await open(cR, base, { settle: false });
     await g.waitForFunction(() => typeof epvTolt !== "undefined" && epvTolt === "OD", null, { timeout: 10000 }); return g; };
+  /* A késleltetett válasz megérkezését várjuk meg, nem egy rögzített időt:
+     ha a lassú gépen a 3 s-os válasz még nem jött meg, az állítás a betöltés
+     VÉGE nélkül, üresen lett volna igaz. */
+  const lefutott = g => g.waitForFunction(() => epvKeres === null, null, { timeout: 15000 }).then(() => true, () => false);
   q = await tolt();
   await q.evaluate(() => select("OA10E18"));
   await q.waitForTimeout(4000);
@@ -242,9 +247,9 @@ run("térképes választó", async ({ t, ctx, browser, base }) => {
     return { busy: r.getAttribute("aria-busy"), szoveg: r.textContent }; });
   // a nyitott választó a csendes eredményt úgyis eldobja: töltőnek mutatva a hallgató hiába várna rá
   t("a csendes betöltést a választó nem mutatja „Betöltés…”-nek", !csendSor.busy && !/Betöltés/.test(csendSor.szoveg), JSON.stringify(csendSor));
-  await q.waitForTimeout(3800);
-  t("a betöltés közben megnyitott választó nyitva marad, és nem vált alatta", (await nyitva(q)) && (await ep(q)) === "OA",
-    `${await nyitva(q)} ${await ep(q)}`);
+  const vege1 = await lefutott(q); await q.waitForTimeout(200);
+  t("a betöltés közben megnyitott választó nyitva marad, és nem vált alatta", vege1 && (await nyitva(q)) && (await ep(q)) === "OA",
+    `lefutott=${vege1} ${await nyitva(q)} ${await ep(q)}`);
   await q.close();
   // ugyanarra az épületre mutató link a betöltés közben (beírt cím): a link érvényesül, nem dobódik el
   q = await tolt();
@@ -266,9 +271,9 @@ run("térképes választó", async ({ t, ctx, browser, base }) => {
   q = await tolt();
   const kozep = await q.evaluate(() => { const r = document.getElementById("stage").getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; });
   await q.mouse.move(kozep[0], kozep[1]); await q.mouse.wheel(0, -120);
-  await q.waitForTimeout(4000);
+  const vege2 = await lefutott(q); await q.waitForTimeout(200);
   t("ha a hallgató a betöltés közben a térképhez nyúl, az alaprajz marad (a házikó viszi át)",
-    (await ep(q)) === "OA" && await q.evaluate(() => !document.getElementById("epvHaza").hidden), await ep(q));
+    vege2 && (await ep(q)) === "OA" && await q.evaluate(() => !document.getElementById("epvHaza").hidden), `lefutott=${vege2} ${await ep(q)}`);
   await q.close();
   // a házikóval kért ugyanaz az épület: nem tölt újra, de már nem is csendes (a választó nem állítja meg)
   const kerdes = [];

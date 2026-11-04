@@ -58,21 +58,30 @@ html,body{margin:0;padding:0}img{max-width:100%}[hidden]{display:none!important}
 
 :root{
   --bg:#eceff4; --surface:#fff; --panel:#f4f7fa; --sunk:#e5eaf1;
-  --ink:#0d151f; --ink-2:#33465c; --muted:#61748a; --line:#d5dde7; --line-2:#bdc9d7;
+  /* A --muted, az --ok-ink és a --route-ink a kis szövegnek: a korábbi
+     #61748a a --sunk-on 3,97:1, a zöld és a narancs jelvény 3,86 és 3,57:1
+     volt (AA: 4,5). A --field-edge a keresőmező kerete (nem szöveg: 3:1). */
+  --ink:#0d151f; --ink-2:#33465c; --muted:#536579; --line:#d5dde7; --line-2:#bdc9d7;
   --accent:#00288c; --accent-soft:#e3e7f2; --accent-ink:#fff;
   --route:#cf5209; --route-soft:#fbe6d4; --ok:#2e7d32;
+  --ok-ink:#256b29; --route-ink:#a84207; --field-edge:#7d8ea2; --ok-soft:#d4e3da;
   --shadow-1:0 1px 2px rgba(13,21,31,.05),0 8px 22px rgba(13,21,31,.08);
   --shadow-2:0 2px 6px rgba(13,21,31,.08),0 22px 48px rgba(13,21,31,.14);
   --plan-bg:#f7f9fc; --slab:#fdfefe; --slab-edge:#c6d1dd;
   --wall:#3f4d5e; --hair:#a8b7c6;
   --ground:rgba(13,21,31,.16); --fsh:rgba(13,21,31,.20);
   --r:11px; --ease:cubic-bezier(.22,.68,.24,1);
+  /* A dvh (a mobil címsor nélküli magasság) iOS 15.4 és Chrome 108 előtt
+     ismeretlen: ott a deklaráció kiesett, és az elrendezés összecsuklott. */
+  --vh100:100vh;
 }
+@supports (height:100dvh){ :root{ --vh100:100dvh } }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#080d13; --surface:#121a24; --panel:#0f161f; --sunk:#0c131b;
   --ink:#e7eef6; --ink-2:#c2d0e0; --muted:#8ba0b7; --line:#1f2c3a; --line-2:#2c3c4c;
   --accent:#799aec; --accent-soft:#0d1c42; --accent-ink:#05101b;
   --route:#ff8c3f; --route-soft:#3a2211; --ok:#7fd18a;
+  --ok-ink:#7fd18a; --route-ink:#ff8c3f; --field-edge:#5b6f85; --ok-soft:#213430;
   --shadow-1:0 1px 2px rgba(0,0,0,.5),0 10px 26px rgba(0,0,0,.5);
   --shadow-2:0 2px 8px rgba(0,0,0,.55),0 26px 56px rgba(0,0,0,.6);
   --plan-bg:#0b131c; --slab:#16202b; --slab-edge:#2b3a4a;
@@ -84,6 +93,7 @@ html,body{margin:0;padding:0}img{max-width:100%}[hidden]{display:none!important}
   --ink:#e7eef6; --ink-2:#c2d0e0; --muted:#8ba0b7; --line:#1f2c3a; --line-2:#2c3c4c;
   --accent:#799aec; --accent-soft:#0d1c42; --accent-ink:#05101b;
   --route:#ff8c3f; --route-soft:#3a2211; --ok:#7fd18a;
+  --ok-ink:#7fd18a; --route-ink:#ff8c3f; --field-edge:#5b6f85; --ok-soft:#213430;
   --shadow-1:0 1px 2px rgba(0,0,0,.5),0 10px 26px rgba(0,0,0,.5);
   --shadow-2:0 2px 8px rgba(0,0,0,.55),0 26px 56px rgba(0,0,0,.6);
   --plan-bg:#0b131c; --slab:#16202b; --slab-edge:#2b3a4a;
@@ -107,7 +117,7 @@ button{cursor:pointer;background:none;border:0}
 .cond{font-family:"Metropolis","Open Sans",system-ui,sans-serif}
 
 /* ------------------------------------------------------------- shell */
-.app{height:100dvh;display:grid;grid-template-columns:334px 1fr;grid-template-rows:auto 1fr;
+.app{height:var(--vh100);display:grid;grid-template-columns:334px 1fr;grid-template-rows:auto 1fr;
   grid-template-areas:"head head" "side map"}
 .head{grid-area:head;display:flex;align-items:center;gap:12px;padding:10px 16px;
   background:var(--surface);border-bottom:1px solid var(--line);z-index:5;position:relative}
@@ -127,7 +137,7 @@ button{cursor:pointer;background:none;border:0}
 
 /* ------------------------------------------------------------- sidebar */
 .search{padding:14px 14px 12px;border-bottom:1px solid var(--line)}
-.field{display:flex;align-items:center;gap:9px;background:var(--sunk);border:1px solid var(--line);
+.field{display:flex;align-items:center;gap:9px;background:var(--sunk);border:1px solid var(--field-edge);
   border-radius:var(--r);padding:10px 12px;transition:border-color .18s,box-shadow .18s}
 .field:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
 .field input{flex:1;border:0;background:none;outline:none;min-width:0}
@@ -161,6 +171,10 @@ button{cursor:pointer;background:none;border:0}
 .tag{font-size:11px;padding:3px 8px;border-radius:999px;background:var(--surface);
   border:1px solid var(--line);color:var(--ink-2);white-space:nowrap}
 .btn-row{display:flex;gap:1px;background:var(--line);border-top:1px solid var(--line)}
+.totem .field kbd,.totem #themeSeg,.totem #staffSeg{display:none}
+.listback{display:flex;align-items:center;gap:6px;margin:10px 12px 0;padding:8px 12px;min-height:40px;border-radius:9px;
+  font-size:13.5px;font-weight:600;color:var(--accent)}
+.listback:hover{background:var(--sunk)}
 .btn{flex:1;background:var(--surface);padding:10px;font-size:13px;font-weight:500;
   transition:background .16s,color .16s}
 .btn:hover{background:var(--accent-soft);color:var(--accent)}
@@ -179,8 +193,11 @@ button{cursor:pointer;background:none;border:0}
 .ep .txt{flex:1;min-width:0}
 .ep .txt small{display:block;font-size:10px;color:var(--muted);letter-spacing:.09em;text-transform:uppercase}
 .ep .txt span{display:block;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ep .x{color:var(--muted);font-size:16px;padding:0 2px;line-height:1}
-.ep .x:hover{color:var(--ink)}
+.epw{position:relative}
+.epw.xx .ep{padding-right:46px}
+.epx{position:absolute;right:5px;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:8px;
+  display:grid;place-items:center;color:var(--muted);font-size:18px;line-height:1}
+.epx:hover{color:var(--ink);background:var(--sunk)}
 
 /* Útvonalválasztó: lépcső vagy lift. A kiválasztott az akcentszínt kapja. */
 .eyebrow.sub{margin:14px 0 7px}
@@ -200,7 +217,7 @@ button{cursor:pointer;background:none;border:0}
   color:var(--accent);font-size:13.5px;font-weight:600;transition:border-color .16s,background .16s}
 .qrsend:hover{border-color:var(--accent);background:var(--accent-soft)}
 .qrdlg{border:0;padding:0;border-radius:16px;background:var(--surface);color:var(--ink);
-  box-shadow:var(--shadow-2);width:min(360px,calc(100vw - 32px));max-height:calc(100dvh - 32px)}
+  box-shadow:var(--shadow-2);width:min(360px,calc(100vw - 32px));max-height:calc(var(--vh100) - 32px)}
 .qrdlg::backdrop{background:rgba(8,13,19,.55)}
 .qrdlg .in{position:relative;padding:20px 20px 18px;text-align:center}
 .qrdlg h2{margin:0 34px 6px;font-size:17px;font-weight:600;line-height:1.3}
@@ -210,6 +227,8 @@ button{cursor:pointer;background:none;border:0}
 .qrdlg .qrimg{display:inline-block;margin:14px 0 10px;padding:8px;border-radius:10px;background:#fff;line-height:0}
 .qrdlg .qrimg svg{max-width:100%;height:auto}
 .qrdlg .qrut{font-weight:600;color:var(--ink)}
+.qrdlg .qrlink{display:block;width:100%;margin-top:12px;padding:9px 10px;font-size:13px;color:var(--ink);
+  background:var(--sunk);border:1px solid var(--line-2);border-radius:8px}
 .qrdlg .qrurl{margin-top:8px;font-size:10.5px;color:var(--muted);word-break:break-all}
 .qrdlg .x{position:absolute;top:10px;right:10px;width:34px;height:34px;border-radius:10px;
   font-size:20px;line-height:1;color:var(--muted)}
@@ -232,6 +251,8 @@ button{cursor:pointer;background:none;border:0}
 /* Foglalható termek listája */
 .tmlist{border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--line);
   display:flex;flex-direction:column;gap:1px}
+/* az overflow:hidden a külső fókuszkeretet levágta: a sor belsejébe kerül */
+.tmlist :focus-visible{outline-offset:-3px;border-radius:calc(var(--r) - 2px)}
 .tmrow{display:grid;grid-template-columns:1fr auto auto;grid-template-areas:"n c b" "s s s";
   gap:2px 9px;align-items:center;width:100%;text-align:left;padding:11px 12px;background:var(--panel);
   color:var(--ink);transition:background .16s}
@@ -244,12 +265,12 @@ button{cursor:pointer;background:none;border:0}
 .tms{grid-area:s;font-size:12px;color:var(--ink-2);margin-top:2px}
 .tmb{grid-area:b;font-size:10.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
   padding:3px 8px;border-radius:99px;white-space:nowrap}
-.tmb.free{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}
-.tmb.busy{background:var(--route-soft);color:var(--route)}
+.tmb.free{background:var(--ok-soft);color:var(--ok-ink)}
+.tmb.busy{background:var(--route-soft);color:var(--route-ink)}
 .tmb.none{background:var(--sunk);color:var(--muted)}
 /* „Szabad?": csak a mi karunk órája nincs benne — keretes, nem teli zöld,
    hogy ne ígérjen többet, mint amit az adat tud */
-.tmb.maybe{color:var(--ok);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ok) 45%,transparent)}
+.tmb.maybe{color:var(--ok-ink);box-shadow:inset 0 0 0 1px var(--ok);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ok) 45%,transparent)}
 .tmd{background:var(--sunk);padding:9px 12px 11px;font-size:12.5px}
 .tmdh{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
 .tmr{display:flex;gap:10px;padding:3px 0;color:var(--ink-2)}
@@ -326,8 +347,8 @@ button{cursor:pointer;background:none;border:0}
    helyiségek színéhez nem nyúlunk, az a jelmagyarázaté. */
 .wband{display:none}
 .deep .floor.on .wband{display:inline}
-.wband .wb1{fill:color-mix(in srgb,var(--wall) 36%,var(--slab))}
-.wband .wb2{fill:color-mix(in srgb,var(--wall) 26%,var(--slab))}
+.wband .wb1{fill:var(--slab-edge);fill:color-mix(in srgb,var(--wall) 36%,var(--slab))}
+.wband .wb2{fill:var(--slab-edge);fill:color-mix(in srgb,var(--wall) 26%,var(--slab))}
 .slabsh{fill:var(--fsh);stroke:var(--fsh);stroke-width:1.1;stroke-linejoin:round;opacity:0;
   transition:opacity .5s var(--ease)}
 .deep .slabsh{opacity:1}
@@ -395,7 +416,7 @@ button{cursor:pointer;background:none;border:0}
 .navving .slabsh,.navving .glabel{transition:none}
 .switching .ring{animation-play-state:paused}
 
-.navving .rail,.navving .plate,.navving .tools button,.navving .legend-btn{backdrop-filter:none}
+.navving .rail,.navving .plate,.navving .tools button,.navving .legend-btn{-webkit-backdrop-filter:none;backdrop-filter:none}
 .navving .ring{animation-play-state:paused}
 /* Navigálás közben a szintek átlátszósága képkockánként változik (a dőléstől
    függ); a .55s-os áttűnés ilyenkor minden képkockán újraindulna, és a köteg
@@ -449,7 +470,7 @@ button{cursor:pointer;background:none;border:0}
 .floor.on .ftag{color:var(--accent);font-size:17px}
 .deep .floor:not(.on) .ftag{opacity:.6}
 
-.riser{position:absolute;width:3px;border-radius:2px;background:linear-gradient(var(--route),color-mix(in srgb,var(--route) 15%,transparent));
+.riser{position:absolute;width:3px;border-radius:2px;background:var(--route);background:linear-gradient(var(--route),color-mix(in srgb,var(--route) 15%,transparent));
   transform-origin:50% 100%;opacity:0;
   transition:opacity .5s var(--ease) .25s,transform 1s var(--ease)}
 .deep .riser{opacity:.9}
@@ -477,10 +498,15 @@ button{cursor:pointer;background:none;border:0}
 
 /* ------------------------------------------------------------- chrome */
 .rail{position:absolute;right:18px;top:50%;transform:translateY(-50%);z-index:4;
-  background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(10px);
+  background:var(--surface);background:color-mix(in srgb,var(--surface) 92%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
   border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow-1);padding:6px;
   display:flex;flex-direction:column;gap:3px}
-.lv{width:44px;height:34px;border-radius:9px;position:relative;display:grid;place-items:center;
+/* Alacsony ablakban a szintsín a tetején indul, és görget: középre igazítva
+   a +/− gombokra lógott (932×430-on az F és az A alattuk volt). */
+@media (min-width:901px) and (max-height:620px){
+  .rail{top:12px;transform:none;max-height:calc(100% - 170px);overflow-y:auto;overscroll-behavior:contain}
+}
+.lv{flex:none;width:44px;height:34px;border-radius:9px;position:relative;display:grid;place-items:center;
   font-family:"Metropolis","Open Sans",system-ui,sans-serif;font-weight:700;font-size:14.5px;color:var(--muted);
   transition:background .18s,color .18s,transform .18s var(--ease)}
 .lv:hover{background:var(--sunk);color:var(--ink);transform:translateX(-3px)}
@@ -489,7 +515,7 @@ button{cursor:pointer;background:none;border:0}
 .lv[aria-pressed="true"] .pip{background:var(--accent-ink)}
 
 .hud{position:absolute;left:18px;top:18px;z-index:4;display:flex;flex-direction:column;gap:10px;align-items:flex-start}
-.plate{background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(10px);
+.plate{background:var(--surface);background:color-mix(in srgb,var(--surface) 92%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
   border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-1)}
 .fname{padding:9px 14px}
 .fname b{font-family:"Metropolis","Open Sans",system-ui,sans-serif;font-size:16.5px;display:block;line-height:1.15}
@@ -501,20 +527,22 @@ button{cursor:pointer;background:none;border:0}
 
 .tools{position:absolute;right:18px;bottom:18px;z-index:4;display:flex;flex-direction:column;gap:6px}
 .tools button{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-size:16px;
-  color:var(--ink-2);background:color-mix(in srgb,var(--surface) 92%,transparent);
-  backdrop-filter:blur(10px);border:1px solid var(--line);box-shadow:var(--shadow-1);
+  color:var(--ink-2);background:var(--surface);background:color-mix(in srgb,var(--surface) 92%,transparent);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border:1px solid var(--line);box-shadow:var(--shadow-1);
   transition:color .16s,border-color .16s}
 .tools button:hover{color:var(--accent);border-color:var(--accent)}
 
 .legend-btn{position:absolute;left:18px;bottom:18px;z-index:4;padding:8px 13px;border-radius:10px;
-  font-size:12px;color:var(--ink-2);background:color-mix(in srgb,var(--surface) 92%,transparent);
-  backdrop-filter:blur(10px);border:1px solid var(--line);box-shadow:var(--shadow-1);
+  font-size:12px;color:var(--ink-2);background:var(--surface);background:color-mix(in srgb,var(--surface) 92%,transparent);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border:1px solid var(--line);box-shadow:var(--shadow-1);
   display:flex;align-items:center;gap:7px;transition:border-color .16s,color .16s}
 .legend-btn:hover{border-color:var(--accent);color:var(--accent)}
+/* Zárva visibility:hidden is (az áttűnés végén): csak átlátszó és
+   kattinthatatlan volt, a felolvasó és a Tab mégis bejárta. */
 .legend-pop{position:absolute;left:18px;bottom:62px;z-index:5;width:270px;padding:13px 14px;
-  opacity:0;transform:translateY(8px) scale(.98);pointer-events:none;
-  transition:opacity .26s var(--ease),transform .26s var(--ease)}
-.legend-pop.open{opacity:1;transform:none;pointer-events:auto}
+  opacity:0;transform:translateY(8px) scale(.98);pointer-events:none;visibility:hidden;
+  transition:opacity .26s var(--ease),transform .26s var(--ease),visibility 0s linear .26s}
+.legend-pop.open{opacity:1;transform:none;pointer-events:auto;visibility:visible;transition-delay:0s}
 .legend-pop .grid{display:grid;gap:6px 12px;grid-template-columns:1fr 1fr;font-size:11.5px;color:var(--ink-2)}
 .legend-pop i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;
   vertical-align:-1px;border:1px solid var(--line-2)}
@@ -543,7 +571,7 @@ button{cursor:pointer;background:none;border:0}
   font-size:12.5px;font-weight:600;align-self:center;flex:none}
 .epvhaza[hidden]{display:none}
 .epvhaza svg{color:var(--accent)}
-.epvdlg{border:0;padding:0;margin:auto;width:min(1080px,calc(100vw - 48px));height:min(760px,calc(100dvh - 48px));
+.epvdlg{border:0;padding:0;margin:auto;width:min(1080px,calc(100vw - 48px));height:min(760px,calc(var(--vh100) - 48px));
   max-width:none;max-height:none;border-radius:16px;background:var(--surface);color:var(--ink);
   box-shadow:var(--shadow-2);overflow:hidden}
 .epvdlg[open]{display:flex;flex-direction:column}
@@ -588,7 +616,7 @@ button{cursor:pointer;background:none;border:0}
 /* Asztalon a térkép a hasáb magasságába is beférjen (a magas Budapest-
    kivágat különben kilógna); telefonon a hasáb görget, ott csak a szélesség köt. */
 .epvmap{position:relative;width:min(100%,calc(var(--epvh,9999px) * var(--ar,1)));max-width:760px;margin:0 auto}
-.epvterkep{--epvh:calc(min(760px,100dvh - 48px) - 190px)}
+.epvterkep{--epvh:calc(min(760px,var(--vh100) - 48px) - 190px)}
 .epvmap svg{position:absolute;inset:0;width:100%;height:100%;overflow:hidden}
 .epvmap .h{fill:var(--surface);stroke:var(--line-2);stroke-width:2.5;stroke-linejoin:round;vector-effect:non-scaling-stroke}
 .epvmap .s{fill:var(--panel);stroke:#8fb7e2;stroke-width:1;vector-effect:non-scaling-stroke}
@@ -656,12 +684,12 @@ button{cursor:pointer;background:none;border:0}
    szélesebb (a nagy iPhone-ok és Pixelek fekve 915–956 px): ott a 760 px-es
    asztali doboz a kép magasságába szorult. */
 @media (max-width:900px), (orientation:landscape) and (max-height:500px){
-  .epvdlg{width:100vw;height:100dvh;margin:0;border-radius:0;padding-top:env(safe-area-inset-top);
+  .epvdlg{width:100vw;height:var(--vh100);margin:0;border-radius:0;padding-top:env(safe-area-inset-top);
     padding-bottom:env(safe-area-inset-bottom)}
   .epvtest{display:block;overflow-y:auto}
   /* Állva a szélesség köt; fekve a magasság, különben a négyzetes Budapest-
      térkép két képernyőnyi lenne, a jelek és a lista a képen kívül. */
-  .epvterkep{padding:12px 16px 4px;border-right:0;background:none;overflow:visible;--epvh:max(200px,100dvh - 180px)}
+  .epvterkep{padding:12px 16px 4px;border-right:0;background:none;overflow:visible;--epvh:max(200px,var(--vh100) - 180px)}
 }
 /* Fekvő telefonon a térkép és a lista egymás mellé kerül, mint asztalon:
    egymás alatt a négyzetes Budapest-térkép két képernyőnyi lett, korlátozva
@@ -669,11 +697,13 @@ button{cursor:pointer;background:none;border:0}
 /* Az egész egy görgető tömb, a térkép a helyén ragad: két külön görgető
    oszlopnál a jobb oszlop teteje (az alapértelmezett és egy GPS-eredmény) a
    listát nullára nyomta, és nem lehetett görgetni. */
-@media (max-width:900px) and (orientation:landscape), (orientation:landscape) and (max-height:500px){
+/* min-width:600px: nagyon keskeny fekvő ablakban (320×256, 400%-os nagyítás)
+   a 300 px-es lista mellett a térképnek 32 px maradt — ott egymás alatt jobb. */
+@media (max-width:900px) and (orientation:landscape) and (min-width:600px), (orientation:landscape) and (max-height:500px) and (min-width:600px){
   .epvtest{display:grid;overflow-y:auto;grid-template-columns:minmax(0,1fr) minmax(300px,45%);grid-template-rows:auto 1fr}
   /* a doboz biztonsági sávjai is a görgető tömbből veszik el a helyet */
   .epvterkep{align-self:start;position:sticky;top:0;
-    --epvh:calc(100dvh - 140px - env(safe-area-inset-top) - env(safe-area-inset-bottom))}
+    --epvh:calc(var(--vh100) - 140px - env(safe-area-inset-top) - env(safe-area-inset-bottom))}
   .epvlista{overflow:visible}
 }
 .grab{display:none}
@@ -683,26 +713,30 @@ button{cursor:pointer;background:none;border:0}
   body{overscroll-behavior:none}
   /* Telefonon a backdrop-blur minden képkockán újraszámolná az alatta mozgó
      térképet. A panelek amúgy is 92%-ban átlátszatlanok, így alig látszik. */
-  .rail,.plate,.tools button,.legend-btn{backdrop-filter:none;background:var(--surface)}
-  .app{display:block;height:100dvh;position:relative}
+  .rail,.plate,.tools button,.legend-btn{-webkit-backdrop-filter:none;backdrop-filter:none;background:var(--surface)}
+  .app{display:block;height:var(--vh100);position:relative}
 
   .head{position:fixed;top:0;left:0;right:0;height:54px;padding:0 12px;gap:8px;
     padding-top:env(safe-area-inset-top)}
-  .head{height:calc(54px + env(safe-area-inset-top))}
+  .head{height:calc(54px + env(safe-area-inset-top));
+    padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right))}
+  /* Fekve a kivágás (notch) és a lekerekített sarok a bal vagy a jobb szélre
+     kerül: a 12 px-re álló gombok alá csúsztak. */
+  .side{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
   .brand b{font-size:17px}
   .brand>span{display:none}
   .iconbtn{display:grid}
   .optbar{position:absolute;top:calc(100% + 6px);right:10px;flex-direction:column;gap:6px;
     background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px;
-    box-shadow:var(--shadow-2);opacity:0;transform:translateY(-6px) scale(.97);pointer-events:none;
-    transition:opacity .2s var(--ease),transform .2s var(--ease)}
-  .optbar.open{opacity:1;transform:none;pointer-events:auto}
+    box-shadow:var(--shadow-2);opacity:0;transform:translateY(-6px) scale(.97);pointer-events:none;visibility:hidden;
+    transition:opacity .2s var(--ease),transform .2s var(--ease),visibility 0s linear .2s}
+  .optbar.open{opacity:1;transform:none;pointer-events:auto;visibility:visible;transition-delay:0s}
   .optbar .seg button{padding:9px 15px;font-size:14px}
 
   .map-wrap{position:fixed;top:calc(54px + env(safe-area-inset-top));left:0;right:0;bottom:0}
 
   /* ---- alsó lap ---- */
-  .side{position:fixed;left:0;right:0;bottom:0;top:auto;height:86dvh;z-index:20;
+  .side{position:fixed;left:0;right:0;bottom:0;top:auto;height:calc(var(--vh100) * .86);z-index:20;
     border-right:0;border-top:1px solid var(--line);border-radius:20px 20px 0 0;
     box-shadow:0 -6px 34px rgba(0,0,0,.20);
     transform:translateY(var(--sheet,60vh));transition:transform .42s var(--ease);
@@ -726,7 +760,8 @@ button{cursor:pointer;background:none;border:0}
   .btn{padding:15px 10px;font-size:15px}
   .ep{padding:12px 12px;border-radius:11px}
   .ep .txt span{font-size:15px}
-  .ep .x{font-size:22px;padding:4px 6px}
+  .epx{width:42px;height:42px;font-size:22px}
+  .epw.xx .ep{padding-right:52px}
   .sum b{font-size:22px}
   .sum div{padding:12px 11px}
   .step{padding:9px 0;min-height:46px}
@@ -736,8 +771,8 @@ button{cursor:pointer;background:none;border:0}
   .empty{padding:20px 16px}
 
   /* ---- térkép-vezérlők ---- */
-  .hud{left:12px;top:12px;gap:8px}
-  .modesw{position:fixed;left:12px;bottom:var(--railb,142px);z-index:4;
+  .hud{left:max(12px,env(safe-area-inset-left));top:12px;gap:8px}
+  .modesw{position:fixed;left:max(12px,env(safe-area-inset-left));bottom:var(--railb,142px);z-index:4;
     transition:bottom .42s var(--ease)}
   .fname{padding:8px 12px}
   .fname b{font-size:15px}
@@ -745,8 +780,12 @@ button{cursor:pointer;background:none;border:0}
   .modesw button{padding:9px 14px;font-size:13.5px}
   .tools{display:none}
   .legend-btn,.legend-pop{display:none}
-  .rail{top:auto;transform:none;right:10px;bottom:var(--railb,142px);
-    transition:bottom .42s var(--ease);flex-direction:column;gap:2px;padding:5px;border-radius:15px}
+  /* A sín alulról nő: fekvő telefonon (844×390, 667×375) a felső szintek a
+     fejléc mögé kerültek, elérhetetlenül. A fejléc alá korlátozva görget. */
+  .rail{top:auto;transform:none;right:max(10px,env(safe-area-inset-right));bottom:var(--railb,142px);
+    transition:bottom .42s var(--ease);flex-direction:column;gap:2px;padding:5px;border-radius:15px;
+    max-height:calc(var(--vh100) - var(--railb,142px) - 66px - env(safe-area-inset-top));
+    overflow-y:auto;overscroll-behavior:contain}
   .lv{width:42px;height:36px;font-size:15px;border-radius:10px}
   .lv:hover{transform:none}
   .ftag{font-size:13px}
@@ -790,26 +829,30 @@ button{cursor:pointer;background:none;border:0}
       <span id="sub"></span>
     </div>
     <div class="sp"></div>
-    <button class="iconbtn" id="menuBtn" aria-label="Beállítások" aria-expanded="false">
+    <button class="iconbtn" id="menuBtn" aria-label="Beállítások" aria-expanded="false" aria-controls="optbar">
       <svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6">
         <circle cx="9" cy="4" r="1.3"/><circle cx="9" cy="9" r="1.3"/><circle cx="9" cy="14" r="1.3"/></svg>
     </button>
     <div class="optbar" id="optbar">
-      <div class="seg" role="group" aria-label="Nyelv">
+      <div class="seg" role="group" aria-label="Nyelv" id="langSeg">
         <button id="langHu" aria-pressed="true">HU</button><button id="langEn" aria-pressed="false">EN</button>
       </div>
       <div class="seg" role="group" aria-label="Helyiségek" id="staffSeg">
         <button id="stOff" aria-pressed="true">Hallgatói</button><button id="stOn" aria-pressed="false">Minden</button>
       </div>
-      <div class="seg icons" role="group" aria-label="Téma">
-        <button id="thLight" aria-pressed="false" title="Világos">☀</button>
-        <button id="thAuto" aria-pressed="true" title="Rendszer">◐</button>
-        <button id="thDark" aria-pressed="false" title="Sötét">☾</button>
+      <div class="seg icons" role="group" aria-label="Téma" id="themeSeg">
+        <button id="thLight" aria-pressed="false" title="Világos" aria-label="Világos"><span aria-hidden="true">☀</span></button>
+        <button id="thAuto" aria-pressed="true" title="Rendszer szerint" aria-label="Rendszer szerint"><span aria-hidden="true">◐</span></button>
+        <button id="thDark" aria-pressed="false" title="Sötét" aria-label="Sötét"><span aria-hidden="true">☾</span></button>
       </div>
     </div>
   </header>
 
-  <aside class="side" id="side">
+  <!-- A panel a fő tartalom (kereső, adatlap, útvonal lépései): <main>, és
+       egy rejtett h1 a lap címével — a felolvasó címsorokkal és
+       tájékozódási pontokkal ugrik, és egyik sem volt. -->
+  <main class="side" id="side">
+    <h1 class="sr-only" id="h1">OA Épület Teremkereső</h1>
     <button class="grab" id="grab" aria-label="Panel húzása"><span></span></button>
     <div class="search">
       <div class="field">
@@ -821,13 +864,14 @@ button{cursor:pointer;background:none;border:0}
     </div>
     <div class="scroll" id="scroll"></div>
     <div class="foot" id="foot"></div>
-  </aside>
+  </main>
 
   <div class="map-wrap" id="mapwrap">
-    <!-- A térkép EGY tab-állomás, nem 182. Odaérve a nyilak léptetnek a
-         helyiségek közt, Enter választ — a roving tabindex mintája. Ha minden
-         poligon külön tab-állomás lenne, a billentyűzetes felhasználónak
-         182-szer kellene tabbolnia, hogy a térképen túljusson. -->
+    <!-- A térkép EGY tab-állomás, nem minden helyiség egy-egy. Odaérve a
+         nyilak léptetnek a helyiségek közt, Enter választ — a roving tabindex
+         mintája. Ha minden poligon külön tab-állomás lenne, a billentyűzetes
+         felhasználónak az OA-ban több mint kétszázszor kellene tabbolnia,
+         hogy a térképen túljusson. -->
     <div class="stage" id="stage" tabindex="0" role="group"
          aria-describedby="mapHint"><div class="world" id="world"></div></div>
     <!-- Épület nézetben a teremszámok itt állnak, a 3D-s jeleneten kívül —
@@ -856,7 +900,7 @@ button{cursor:pointer;background:none;border:0}
 
     <div class="hud">
       <div class="plate fname" id="fname"></div>
-      <div class="plate modesw" role="group" aria-label="Nézet">
+      <div class="plate modesw" role="group" aria-label="Nézet" id="modeSeg">
         <button id="m2" aria-pressed="true">
           <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4">
             <rect x="1.2" y="1.2" width="11.6" height="11.6" rx="1.4"/><path d="M1.2 5.6h11.6M5.6 5.6v7.2"/></svg>
@@ -874,7 +918,7 @@ button{cursor:pointer;background:none;border:0}
       <button id="zout" title="Kicsinyítés">−</button>
       <button id="zfit" title="Illesztés">⤢</button>
     </div>
-    <button class="legend-btn" id="legBtn">
+    <button class="legend-btn" id="legBtn" aria-expanded="false" aria-controls="legPop">
       <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
         <rect x="1" y="1.6" width="4" height="4" rx=".8"/><rect x="7" y="1.6" width="4" height="4" rx=".8"/>
         <rect x="1" y="6.6" width="4" height="4" rx=".8"/><rect x="7" y="6.6" width="4" height="4" rx=".8"/></svg>
@@ -898,21 +942,24 @@ const D_OA = D;
 const I18N={hu:{
   sub:"Neumann János Informatikai Kar · Bécsi út 96/b",
   ph:"Terem, kód vagy funkció…", plan:"Alaprajz", bld:"Épület", legend:"Jelmagyarázat",
-  start:"Innen", dest:"Ide", setFrom:"Innen indulok", setTo:"Ide megyek",
+  cimLap:"%s épület · Teremkereső", lSettings:"Beállítások", lLang:"Nyelv", lTheme:"Téma",
+  thLight:"Világos", thAuto:"Rendszer szerint", thDark:"Sötét", lGrab:"Panel: fel vagy le", lSearch:"Keresés", lView:"Nézet",
+  start:"Innen", dest:"Ide", clearFrom:"Indulás törlése", clearTo:"Cél törlése", setFrom:"Innen indulok", setTo:"Ide megyek",
   hint:"Keress rá egy teremre, vagy kattints egyre az alaprajzon.",
   hint2:"Válaszd ki a célt is — az útvonal automatikusan kirajzolódik.",
-  none:"Nincs összefüggő útvonal. Az alaprajzról hiányzó ajtók miatt néhány szárny még nincs bekötve.",
-  nores:"Nincs találat.",
-  dist:"távolság", time:"séta", vert:"szintváltás", m:"m", min:"perc",
+  none:"Ide innen nem tudunk útvonalat rajzolni: ez a rész a térképen még nincs bekötve. A portán segítenek.",
+  nores:"Nincs találat. Próbáld így: F05, 1.13, mosdó, büfé, labor.", listBack:"Vissza", nRes:"%s találat", nRes0:"Nincs találat",
+  dist:"távolság", time:"séta", vert:"emelet", m:"m", min:"perc", fo:"fő",
   route:"Útvonal", room:"Helyiség", lvl:"Szint",
-  go:"Indulj innen:", arrive:"Cél:", inThru:"Bejárat ezen át:", outThru:"Kijárat ezen át:", walk:"Haladj tovább", left:"Fordulj balra", right:"Fordulj jobbra",
+  go:"Indulj innen:", arrive:"Cél:", inThru:"Bejárat ezen át:", outThru:"Kijárat ezen át:", walk:"Haladj tovább", after:"~%s m után", left:"Fordulj balra", right:"Fordulj jobbra",
   stairs:"Lépcsőn", up:"fel", down:"le", via:"Lépcsőház", nLv:"%s szint", nRooms:"helyiség",
   epvOpen:"Épület választása", epvHere:"most ez van nyitva", epvNoPlan:"alaprajz még nincs",
   epvOther:"Ez a kód a(z) %s épületé, ahhoz viszont még nincs alaprajz.",
   epvUnknown:"Ez a kód egyetlen ismert épülethez sem tartozik.",
+  linkNincs:"A linkben szereplő helyiség (%s) nincs ezen az alaprajzon.",
   epvNoData:"A(z) %s épület alaprajza most nem érhető el, ezért nem nyitható meg.",
   epvBack:"Vissza: %s", epvCountry:"Magyarország", epvNoPlace:"Hely nélkül",
-  epvNoPlaceSub:"a nyilvántartásban nincs címük", epvN:"%s épület", epvWithPlan:"%s alaprajzzal",
+  epvNoPlaceSub:"a térképen még nem szerepelnek", epvN:"%s épület", epvWithPlan:"%s alaprajzzal",
   epvHasPlan:"van alaprajz", epvDistrict:"kerület", epvAll:"Mind", epvAround:"%s környéke",
   epvPin:"%s: %s, ebből %s alaprajzzal", epvNotOnMap:"A térképen nem jelölt",
   epvDefault:"Alapértelmezett épület", epvOpenBtn:"Megnyitás", epvIsOpen:"ez van nyitva",
@@ -943,16 +990,17 @@ const I18N={hu:{
   qrSend:"Küldd el a telefonodra", qrTitle:"Olvasd be a telefonoddal",
   qrHint:"Irányítsd a kamerát a kódra: ugyanez az útvonal nyílik meg a telefonodon, és viheted magaddal.",
   qrImg:"QR-kód az útvonal linkjével", close:"Bezárás",
-  shareRoute:"Útvonal · %s → %s", shareRoom:"%s · OA épület",
+  shareRoute:"Útvonal · %s → %s", shareRoom:"%s · %s épület", shareManual:"Másold ki a linket:",
   stStudent:"Hallgatói", stAll:"Minden", stTitle:"Mely helyiségek látszanak",
   stHint:"Az irodák, raktárak és üzemeltetési terek halványan jelennek meg.",
   qwc:"Legközelebbi mosdó", qbufe:"Büfé", qentry:"Porta", tmWalk:"%s perc",
-  totemSoon:"10 másodperc múlva alaphelyzetbe áll — érintsd meg a képernyőt, ha még használod.",
+  totemSoon:"20 másodperc múlva alaphelyzetbe áll — érintsd meg a képernyőt, ha még használod.",
   totemOn:"Totem mód: egy perc tétlenség után alaphelyzetbe áll.",
   wcWomen:"Női mosdó", wcMen:"Férfi mosdó", wcAcc:"Akadálymentes mosdó", wcAny:"Mosdó (nemre nem jelölt)",
   qrooms:"Foglalható termek", qroomsSub:"most szabad vagy foglalt",
   tmTitle:"Foglalható termek", tmFree:"Szabad", tmBusy:"Foglalt",
-  tmUntil:"%s-ig", tmFrom:"%s-tól", tmNoData:"Erre a napra nincs adat",
+  tmUntil:"%s-ig", tmNoData:"Erre a napra nincs adat",
+  tmLoadFail:"Az órarendet most nem sikerült betölteni. Ellenőrizd a kapcsolatot, és nyisd meg újra a listát.",
   tmToday:"Ma", tmNothing:"Ma nincs óra", tmNoMore:"Ma már nincs óra",
   tmHoliday:"Ünnepnap, nincs óra", tmMaybe:"Szabad?", tmMaybeSub:"Csak a %s órái ismertek",
   tmShared:"A „Szabad?” termekben más karok is tartanak órát, és azok nincsenek benne az adatban.",
@@ -967,29 +1015,32 @@ const I18N={hu:{
   mapLabel:"Alaprajz — %s", mapLabel3:"Épület, 3D nézet — %s",
   mapHint:"Nyílbillentyűkkel léptethetsz a helyiségek közt, Enterrel kiválasztod. A Page Up és Page Down szintet vált.",
   aLevel:"%s. Ezen a szinten %s helyiség van.",
-  aSel:"%s kiválasztva, %s.", aClear:"A kiválasztás törölve.",
-  aRoute:"Útvonal kiszámolva: %s méter, %s perc, %s szintváltás.",
+  aSel:"%s kiválasztva, %s.", aClear:"A kiválasztás törölve.", aVia:"Útvonal: %s.", aEpulet:"Megnyitva: %s.",
+  aRoute:"Útvonal kiszámolva: %s méter, %s perc, %s emelet.",
   aNoRoute:"Erre a két helyiségre nincs összefüggő útvonal.",
   aMode:"%s nézet.", aStaff:"%s helyiség látszik.", aEdge:"Nincs több helyiség ebben az irányban.",
   zin:"Nagyítás", zout:"Kicsinyítés", zfit:"Képre igazítás", railLabel:"Szint", toolsLabel:"Nagyítás"
 },en:{
   sub:"Faculty of Informatics · Bécsi út 96/b, Budapest",
   ph:"Room, code or function…", plan:"Floor plan", bld:"Building", legend:"Legend",
-  start:"From", dest:"To", setFrom:"Start here", setTo:"Go here",
+  cimLap:"%s building · Room finder", lSettings:"Settings", lLang:"Language", lTheme:"Theme",
+  thLight:"Light", thAuto:"System", thDark:"Dark", lGrab:"Panel: up or down", lSearch:"Search", lView:"View",
+  start:"From", dest:"To", clearFrom:"Clear start", clearTo:"Clear destination", setFrom:"Start here", setTo:"Go here",
   hint:"Search for a room, or tap one on the plan.",
   hint2:"Pick a destination too — the route draws itself.",
-  none:"No connected route. Some wings are not linked yet because door openings are missing from the source plan.",
-  nores:"No results.",
-  dist:"distance", time:"walk", vert:"level changes", m:"m", min:"min",
+  none:"We can't draw a route here from this start: this part isn't linked on the map yet. Ask at the reception.",
+  nores:"No results. Try: F05, 1.13, toilet, cafe, lab.", listBack:"Back", nRes:"%s results", nRes0:"No results",
+  dist:"distance", time:"walk", vert:"floors", m:"m", min:"min", fo:"seats",
   route:"Route", room:"Room", lvl:"Level",
-  go:"Start at:", arrive:"Destination:", inThru:"Enter through:", outThru:"Leave through:", walk:"Continue", left:"Turn left", right:"Turn right",
+  go:"Start at:", arrive:"Destination:", inThru:"Enter through:", outThru:"Leave through:", walk:"Continue", after:"after ~%s m", left:"Turn left", right:"Turn right",
   stairs:"Take the stairs", up:"up", down:"down", via:"Stairwell", nLv:"%s floors", nRooms:"rooms",
   epvOpen:"Choose building", epvHere:"open now", epvNoPlan:"no floor plan yet",
   epvOther:"This code belongs to building %s, which has no floor plan yet.",
   epvUnknown:"This code does not belong to any known building.",
+  linkNincs:"The room in the link (%s) is not on this floor plan.",
   epvNoData:"The floor plan of building %s is not available right now, so it cannot be opened.",
   epvBack:"Back: %s", epvCountry:"Hungary", epvNoPlace:"No location",
-  epvNoPlaceSub:"no address on record", epvN:"%s buildings", epvWithPlan:"%s with floor plans",
+  epvNoPlaceSub:"not on the map yet", epvN:"%s buildings", epvWithPlan:"%s with floor plans",
   epvHasPlan:"floor plan", epvDistrict:"district", epvAll:"All", epvAround:"around %s",
   epvPin:"%s: %s, %s with floor plans", epvNotOnMap:"Not on the map",
   epvDefault:"Default building", epvOpenBtn:"Open", epvIsOpen:"open now",
@@ -1020,16 +1071,17 @@ const I18N={hu:{
   qrSend:"Send to your phone", qrTitle:"Scan with your phone",
   qrHint:"Point your camera at the code: the same route opens on your phone, ready to take with you.",
   qrImg:"QR code with the route link", close:"Close",
-  shareRoute:"Route · %s → %s", shareRoom:"%s · OA building",
+  shareRoute:"Route · %s → %s", shareRoom:"%s · %s building", shareManual:"Copy the link:",
   stStudent:"Student", stAll:"All", stTitle:"Which rooms are shown",
   stHint:"Offices, stores and plant rooms are shown dimmed.",
   qwc:"Nearest toilet", qbufe:"Café", qentry:"Front desk", tmWalk:"%s min",
-  totemSoon:"Resetting in 10 seconds — touch the screen if you are still using it.",
+  totemSoon:"Resetting in 20 seconds — touch the screen if you are still using it.",
   totemOn:"Totem mode: resets after a minute without use.",
   wcWomen:"Women's toilet", wcMen:"Men's toilet", wcAcc:"Accessible toilet", wcAny:"Toilet (not marked by gender)",
   qrooms:"Bookable rooms", qroomsSub:"free or busy right now",
   tmTitle:"Bookable rooms", tmFree:"Free", tmBusy:"Busy",
-  tmUntil:"until %s", tmFrom:"from %s", tmNoData:"No data for this day",
+  tmUntil:"until %s", tmNoData:"No data for this day",
+  tmLoadFail:"Couldn't load the timetable right now. Check your connection and open the list again.",
   tmToday:"Today", tmNothing:"No classes today", tmNoMore:"No more classes today",
   tmHoliday:"Public holiday, no classes", tmMaybe:"Free?", tmMaybeSub:"Only %s classes are known",
   tmShared:"Rooms marked “Free?” are also used by other faculties, whose classes are not in the data.",
@@ -1044,8 +1096,8 @@ const I18N={hu:{
   mapLabel:"Floor plan — %s", mapLabel3:"Building, 3D view — %s",
   mapHint:"Use the arrow keys to move between rooms and Enter to select. Page Up and Page Down change level.",
   aLevel:"%s. This level has %s rooms.",
-  aSel:"%s selected, %s.", aClear:"Selection cleared.",
-  aRoute:"Route found: %s metres, %s minutes, %s level changes.",
+  aSel:"%s selected, %s.", aClear:"Selection cleared.", aVia:"Route: %s.", aEpulet:"Opened: %s.",
+  aRoute:"Route found: %s metres, %s minutes, %s floors.",
   aNoRoute:"No connected route between these two rooms.",
   aMode:"%s view.", aStaff:"Showing %s rooms.", aEdge:"No further room in that direction.",
   zin:"Zoom in", zout:"Zoom out", zfit:"Fit to view", railLabel:"Level", toolsLabel:"Zoom"
@@ -1065,7 +1117,8 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
 /* ------------------------------------------------------------------ adat */
-const MOB=()=>matchMedia("(max-width:900px)").matches;
+// egyetlen MediaQueryList: hívásonként egy új ~10 ms-ot vitt el egy-egy rajzolásból
+const MQ_MOB=matchMedia("(max-width:900px)"), MOB=()=>MQ_MOB.matches;
 
 /* Amire egy hallgatónak nincs dolga: az OA 223 helyiségéből 109. Nem
    vesszük ki őket — a födém sziluettje az összes poligonból áll össze, így
@@ -1192,6 +1245,11 @@ const neptunOf=code=>(PAIRING && Object.prototype.hasOwnProperty.call(localPairs
    terem is megjelenik, a mintát bővíteni kell. A párosító módban kiosztott
    nevekkel ugyanígy. */
 const NEPTUN_ALAK=/^F0[1-9]$/;
+// a helyiség neve a felolvasónak: a látható felirattal kezdődik, a tervlapi kód zárójelben
+function hangNev(r){
+  const lb=roomLabel(r);
+  return lb===r.code?`${r.code} · ${r.name||r.cat}`:`${lb} · ${r.name||r.cat} (${r.code})`;
+}
 function roomLabel(r){
   const n=neptunOf(r.code); if(n) return n;
   const sc=r.code.slice(4);
@@ -1468,9 +1526,13 @@ function bentrolVizsgalo(fo,kint){
 function kotesJeloltek(r){
   const P=r.poly, L=P.length, xs=P.map(p=>p[0]), ys=P.map(p=>p[1]), E=1e-6;
   const x0=Math.min(...xs)-KOTES_TAV, x1=Math.max(...xs)+KOTES_TAV, y0=Math.min(...ys)-KOTES_TAV, y1=Math.max(...ys)+KOTES_TAV;
-  const ki=[], list=CELLLIST[r.level]||[];
-  for(let n=0;n<list.length;n++){
-    const k=list[n], i=k%GW, j=(k-i)/GW, x=(i+.5)*RES, y=(j+.5)*RES;
+  const ki=[], M=MASK[r.level]; if(!M) return ki;
+  // csak a helyiség befoglaló téglalapjának cellái, a CELLLIST sorrendjében (lásd nearestCell)
+  const i0=Math.max(0,Math.floor(x0/RES-.5)), i1=Math.min(GW-1,Math.ceil(x1/RES)),
+        j0=Math.max(0,Math.floor(y0/RES-.5)), j1=Math.min(GH-1,Math.ceil(y1/RES));
+  for(let j=j0;j<=j1;j++) for(let i=i0;i<=i1;i++){
+    const k=j*GW+i; if(!((M[k>>3]>>(k&7))&1)) continue;
+    const x=(i+.5)*RES, y=(j+.5)*RES;
     if(x<x0||x>x1||y<y0||y>y1) continue;
     let m=1e9, be=false;
     for(let e=0,o=L-1;e<L;o=e++){
@@ -1490,11 +1552,18 @@ function epuletRcell(d){
   for(const r of d.rooms){
     const ds=(r.doors||[]).map(p=>nearestCell(r.level,p[0],p[1])).filter(c=>c>=0);
     if(ds.length){RCELL[r.id]=ds;continue;}
-    const list=CELLLIST[r.level];if(!list)continue;
+    const M=MASK[r.level];if(!M)continue;
     let best=-1,bd=1e9;
     const cs=r.poly.concat([[r.cx,r.cy]]);
-    for(let n=0;n<list.length;n++){const k=list[n],i=k%GW,j=(k-i)/GW,x=(i+.5)*RES,y=(j+.5)*RES;
-      for(const p of cs){const dd=(p[0]-x)**2+(p[1]-y)**2;if(dd<bd){bd=dd;best=k;}}}
+    /* Csak a csúcsok befoglaló téglalapja 6 m-rel bővítve: azon kívül minden
+       cella 6 m-nél messzebb van mindegyik ponttól, és úgysem köthetne. */
+    let bx0=1e9,bx1=-1e9,by0=1e9,by1=-1e9;
+    for(const p of cs){ if(p[0]<bx0)bx0=p[0]; if(p[0]>bx1)bx1=p[0]; if(p[1]<by0)by0=p[1]; if(p[1]>by1)by1=p[1]; }
+    const i0=Math.max(0,Math.floor((bx0-6)/RES-.5)), i1=Math.min(GW-1,Math.ceil((bx1+6)/RES)),
+          j0=Math.max(0,Math.floor((by0-6)/RES-.5)), j1=Math.min(GH-1,Math.ceil((by1+6)/RES));
+    for(let j=j0;j<=j1;j++) for(let i=i0;i<=i1;i++){ const k=j*GW+i; if(!((M[k>>3]>>(k&7))&1)) continue;
+      const x=(i+.5)*RES,y=(j+.5)*RES;
+      for(const p of cs){const ex=p[0]-x,ey=p[1]-y,dd=ex*ex+ey*ey;if(dd<bd){bd=dd;best=k;}}}
     if(best>=0&&bd<36)RCELL[r.id]=[best];
   }
   /* Második menet: a fő hálózat épületenként egyszer számolódik (a hét
@@ -1525,10 +1594,19 @@ function entryOf(r){
   const e=chain.length?chain[chain.length-1]:r;
   return {cells:RCELL[e.id],chain};
 }
+/* Csak a 7 m-es körön belüli cellákat nézi, nem a szint mind a több tízezer
+   járható celláját: az épületváltás és az indulás idejének nagyobb része ez
+   volt (a KT-ra váltás 1,1 s helyett ~0,5 s). A sorrend (soronként, a cella
+   sorszáma szerint) ugyanaz, mint a CELLLIST-é, így egyenlő távolságnál is
+   ugyanaz a cella nyer — az aranyértékek ezt őrzik. */
 function nearestCell(lv,x,y){
-  const list=CELLLIST[lv];let best=-1,bd=1e9;
-  for(let n=0;n<list.length;n++){const k=list[n],i=k%GW,j=(k-i)/GW;
-    const dd=((i+.5)*RES-x)**2+((j+.5)*RES-y)**2;if(dd<bd){bd=dd;best=k;}}
+  const M=MASK[lv]; if(!M) return -1;
+  const i0=Math.max(0,Math.floor((x-7)/RES-.5)), i1=Math.min(GW-1,Math.ceil((x+7)/RES)),
+        j0=Math.max(0,Math.floor((y-7)/RES-.5)), j1=Math.min(GH-1,Math.ceil((y+7)/RES));
+  let best=-1,bd=1e9;
+  for(let j=j0;j<=j1;j++){ const dy=(j+.5)*RES-y;
+    for(let i=i0;i<=i1;i++){ const k=j*GW+i; if(!((M[k>>3]>>(k&7))&1)) continue;
+      const dx=(i+.5)*RES-x, dd=dx*dx+dy*dy; if(dd<bd){bd=dd;best=k;} } }
   return bd<49?best:-1;
 }
 /* A hallgatók által használható lift (D.lifts). Se a tervlap, se az IFC-modell
@@ -1683,8 +1761,11 @@ function steps(rt,mm){
       if(c){
         let g=Math.atan2(c[1]-b[1],c[0]-b[0])-Math.atan2(b[1]-a[1],b[0]-a[0]);
         while(g>Math.PI)g-=2*Math.PI;while(g<-Math.PI)g+=2*Math.PI;
+        /* A fordulás lépése azt mondja, MENNYI egyenes után kell fordulni:
+           korábban „Fordulj jobbra · Haladj tovább ~48 m” állt, amit a
+           hallgató úgy olvasott, hogy előbb fordul, aztán megy 48 métert. */
         if(Math.abs(g)>Math.PI/4.5&&run>2.5){
-          o.push({ico:g>0?"↷":"↶",t:g>0?t.right:t.left,d:`${t.walk} ~${Math.round(run)} ${t.m}`,lv:s.lv});
+          o.push({ico:g>0?"↷":"↶",t:g>0?t.right:t.left,d:t.after.replace("%s",Math.round(run)),lv:s.lv});
           run=0;
         }
       }
@@ -1722,10 +1803,11 @@ const CATS={"ELŐADÓ - SZEMINÁRIUM":"#fa9a90","LABOR":"#fcbcb5","IRODÁK":"#ff
   "KÖNYVTÁR":"#d3c7be","KÜLSŐS SZOLGÁLTATÁS":"#b5909b"};
 const DARK=[11,19,28];
 const _c={};
+const MQ_SOTET=matchMedia("(prefers-color-scheme: dark)");
 const isDark=()=>{const a=document.documentElement.getAttribute("data-theme");
-  return a?a==="dark":matchMedia("(prefers-color-scheme: dark)").matches;};
+  return a?a==="dark":MQ_SOTET.matches;};
 function cc(cat){
-  const base=CATS[cat]||D.cats[cat]||"#cfd6dd",key=cat+(isDark()?"|d":"|l");
+  const base=CATS[cat]||(D.cats||{})[cat]||"#cfd6dd",key=cat+(isDark()?"|d":"|l");
   if(_c[key])return _c[key];
   let out=base;
   if(isDark()){
@@ -1747,7 +1829,7 @@ const FLOOR={};
    járásvonal a fokok közepén alulról felfelé, a végén nyílheggyel. */
 function flightD(k){
   const r=x=>Math.round(x*100)/100, pt=q=>r(q[0])+" "+r(q[1]);
-  const a=k.w.at(-2), b=k.w.at(-1), L=Math.hypot(b[0]-a[0],b[1]-a[1])||1;
+  const a=k.w[k.w.length-2], b=k.w[k.w.length-1], L=Math.hypot(b[0]-a[0],b[1]-a[1])||1;
   const ux=(b[0]-a[0])/L, uy=(b[1]-a[1])/L, h=.45, s=.27;
   return k.t.map(p=>"M"+p.map(pt).join("L")+"Z").join("")+"M"+k.w.map(pt).join("L")+
     "M"+pt([b[0]-ux*h-uy*s,b[1]-uy*h+ux*s])+"L"+pt(b)+"L"+pt([b[0]-ux*h+uy*s,b[1]-uy*h-ux*s]);
@@ -1801,7 +1883,10 @@ function buildFloors(){
         class:"room"+(r.code?" pick":"")+(S.sel===r.code?" sel":"")+(STAFF.has(r.cat)?" staff":"")});
       if(r.code){
         po.addEventListener("click",e=>{e.stopPropagation();select(r.code);});
-        const nm=r.code+" · "+(r.name||r.cat);
+        /* A név a térképen látható felirattal kezdődik (az ajtón álló számmal,
+           ha van): az „F08” feliratú terem korábban „OA00F01 · ELŐADÓ”-nak
+           hangzott, és hangvezérléssel a látott számot nem lehetett kimondani. */
+        const nm=hangNev(r);
         const ti=el("title");ti.textContent=nm;po.appendChild(ti);
         // A <title> egérre buboréknév, de a hozzáférhető nevet nem bízzuk rá:
         // a gombszerepnél az aria-label a kiszámítási sor elején áll, tehát
@@ -2376,7 +2461,9 @@ function drawRoute(){
       g.appendChild(el("polyline",{points:pts,class:"rl casing"}));
       const line=el("polyline",{points:pts,class:"rl draw"});
       g.appendChild(line);
-      const L=line.getTotalLength?line.getTotalLength():200;
+      /* A hossz a pontokból: a getTotalLength() kényszerített layoutot kért,
+         egy QR-linkes indulásnál ~130 ms-ot (4× lassított CPU-n). */
+      let L=0; for(let i=1;i<s.pts.length;i++) L+=Math.hypot(s.pts[i][0]-s.pts[i-1][0],s.pts[i][1]-s.pts[i-1][1]);
       line.style.setProperty("--len",L);
     }
     const nx=mm.segs[si+1];
@@ -2429,7 +2516,8 @@ function projBBox(){
   for(const r of D.rooms){
     if(!three && r.level!==S.level) continue;
     const z = three ? (LVI[r.level]-ai)*GAP : 0;
-    for(let i=0;i<r.poly.length;i+=2){
+    // minden csúcs: a korábbi i+=2 minden másodikat kihagyta, és a ⤢ 5–10%-kal kisebb dobozra illesztett
+    for(let i=0;i<r.poly.length;i++){
       const X=(r.poly[i][0]-BB.cx)*PXM, Y=(r.poly[i][1]-BB.cy)*PXM;
       const px=X*cb-Y*sb, py=(X*sb+Y*cb)*ca - z*sa;
       if(px<x0)x0=px; if(px>x1)x1=px; if(py<y0)y0=py; if(py>y1)y1=py;
@@ -2774,7 +2862,7 @@ function dive(lv){
 })();
 $("stage").addEventListener("click",()=>{if(window.__moved)return;
   if(MOB()&&snap==="full"){setSnap("peek");return;}
-  if(S.sel){S.sel=null;refreshSel();renderPanel();}});
+  if(S.sel) kijelolesTorol();});
 
 /* --------------------------------------------------- foglalható termek */
 /* Az egyetem hivatalos teremnevei (ingatlan-nyilvántartás) és a Neptun
@@ -2791,9 +2879,17 @@ let TM=null, tmLoading=null, tmDone=false;
    hálózatról jön. */
 const tmOk=d=>d&&d.het1&&d.rooms&&d.targyak?d:null;
 const tmGet=(u,o)=>fetch(u,o).then(r=>r.ok?r.json():null).catch(()=>null);
+/* Egy elbukott letöltés nem végleges: korábban a munkamenet végéig „Erre a
+   napra nincs adat” állt (ami mást jelent), és újra sem próbálta. Most a
+   hiba külön üzenet, a lista újranyitása és a hálózat visszatérése újrapróbál;
+   magától (a panel újrarajzolásakor) legfeljebb negyedpercenként. */
+let tmHiba=0;
 const tmLoad=()=>tmLoading||(tmLoading=tmGet("data/termek.json")
   .then(d=>tmOk(d)||tmGet("data/termek.json?v="+Date.now(),{cache:"no-store"}))
-  .then(d=>{ TM=tmOk(d); tmDone=true; return TM; }));
+  .then(d=>{ TM=tmOk(d); tmDone=true;
+    if(!TM){ tmHiba=Date.now(); tmLoading=null; }
+    return TM; }));
+const tmKell=()=>!TM && !tmLoading && Date.now()-tmHiba>15e3;
 
 const hhmm=m=>String((m/60)|0).padStart(2,"0")+":"+String(m%60).padStart(2,"0");
 const isoDay=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
@@ -2850,7 +2946,8 @@ function tmRow(r,now,t,tag,attr){
   else if(st.state==="busy"){ badge=`<span class="tmb busy">${t.tmBusy}</span>`;
     sub=`${esc(st.b.subj)} · ${kn(st.b.kind)} · ${t.tmUntil.replace("%s",hhmm(st.until))}`; }
   else {
-    const nx=st.next?t.tmFrom.replace("%s",hhmm(st.next.from)):t.tmNoMore;
+    // „Szabad · 10:45-ig”: a következő óra kezdetéig — a „10:45-tól” úgy hatott, mintha akkortól lenne szabad
+    const nx=st.next?t.tmUntil.replace("%s",hhmm(st.next.from)):t.tmNoMore;
     badge=st.state==="maybe"?`<span class="tmb maybe">${t.tmMaybe}</span>`
                             :`<span class="tmb free">${t.tmFree}</span>`;
     sub=st.state==="maybe"?`${t.tmMaybeSub.replace("%s",esc(TM.kar.join(", ")||"NIK"))} · ${nx}`:nx;
@@ -2858,7 +2955,7 @@ function tmRow(r,now,t,tag,attr){
   return `<${tag} class="${attr.cls}"${attr.data||""}>
       <span class="tmn"><b>${esc(r.nev)}</b><i>${esc(r.neptun)}</i></span>
       <span class="tms">${sub}${attr.ido?` · <b>${attr.ido}</b>`:""}</span>
-      <span class="tmc mono">${r.fero?r.fero+" fő":""}</span>${badge}</${tag}>`;
+      <span class="tmc mono">${r.fero?r.fero+" "+t.fo:""}</span>${badge}</${tag}>`;
 }
 function tmDetail(r,now,t){
   const iso=isoDay(now), day=tmDay(r,iso), kn=k=>t[TMKIND[k]||"kEgyeb"];
@@ -2878,7 +2975,8 @@ function tmDetail(r,now,t){
    fókuszt a gombjairól. */
 function tmCard(code,t){
   if(D!==D_OA) return "";            // az órarendi adat az OA-é (lásd renderTermek)
-  if(!tmDone){ tmLoad().then(()=>{
+  if(!TM){ if(tmLoading||tmKell()) tmLoad().then(()=>{
+      if(!TM) return;
       const top=document.querySelector("#scroll .rcard .top");
       if(S.sel===code && !S.termek && top && !top.parentNode.querySelector(".rtm"))
         top.insertAdjacentHTML("afterend",tmCard(code,T())); });
@@ -2895,7 +2993,7 @@ const pairText=()=>pairAll().map(([c,n])=>`${n} = ${c}`).join("\n");
 // a Neptun-kód emelete (BA.F.05, BA.1.13, BA.4.01) az app szintszámozásában
 const nepLevel=x=>({F:0,"1":2,"2":3,"3":4,"4":5})[x.neptun.split(".")[1]];
 function pairBar(t){
-  if(!tmDone) tmLoad().then(()=>{ if(!S.termek) renderPanel(); });
+  if(tmKell()) tmLoad().then(()=>{ if(TM && !S.termek) renderPanel(); });
   return `<div class="sec pairbar"><div class="eyebrow row">${t.pairTitle}
       <span class="mono">${pairAll().length} / ${TM?TM.rooms.length:"…"}</span></div>
     <p class="note">${t.pairHint}</p>
@@ -2916,7 +3014,7 @@ function pairPick(r,t){
       return `<button class="tmrow${cur===x.nev?" open":""}" data-pair="${esc(x.nev)}">
         <span class="tmn"><b>${esc(x.nev)}</b><i>${esc(x.neptun)}</i></span>
         <span class="tms">${o?t.pairTaken.replace("%s",esc(o)):lv!=null?esc(lvName(lv)):""}</span>
-        <span class="tmc mono">${x.fero?x.fero+" fő":""}</span></button>`; }).join("")}
+        <span class="tmc mono">${x.fero?x.fero+" "+t.fo:""}</span></button>`; }).join("")}
       <button class="tmrow${cur?"":" open"}" data-pair=""><span class="tmn"><b>${t.pairNone}</b></span></button></div></div>`;
 }
 function setPair(code,nev){
@@ -2953,7 +3051,7 @@ function tmIdok(src){
    tesszük vissza; ha az már nincs (a választott sor eltűnt, mert kész az
    útvonal), az új tartalom első gombjára. Ha közben a kód maga vitte máshová
    (térkép, kereső), maradjon. */
-const FOKUSZ_KULCS=["q","wc","via","s","tm","goto","ep","code","pair","l","epv"];
+const FOKUSZ_KULCS=["q","wc","via","s","tm","goto","ep","clear","code","pair","l","epv"];
 function fokuszElotte(box){
   const a=document.activeElement;
   if(!a||!box.contains(a)) return null;
@@ -2981,10 +3079,14 @@ function renderTermek(){
      korábban ugyanez a 24 terem jött „Szabad” jelzéssel, mintha ottaniak
      lennének — a gomb ott nincs is kint, ez a linkről vagy állapotból
      ideérő esetre szól. */
-  if(D!==D_OA){ box.innerHTML=`<div class="empty" style="padding:18px 16px">${t.tmOtherBuilding}</div>`;
-    fokuszUtana(box,fk); return; }
-  if(!TM){ box.innerHTML=`<div class="empty" style="padding:18px 16px">${tmDone?t.tmNoData:"…"}</div>`;
-    fokuszUtana(box,fk); return; }
+  /* A lista telefonon zsákutca volt: se vissza gomb, se history-bejegyzés —
+     a rendszer Vissza gombja kilépett az appból. */
+  const vissza=`<button class="listback" id="listaVissza"><span aria-hidden="true">‹</span> ${t.listBack}</button>`;
+  const kotes=()=>{ $("listaVissza").onclick=listaZar; fokuszUtana(box,fk); };
+  if(D!==D_OA){ box.innerHTML=`${vissza}<div class="empty" style="padding:18px 16px">${t.tmOtherBuilding}</div>`;
+    kotes(); return; }
+  if(!TM){ box.innerHTML=`${vissza}<div class="empty" style="padding:18px 16px">${tmLoading||!tmDone?"…":t.tmLoadFail}</div>`;
+    kotes(); return; }
   const now=new Date(), src=ROOM[S.from]||ROOM[START], ido=src?tmIdok(src):{};
   const CSOP={free:0,maybe:1,busy:2}, VEGE=24*60;
   const sorrend=TM.rooms.map((r,i)=>{ const st=tmNow(r,now), g=CSOP[st.state]??3;
@@ -2993,28 +3095,64 @@ function renderTermek(){
 
   const rows=sorrend.map(({r})=>{
     const open=S.tmOpen===r.nev, code=open&&codeOfNev(r.nev);
-    return tmRow(r,now,t,"button",{cls:"tmrow"+(open?" open":""),data:` data-tm="${esc(r.nev)}"`,
+    return tmRow(r,now,t,"button",{cls:"tmrow"+(open?" open":""),data:` data-tm="${esc(r.nev)}" aria-expanded="${open}"`,
         ido:ido[r.nev]!=null?t.tmWalk.replace("%s",ido[r.nev]):""})
       +(open?tmDetail(r,now,t)+(code?`<button class="btn tmgo" data-goto="${esc(code)}">${t.tmGoto}</button>`:""):"");
   }).join("");
 
   const shared=TM.rooms.some(r=>r.kozos)?`<br>${t.tmShared}`:"";
-  box.innerHTML=`<div class="sec"><div class="eyebrow">${t.tmTitle}</div>
+  box.innerHTML=`${vissza}<div class="sec"><div class="eyebrow">${t.tmTitle}</div>
     <div class="tmlist">${rows}</div>
     <p class="note">${t.tmNote}${shared}<br><span class="mono">${
       t.tmRange.replace("%s",esc(TM.felev)).replace("%s",TM.het1).replace("%s",tmLast())}</span></p></div>`;
   box.querySelectorAll("[data-tm]").forEach(b=>b.onclick=()=>{
     S.tmOpen=S.tmOpen===b.dataset.tm?null:b.dataset.tm; renderTermek(); });
   box.querySelectorAll("[data-goto]").forEach(b=>b.onclick=()=>select(b.dataset.goto));
-  fokuszUtana(box,fk);
+  kotes();
+}
+/* A lista (foglalható termek, mosdóválasztó) saját history-bejegyzést kap:
+   a Vissza gomb (telefonon a rendszeré is) a listát zárja, nem az appot. */
+function listaNyit(){
+  if(!(history.state&&history.state.lista)) try{ history.pushState({lista:true},"",location.href); }catch(e){}
+}
+function listaZar(){
+  if(history.state&&history.state.lista){ history.back(); return; }   // a popstate zárja
+  S.termek=false; S.wc=null; renderPanel();
 }
 // a Neptun-teremhez tartozó tervlapi terem, ha rajta van a térképen
 const codeOfNev=nev=>Object.keys({...NEPTUN,...(PAIRING?localPairs:{})}).find(c=>ROOM[c]&&neptunOf(c)===nev)||null;
 
 /* ------------------------------------------------------------------ UI */
 const norm=s=>s.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu,"");
+/* Hallgatói keresőszavak. A tervlap a „NŐI WC”, „AK. MENT. WC”, „BÜFÉ”
+   alakot ismeri, a hallgató viszont „mosdó”-t, „akadálymentes”-t, „kávé”-t
+   ír, vagy angolul „toilet”-et — ezekre korábban nem volt találat, a „wc”-re
+   pedig elöl a dolgozói öltöző WC-i jöttek. A személyzeti mosdó a szavakra
+   nem jön (névre, kódra továbbra is megtalálható). */
+const icoOf=r=>iconsOf(r)||[];
+const hallgatoiWc=r=>!DOLGOZOI_WC.has(r.code)&&!SZEMELYZETI_WC.test((r.name||"").toUpperCase());
+const KERESO_SZO=[
+  [["mosdo","wc","toalett","vece","mellekhelyiseg","toilet","restroom","bathroom","washroom","lavatory"],
+    r=>hallgatoiWc(r)&&["wc","wcw","wcm","acc"].includes(icoOf(r)[0])],
+  [["noi","nok","women","woman","ladies","female"], r=>hallgatoiWc(r)&&icoOf(r)[0]==="wcw"],
+  [["ferfi","ffi","men","gents","male"], r=>hallgatoiWc(r)&&icoOf(r)[0]==="wcm"],
+  [["akadalymentes","mozgaskorlatozott","mozgasserult","accessible","disabled","wheelchair"], r=>hallgatoiWc(r)&&icoOf(r)[0]==="acc"],
+  [["lepcso","lepcsohaz","stairs","staircase","stairway"], r=>icoOf(r).includes("stair")],
+  [["lift","felvono","elevator"], r=>icoOf(r).includes("lift")],
+  [["bufe","kave","kavezo","etel","enni","cafe","cafeteria","coffee","food","snack","buffet"], r=>(r.name||"").trim()==="BÜFÉ"],
+  [["bejarat","porta","recepcio","kijarat","entrance","reception","exit"], r=>r.code===START||/SZÉLFOGÓ|PORTA/.test(r.name||"")],
+  [["konyvtar","library"], r=>/KÖNYVTÁR/.test(r.name||"")],
+  [["lecture","auditorium","seminar","classroom"], r=>r.cat==="ELŐADÓ - SZEMINÁRIUM"],
+  [["laboratory","lab"], r=>r.cat==="LABOR"],
+];
+function szoTalal(w,r,szoveg){
+  if(szoveg.includes(w)) return true;
+  // rövid szónál csak a teljes egyezés („wc”), különben a gépelés közbeni „ma” is a férfi mosdókat hozná
+  return KERESO_SZO.some(([szk,f])=>szk.some(k=>k===w||(w.length>=3&&k.startsWith(w)))&&f(r));
+}
 function search(q){
   q=norm(q.trim()); if(!q)return[];
+  const szavak=q.split(/\s+/).filter(Boolean);
   /* Az ajtószámot sokan pont nélkül írják be („110"), a Neptun teljes
      alakjában pedig épületjel is van előtte (BA.1.10, BA.F.01). */
   const nodot=x=>x.replace(/^ba[.\s]/,"").replace(/[.\s/]/g,""), qd=nodot(q);
@@ -3025,8 +3163,15 @@ function search(q){
     else if(np&&np.startsWith(q))s=1; else if(c.startsWith(q)||c.slice(4).startsWith(q))s=1.5;
     else if(n.startsWith(q))s=2; else if(n.includes(q))s=3;
     else if(k.includes(q))s=4; else if(c.includes(q))s=5;
-    return s<0?null:{r,s};
-  }).filter(Boolean).sort((a,b)=>a.s-b.s||a.r.code.localeCompare(b.r.code)).slice(0,50).map(x=>x.r);
+    else if(szavak.every(w=>szoTalal(w,r,`${n} ${k} ${c} ${np}`)))s=3.5;   // keresőszó (mosdó, női, büfé…)
+    if(s<0) return null;
+    /* A dolgozói (iroda, raktár, öltöző, személyzeti mosdó) és a csak más
+       helyiségen át megközelíthető helyiség egy szinttel hátrébb kerül: a
+       „mosdó”-ra korábban a raktárból nyíló, a „wc”-re a dolgozói öltöző
+       mosdója jött elöl. Kódra keresve ettől még elöl marad. */
+    const h=(STAFF.has(r.cat)||!hallgatoiWc(r)?2:0)+(r.via?1:0);
+    return {r,s:s+(h?1.6:0),h};
+  }).filter(Boolean).sort((a,b)=>a.s-b.s||a.h-b.h||a.r.code.localeCompare(b.r.code)).slice(0,50).map(x=>x.r);
 }
 function renderPanel(){
   S.termek=false;
@@ -3041,12 +3186,15 @@ function renderPanel(){
         <span class="res-meta">${esc(lvOf(r.level).short)}</span></button>`).join("")
       :`<div class="empty">${t.nores}</div>`;
     box.querySelectorAll(".res-item").forEach(b=>b.onclick=()=>select(b.dataset.code));
+    // a találatok száma a felolvasónak, gépelés után (nem minden leütésre)
+    clearTimeout(renderPanel.kerT);
+    renderPanel.kerT=setTimeout(()=>{ if($("q").value.trim()===q) say(list.length?t.nRes.replace("%s",list.length):t.nRes0); },700);
     fokuszUtana(box,fk); return;
   }
   let h="";
   /* Ugyanaz a gomb a teremnél és az útvonalnál is: egy kiválasztott terem
      önmagában is megosztható link („ez a terem"), nem csak a kész útvonal. */
-  const shrBtn=`<button class="shr" title="${t.share}" aria-label="${t.share}"><svg width="15" height="15"
+  const shrBtn=TOTEM?"":`<button class="shr" title="${t.share}" aria-label="${t.share}"><svg width="15" height="15"
       viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
       <circle cx="12" cy="3.5" r="2"/><circle cx="4" cy="8" r="2"/><circle cx="12" cy="12.5" r="2"/>
       <path d="M5.8 7 10.2 4.5M5.8 9l4.4 2.5"/></svg></button>`;
@@ -3073,7 +3221,7 @@ function renderPanel(){
      felül, hogy telefonon a félig nyitott panelen is látsszon. */
   const gyors=!S.to&&(!S.sel||S.sel===S.from);
   if(S.wc&&gyors){
-    const sub=S.from?t.qsub.replace("%s",ROOM[S.from].name||ROOM[S.from].code):t.qsub0;
+    const sub=S.from?t.qsub.replace("%s",neptunOf(S.from)||ROOM[S.from].name||ROOM[S.from].code):t.qsub0;
     h+=`<div class="sec"><div class="eyebrow">${t.qwc} · ${esc(sub)}</div>
       <div class="tmlist">${S.wc.lista.map(x=>`<button class="tmrow" data-wc="${x.r.code}">
         <span class="tmn"><b>${t[x.lbl]}</b><i>${esc(x.r.code)}</i></span>
@@ -3081,7 +3229,7 @@ function renderPanel(){
         <span class="tmc mono">${x.mm.min} ${t.min}</span></button>`).join("")||`<p class="note">${t.none}</p>`}</div></div>`;
   }
   if(S.from||S.to){
-    h+=`<div class="sec"><div class="eyebrow row">${t.route}${shrBtn}</div><div class="ends">
+    h+=`<div class="sec" id="routeSec"><div class="eyebrow row">${t.route}${shrBtn}</div><div class="ends">
       ${epRow("from")}${epRow("to")}</div>`;
     if(S.from&&S.to&&!S.route) h+=`<p class="note">${t.none}</p>`;
     else if(S.route){
@@ -3089,8 +3237,8 @@ function renderPanel(){
       if(S.hasLift){
         const opt=(key,ico,label)=>{
           const m=S.mms[key]; if(!m) return "";
-          return `<button class="via${S.via===key?" on":""}" data-via="${key}">
-            <span class="vico">${ico}</span>
+          return `<button class="via${S.via===key?" on":""}" data-via="${key}" aria-pressed="${S.via===key}">
+            <span class="vico" aria-hidden="true">${ico}</span>
             <span class="vtx"><b>${label}</b>
               <small class="mono">${m.dist} ${t.m} · ${m.min} ${t.min}</small></span></button>`;
         };
@@ -3105,7 +3253,7 @@ function renderPanel(){
           fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="4" y="1.2" width="8"
           height="13.6" rx="1.6"/><path d="M7 12.2h2"/></svg>${t.qrSend}</button>`:""}
         <ol class="steps">${st.map((x,i)=>`<li><button class="step ${x.v?"v":""}" data-s="${i}">
-          <span class="ico">${x.ico}</span><span class="b"><span class="t">${esc(x.t)}</span>
+          <span class="ico" aria-hidden="true">${x.ico}</span><span class="b"><span class="t">${esc(x.t)}</span>
           ${x.d?`<span class="d">${esc(x.d)}</span>`:""}</span></button></li>`).join("")}</ol>
         ${mm.vert?`<p class="note">${liftMegj(t)}</p>`:""}`;
       window.__steps=st;
@@ -3113,7 +3261,7 @@ function renderPanel(){
     h+=`</div>`;
   }
   if(gyors){
-    const sub=S.from?t.qsub.replace("%s",ROOM[S.from].name||ROOM[S.from].code):t.qsub0;
+    const sub=esc(S.from?t.qsub.replace("%s",neptunOf(S.from)||ROOM[S.from].name||ROOM[S.from].code):t.qsub0);
     if(!S.from&&!S.wc) h+=`<div class="empty" style="padding:18px 16px 4px">${t.hint}</div>`;
     h+=`<div class="qgrid">
         <button class="qbtn" data-q="WC"><svg width="19" height="19" viewBox="0 0 20 20" fill="none"
@@ -3131,7 +3279,7 @@ function renderPanel(){
         <button class="qbtn" data-q="@ENTRY"><svg width="19" height="19" viewBox="0 0 20 20" fill="none"
           stroke="currentColor" stroke-width="1.5"><path d="M11.5 2.8h4.2v14.4h-4.2"/>
           <path d="M8.6 10H2.9M5.6 6.9 2.5 10l3.1 3.1"/></svg>
-          <span>${t.qentry}<small>${START}</small></span></button>
+          <span>${t.qentry}<small>${ROOM[START]?esc(lvName(ROOM[START].level)):""}</small></span></button>
       </div>
       <details class="legfold"><summary>${t.legend2}</summary>
         <div class="grid">${Object.keys(CATS).map(n=>
@@ -3142,14 +3290,20 @@ function renderPanel(){
   box.querySelectorAll("[data-wc]").forEach(b=>b.onclick=()=>{
     S.from=S.wc.src; S.to=S.sel=b.dataset.wc; recompute(); refreshSel(); });
   const bF=$("bF"),bT=$("bT");
-  if(bF)bF.onclick=()=>{S.from=S.sel;recompute();};
-  if(bT)bT.onclick=()=>{S.to=S.sel;recompute();};
+  /* Az „Ide megyek” után az útvonal a teremkártya ALATT jelent meg, telefonon
+     a képernyő alján túl: úgy tűnt, nem történt semmi. Most a panel odagörget. */
+  const utvonalra=()=>{ const sec=$("routeSec"); if(!sec) return;
+    if(MOB()&&snap==="peek") setSnap("mid");
+    box.scrollTop+=sec.getBoundingClientRect().top-box.getBoundingClientRect().top-6; };
+  if(bF)bF.onclick=()=>{S.from=S.sel;recompute();if(S.route)utvonalra();};
+  if(bT)bT.onclick=()=>{S.to=S.sel;recompute();utvonalra();};
   box.querySelectorAll("[data-via]").forEach(b=>b.onclick=()=>setVia(b.dataset.via));
   box.querySelectorAll(".shr").forEach(b=>b.onclick=shareCurrent);
   const qs=$("qrSend"); if(qs) qs.onclick=qrNyit;
-  box.querySelectorAll("[data-ep]").forEach(b=>b.onclick=e=>{
-    if(e.target.dataset.clear){S[e.target.dataset.clear]=null;recompute();return;}
-    const c=S[b.dataset.ep];if(c)select(c);});
+  box.querySelectorAll("[data-ep]").forEach(b=>b.onclick=()=>{ const c=S[b.dataset.ep];if(c)select(c);});
+  box.querySelectorAll("[data-clear]").forEach(b=>b.onclick=()=>{ const k=b.dataset.clear; S[k]=null; recompute();
+    // a törlőgomb eltűnik: a fókusz a sorára kerüljön, ne a panel elejére
+    const n=$("scroll").querySelector(`[data-ep="${k}"]`); if(n) n.focus(); });
   box.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{
     const x=window.__steps[+b.dataset.s];
     setLevel(x.lv);});
@@ -3209,15 +3363,21 @@ function mosdok(src){
   return sorok;
 }
 function quick(key){
-  if(key==="@ROOMS"){ S.view0=S.tmOpen=null; S.termek=true;
-    renderTermek(); tmLoad().then(()=>{ if(S.termek) renderTermek(); });
+  if(key==="@ROOMS"){ S.view0=S.tmOpen=null; S.termek=true; listaNyit();
+    const p=tmLoad(); renderTermek(); p.then(()=>{ if(S.termek) renderTermek(); });
     if(MOB()) setSnap("full");
     return; }
-  if(key==="@ENTRY"){ const e=ROOM[START]; if(e){S.from=e.code;select(e.code);renderPanel();} return; }
+  /* A porta is CÉL, mint a társai: korábban az indulást állította át rá, és
+     a totemen (vagy egy QR-kód után) felülírta, hol áll a hallgató. Indulás
+     nélkül csak megmutatja: a portától a portáig nincs mit tervezni. */
+  if(key==="@ENTRY"){ const e=ROOM[START]; if(!e) return;
+    if(S.from && S.from!==e.code){ S.to=S.sel=e.code; recompute(); refreshSel(); }
+    else select(e.code);
+    return; }
   const src = S.from ? ROOM[S.from]
     : (ROOM[START] || D.rooms.filter(r=>r.circ&&r.level===S.level).sort((a,b)=>b.area-a.area)[0]);
   if(!src) return;
-  if(key==="WC"){ S.wc={src:src.code,lista:mosdok(src)}; renderPanel(); if(MOB()) setSnap("mid"); return; }
+  if(key==="WC"){ S.wc={src:src.code,lista:mosdok(src)}; listaNyit(); renderPanel(); if(MOB()) setSnap("mid"); return; }
   let best=null;
   for(const r of D.rooms){
     if(!r.code||!QUICK_OK(key,r)) continue;
@@ -3232,12 +3392,17 @@ function quick(key){
   recompute(); refreshSel();
 }
 
+/* A törlés külön gomb a sor mellett, nem egy <span> a gombon belül:
+   billentyűzettel és felolvasóval az nem volt elérhető (a gomb neve
+   „Ide … ×” lett), és 13×16 px-es célpont volt. A sor az ajtón álló számot
+   mutatja, ha van — a hallgató azt keresi, nem a tervlapi kódot. */
 function epRow(kind){
-  const t=T(),c=S[kind],r=c?ROOM[c]:null;
-  return `<button class="ep ${kind==="to"?"to":""}" data-ep="${kind}"><span class="pin"></span>
+  const t=T(),c=S[kind],r=c?ROOM[c]:null, np=r&&neptunOf(r.code);
+  const torol=r&&!(kind==="from"&&c===START&&S.to);
+  return `<div class="epw${torol?" xx":""}"><button class="ep ${kind==="to"?"to":""}" data-ep="${kind}"><span class="pin" aria-hidden="true"></span>
     <span class="txt"><small>${kind==="from"?t.start:t.dest}</small>
-    <span>${r?esc((r.name||r.cat)+" · "+r.code):"—"}</span></span>
-    ${r&&!(kind==="from"&&c===START&&S.to)?`<span class="x" data-clear="${kind}">×</span>`:""}</button>`;
+    <span>${r?esc(np?`${np} · ${r.name||r.cat}`:`${r.name||r.cat} · ${r.code}`):"—"}</span></span></button>
+    ${torol?`<button class="epx" data-clear="${kind}" aria-label="${esc(kind==="from"?t.clearFrom:t.clearTo)}"><span aria-hidden="true">×</span></button>`:""}</div>`;
 }
 function renderRail(){
   const rail=$("rail"), fk=fokuszElotte(rail);
@@ -3247,6 +3412,10 @@ function renderRail(){
       title="${esc(lvName(l.level))}">${esc(l.short)}${on?'<span class="pip"></span>':""}</button>`;}).join("");
   rail.querySelectorAll("[data-l]").forEach(b=>b.onclick=()=>setLevel(+b.dataset.l));
   fokuszUtana(rail,fk);
+  // ha a sín görget (alacsony ablak), az aktív szint látsszon
+  if(rail.scrollHeight>rail.clientHeight+1){ const a=rail.querySelector('[aria-pressed="true"]');
+    if(a && (a.offsetTop<rail.scrollTop || a.offsetTop+a.offsetHeight>rail.scrollTop+rail.clientHeight))
+      rail.scrollTop=a.offsetTop-(rail.clientHeight-a.offsetHeight)/2; }
   applyMapLabel();
   $("fname").innerHTML=`<b class="cond">${esc(lvName(S.level))}</b>
     <span>${esc(D.meta.building)} · ${D.rooms.filter(r=>r.level===S.level).length} ${T().nRooms}</span>`;
@@ -3275,6 +3444,12 @@ function refreshSel(){
   // ez a terem épp ki van választva — a kontúr csak a szemnek szól.
   if(node){node.classList.add("sel"); node.setAttribute("aria-pressed","true");}
 }
+/* A kijelölés törlése (Esc, a színpadra koppintás) a címet is frissíti:
+   korábban a #OA10E18 a címben maradt, és újratöltve vagy megosztva a
+   már letett terem jött vissza. */
+function kijelolesTorol(){
+  S.sel=null; refreshSel(); renderPanel(); pushUrl();
+}
 function select(code){
   const r=ROOM[code];if(!r)return;
   // A billentyűzetes kurzor minden kiválasztást követ — egérrel, keresőből vagy
@@ -3284,7 +3459,7 @@ function select(code){
   refreshSel(); renderPanel(); setSnap("mid");
   document.querySelectorAll(".res-item").forEach(b=>
     b.setAttribute("aria-current",b.dataset.code===code));
-  say(T().aSel.replace("%s",code+" · "+(r.name||r.cat)).replace("%s",lvName(r.level)));
+  say(T().aSel.replace("%s",hangNev(r)).replace("%s",lvName(r.level)));
   pushUrl();
 }
 function applyVia(){
@@ -3295,6 +3470,7 @@ function setVia(v){
   if(v===S.via||!S.routes[v])return;
   S.via=v; applyVia();
   drawRoute(); renderRail(); renderPanel();
+  if(!urlLock) say(T().aVia.replace("%s",v==="lift"?T().optLift:T().optStairs));
   if(S.mm&&!S.mm.segs.some(x=>x.lv===S.level)){S.level=S.mm.segs[0].lv;renderRail();}
   updateView();
   pushUrl(true);       // finomítás, nem új lépés: a vissza gomb ne a lépcsős változatra vigyen
@@ -3338,13 +3514,24 @@ function applyLang(){
     : [(EPULETEK && (EPULETEK.epuletek[epItt()]||{}).kar) || D.meta.faculty,
        D.meta.address].filter(Boolean).join(" · ");
   $("q").placeholder=t.ph;
+  /* A lap nyelve és címe a felülettel együtt vált: a felolvasó a lang szerint
+     ejt (angolul magyar kiejtéssel olvasta), a cím pedig a fülön és a
+     feladatkezelőben más épületben is az OA-t mondta. */
+  document.documentElement.lang=S.lang;
+  document.title=t.cimLap.replace("%s",epItt()); $("h1").textContent=document.title;
+  $("menuBtn").setAttribute("aria-label",t.lSettings);
+  $("langSeg").setAttribute("aria-label",t.lLang); $("themeSeg").setAttribute("aria-label",t.lTheme);
+  for(const [id,k] of [["thLight","thLight"],["thAuto","thAuto"],["thDark","thDark"]]){
+    $(id).title=t[k]; $(id).setAttribute("aria-label",t[k]); }
+  $("grab").setAttribute("aria-label",t.lGrab); $("q").setAttribute("aria-label",t.lSearch);
+  $("modeSeg").setAttribute("aria-label",t.lView);
   // a szintek felolvasói neve és a 3D-s szintfelirat (a buildFloors() egyszer írja ki)
   for(const l of D.levels){ const F=FLOOR[l.level]; if(!F) continue;
     F.box.setAttribute("aria-label",lvName(l.level));
     F.tag.innerHTML=`${esc(lvName(l.level))}<em>${F.rs.length}</em>`; }
   /* Az épületlista a nyelvvel együtt újraépül (szintek, „alaprajz még nincs”,
      az ezres csoportosítás is más). A nyilvántartás előtt még nincs mit. */
-  if(EPULETEK){ $("epvBtn").setAttribute("aria-label",t.epvOpen); epvRender(); hazaFrissit(); }
+  if(EPULETEK){ epvBtnCimke(); epvRender(); hazaFrissit(); }
   $("m2t").textContent=t.plan; $("m3t").textContent=t.bld;
   $("stOff").textContent=t.stStudent; $("stOn").textContent=t.stAll;
   $("staffSeg").setAttribute("aria-label",t.stTitle);
@@ -3376,9 +3563,15 @@ $("q").addEventListener("keydown",e=>{
   const f=search(e.target.value)[0];if(f){e.preventDefault();$("q").value="";select(f.code);}});
 addEventListener("keydown",e=>{
   if($("qrDlg").open||$("epvlist").open) return;   // az Esc ott az ablakot zárja, a kiválasztás marad
-  if(e.key==="/"&&document.activeElement!==$("q")){e.preventDefault();$("q").focus();}
-  if(e.key==="Escape"){if(S.leg)toggleLeg(false);
-    else if(S.sel){S.sel=null;refreshSel();renderPanel();say(T().aClear);}}});
+  // a „/” egy szövegmezőben (a párosító listája, a link ablaka) a sajátja marad
+  const ae=document.activeElement, ir=ae&&(/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)||ae.isContentEditable);
+  if(e.key==="/"&&!ir&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();$("q").focus();}
+  /* Az Esc a legfelső nyitott dolgot zárja, és a fókuszt a nyitógombjára adja
+     vissza: előbb a menüt, aztán a jelmagyarázatot, végül a kijelölést. */
+  if(e.key==="Escape"){
+    if(menuNyitva()) menuZar(true);
+    else if(S.leg){ toggleLeg(false); $("legBtn").focus(); }
+    else if(S.sel){kijelolesTorol();say(T().aClear);}}});
 $("m2").onclick=()=>{setMode(2);say(T().aMode.replace("%s",T().plan));};
 $("m3").onclick=()=>{setMode(3);say(T().aMode.replace("%s",T().bld));};
 function setStaff(v){
@@ -3398,7 +3591,8 @@ $("langEn").onclick=()=>{S.lang="en";applyLang();};
 $("thLight").onclick=()=>{S.theme="light";applyTheme(false);};
 $("thAuto").onclick=()=>{S.theme="auto";applyTheme(false);};
 $("thDark").onclick=()=>{S.theme="dark";applyTheme(false);};
-function toggleLeg(v){S.leg=v===undefined?!S.leg:v;$("legPop").classList.toggle("open",S.leg);}
+function toggleLeg(v){S.leg=v===undefined?!S.leg:v;$("legPop").classList.toggle("open",S.leg);
+  $("legBtn").setAttribute("aria-expanded",S.leg);}
 $("legBtn").onclick=e=>{e.stopPropagation();toggleLeg();};
 document.addEventListener("click",e=>{if(S.leg&&!$("legPop").contains(e.target))toggleLeg(false);});
 addEventListener("resize",()=>{clearTimeout(window.__rz);window.__rz=setTimeout(fit,140);});
@@ -3450,9 +3644,30 @@ function focusRoom(code){
   const r=ROOM[code]; if(!r) return false;
   if(r.level!==S.level) setLevel(r.level);
   const n=roomNode(r); if(!n) return false;
-  cursor=code; n.focus();
+  /* preventScroll: a böngésző különben a térkép dobozát (overflow:hidden)
+     görgette el a teremig — nagyítva a nyíllal fókuszált terem a képen kívül
+     állt, és a ⤢ sem hozta vissza. Helyette a nézetet toljuk oda. */
+  cursor=code; n.focus({preventScroll:true});
+  lathatova(n);
   return true;
 }
+/* Ha a terem kilógna a látható térképről (telefonon a panel alól is), a
+   nézet középre tolja. Alaprajzon pontos, Épület nézetben közelítő. */
+function lathatova(n){
+  const w=$("mapwrap").getBoundingClientRect(), b=n.getBoundingClientRect(), M=24;
+  if(!b.width && !b.height) return;
+  const lent=w.bottom-insetFor(snap), cx=(b.left+b.right)/2, cy=(b.top+b.bottom)/2;
+  if(cx>w.left+M && cx<w.right-M && cy>w.top+M && cy<lent-M) return;
+  S.view.x+=(w.left+w.right)/2-cx; S.view.y+=(w.top+lent)/2-cy;
+  /* áttűnés nélkül: a nyilakat gyorsan nyomva a következő mérés különben a
+     félúton járó képet látta volna, és mellé tolt */
+  const volt=world.classList.contains("now");
+  world.classList.add("now"); S.dirty=true; updateView();
+  void getComputedStyle(world).transform;
+  if(!volt) world.classList.remove("now");
+}
+// ha bármi mégis elgörgetné a térkép dobozát (keresés a lapon, fókusz), visszaáll
+$("mapwrap").addEventListener("scroll",e=>{ const m=e.currentTarget; if(m.scrollTop||m.scrollLeft){ m.scrollTop=0; m.scrollLeft=0; } });
 
 /* Belépés a térképre: a kiválasztott terem, ha ezen a szinten van, különben az
    előző kurzor, különben a szint legnagyobb közlekedője — az nagyjából középen
@@ -3615,13 +3830,28 @@ function setSnap(n){
     setSnap(snap==="peek"?"mid":snap==="mid"?"full":"peek"); });
 })();
 $("q").addEventListener("focus",()=>setSnap("full"));
+/* Telefonon a panel eltakarta a billentyűzetes fókuszt (WCAG 2.4.11): a
+   kereső után a térkép-vezérlők a teljes panel alatt, félig nyitva a lépések
+   vége a képernyő alatt. A panelbe lépve, ha kilógna, kinyílik; a térképre
+   (vezérlőire) lépve összecsukódik. Csak billentyűs fókuszra
+   (:focus-visible): egy koppintás ne mozgassa a panelt. */
+document.addEventListener("focusin",e=>{
+  if(!MOB()) return;
+  const n=e.target; let lat=false; try{ lat=n.matches(":focus-visible"); }catch(_){}
+  if(!lat) return;
+  if(side.contains(n)){ if(snap!=="full" && n.getBoundingClientRect().bottom>innerHeight-4) setSnap("full"); }
+  else if(snap==="full" && (n.closest("#mapwrap"))) setSnap("peek");
+});
 $("menuBtn").onclick=e=>{e.stopPropagation();
   const o=$("optbar"); o.classList.toggle("open");
   $("menuBtn").setAttribute("aria-expanded",o.classList.contains("open"));};
+const menuNyitva=()=>$("optbar").classList.contains("open");
+function menuZar(fokusz){
+  $("optbar").classList.remove("open"); $("menuBtn").setAttribute("aria-expanded","false");
+  if(fokusz) $("menuBtn").focus();
+}
 document.addEventListener("click",e=>{
-  const o=$("optbar");
-  if(o.classList.contains("open")&&!o.contains(e.target)&&e.target!==$("menuBtn")){
-    o.classList.remove("open");$("menuBtn").setAttribute("aria-expanded","false");}});
+  if(menuNyitva()&&!$("optbar").contains(e.target)&&!$("menuBtn").contains(e.target)) menuZar(false);});
 
 /* ------------------------------------------------------- épületválasztó */
 /* Az app EGY épület geometriáját tartalmazza (a beégetett `D`), az egyetemnek
@@ -3788,12 +4018,15 @@ const epvTerkepKulcs=tel=>HELYEK&&Object.keys(HELYEK.terkep).find(k=>HELYEK.terk
 const epvToltKi=kod=>!!epvKeres&&!epvKeres.csendes&&epvKeres.kod===kod;
 function epvSor(e){
   const t=T(), most=e.kod===epItt(), nav=!!e.navigalhato;
-  const meta=[most?t.epvHere:"", nav?t.epvHasPlan:t.epvNoPlan, e.cim?e.cim.split(", ").pop():"",
+  /* A sor címe az utca: a kar neve egy telephelyen öt épületnél is ugyanaz
+     volt („Bánki…” ötször egymás alatt), a hallgató a címről ismeri fel. */
+  const utca=e.cim?e.cim.split(", ").pop():"";
+  const meta=[most?t.epvHere:"", utca?e.kar:"", nav?t.epvHasPlan:t.epvNoPlan,
     e.szint?t.nLv.replace("%s",e.szint):"", e.helyiseg?e.helyiseg+" "+t.nRooms:""].filter(Boolean).join(" · ");
   const tolt=epvToltKi(e.kod);
   return `<div class="epvsorx"><button class="epvrow${nav?"":" off"}" data-ep="${esc(e.kod)}" aria-current="${most}"`
     +(tolt?` aria-busy="true"`:"")+`><span class="epvkod${most?" most":""}">${esc(e.kod)}</span>`
-    +`<span class="szov"><b>${esc(e.kar||e.nev)}</b><i>${esc(tolt?t.epvLoading:meta)}</i></span>`
+    +`<span class="szov"><b>${esc(utca||e.kar||e.nev)}</b><i>${esc(tolt?t.epvLoading:meta)}</i></span>`
     +`</button>`
     +(nav?`<button class="epvinfo" data-epv="kartya:${esc(e.kod)}" aria-label="${esc(t.epvDetails.replace("%s",e.nev))}">`
       +`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg></button>`:"")
@@ -3999,6 +4232,9 @@ addEventListener("resize",()=>{ if(!$("epvlist").open) return;
    megnyílik a választó, és megmondja, melyik épületé a kód. */
 function epvIsmeretlenKod(kod){
   if(!/^[A-Z]{2}/.test(kod||"")) return;
+  /* A saját épület nem létező kódja (elgépelt, régi matrica) eddig csendben
+     eltűnt; most szólunk — a nyilvántartás nélkül is, offline is. */
+  if(kod.slice(0,2)===epItt()){ toast(T().linkNincs.replace("%s",kod),6000); return; }
   /* A nyilvántartás a /data/ ágon, hálózatról jön, az első applyUrl() tehát
      még nem látja. A kódot félretesszük, és a lista megérkeztekor jelezzük —
      különben pont a linkről érkező hallgató nem kapna semmit. A CÍMET is el
@@ -4008,7 +4244,7 @@ function epvIsmeretlenKod(kod){
   const hash=epvVarHash||location.hash;
   epvVar=""; epvVarHash="";
   const e=EPULETEK.epuletek[kod.slice(0,2)];
-  if(e && e.kod===epItt()) return;        // a saját épület kódja, csak elírás
+  if(e && e.kod===epItt()){ toast(T().linkNincs.replace("%s",kod),6000); return; }   // a saját épület kódja, csak elírás
   /* Ha az az épület megnyitható, a linknek ÉRVÉNYESÜLNIE kell: átváltunk rá,
      és a cím újra lefut rajta. Egy falra ragasztott QR-kód vagy egy megosztott
      útvonal így a másik épületben is odavisz, ahová mutat. */
@@ -4060,6 +4296,12 @@ function alapEpulet(){
   const k=alapOlvas(), e=EPULETEK&&EPULETEK.epuletek[k];
   return e&&e.navigalhato?e.kod:EP_OA;
 }
+/* A gomb neve a látható szöveggel kezdődik (WCAG 2.5.3): korábban „Épület
+   választása” volt, a gombon pedig „OA Épület” állt — hangvezérléssel a
+   látott szót kimondva nem lehetett megnyomni. */
+function epvBtnCimke(){
+  $("epvBtn").setAttribute("aria-label",`${$("epvNev").textContent} · ${T().epvOpen}`);
+}
 function hazaFrissit(){
   const b=$("epvHaza"), a=alapEpulet(), e=EPULETEK&&EPULETEK.epuletek[a];
   // a totem a saját helyére áll vissza, nem a készülék alapértelmezettjére
@@ -4068,7 +4310,7 @@ function hazaFrissit(){
   if(!latszik&&document.activeElement===b&&!$("epvBtn").hidden) $("epvBtn").focus();
   b.hidden=!latszik;
   if(latszik){ b.querySelector("span").textContent=a; const c=T().epvHome.replace("%s",e.nev);
-    b.setAttribute("aria-label",c); b.title=c; }
+    b.setAttribute("aria-label",`${a} · ${c}`); b.title=c; }
 }
 $("epvHaza").onclick=()=>epuletValt(alapEpulet());
 
@@ -4112,8 +4354,24 @@ $("epvlist").addEventListener("click",ev=>{
    gyorsgombok rossz helyről indítanának. Inkább adatlap marad, mint egy
    működőnek látszó, hamis térkép. */
 const EP_KELL=["meta","levels","rooms","grid","masks","walls","stairs"];
+/* A szerkezet is számít, nem csak a kulcsok: egy sokszög nélküli helyiség
+   vagy egy maszk nélküli szint korábban az építés KÖZEPÉN dobott hibát, és az
+   app félig váltott (a D már az új épület, a ROOM és a kép még a régi). */
+const szam=x=>typeof x==="number"&&isFinite(x);
+const pont=p=>Array.isArray(p)&&szam(p[0])&&szam(p[1]);
+function epuletEp(d){
+  if(!Array.isArray(d.levels)||!Array.isArray(d.rooms)||!Array.isArray(d.stairs)) return false;
+  if(!szam(d.meta.w)||!szam(d.meta.h)||!(d.grid.w>0)||!(d.grid.h>0)||!(d.grid.res>0)) return false;
+  const lv=new Set(d.levels.map(l=>l&&l.level));
+  if(lv.has(undefined)||[...lv].some(l=>typeof d.masks[l]!=="string")) return false;
+  if(d.rooms.some(r=>!r||r.id==null||!lv.has(r.level)||!Array.isArray(r.poly)||r.poly.length<3||!r.poly.every(pont)
+       ||(r.doors&&(!Array.isArray(r.doors)||!r.doors.every(pont))))) return false;
+  const atjaro=x=>x&&x.id!=null&&Array.isArray(x.pts)&&x.pts.every(q=>Array.isArray(q)&&lv.has(q[0])&&szam(q[1])&&szam(q[2]));
+  return d.stairs.every(atjaro) && (d.lifts==null||(Array.isArray(d.lifts)&&d.lifts.every(atjaro)));
+}
 function epuletKesz(d){
   if(!d || EP_KELL.some(k=>!d[k])) return false;
+  if(!epuletEp(d)) return false;
   if(!d.levels.length || !d.rooms.length) return false;
   /* Ha a szintek nevéből és kódjából nem áll össze egy alulról felfelé haladó
      sor (két földszint, egy kódjával emeletnek látszó udvarszint), a lépések
@@ -4212,14 +4470,14 @@ function epuletValt(kod,hashMegtart,opt){
     epvKeres=null; epvTolt=false;
     if(ker.csendes&&epvMegelozte()) return;
     if(ker.hash&&location.href!==ker.hely){ if($("epvlist").open) epvRender(); return; }
-    if(!epuletKesz(d)){
-      const msg=T().epvNoData.replace("%s",(EPULETEK.epuletek[kod]||{}).kod||kod);
+    const nincs=()=>{
+      const msg=T().epvNoData.replace("%s",((EPULETEK&&EPULETEK.epuletek[kod])||{}).kod||kod);
       if(ker.hash) epvUjra={kod,hash:ker.hash};
       // a csendes betöltés ide csak zárt választóval jut (a nyitott megelőzi)
       if(!ker.csendes) epvNyit(msg,kod);
       else toast(msg,4500);
-      return;
-    }
+    };
+    if(!epuletKesz(d)){ nincs(); return; }
     /* Linkről érkezve a címet meg kell tartani: az epuletAllit() üres
        állapotból indul és törli a hash-t, utána játsszuk vissza. */
     /* A link útján az epuletAllit() ne tegyen közbülső bejegyzést a
@@ -4227,24 +4485,39 @@ function epuletValt(kod,hashMegtart,opt){
        a másik épület elhagyott kódja különben a bejegyzésben maradt, és a
        Vissza gomb újra átváltott (egy vegyes linknél oda-vissza). */
     if(ker.hash) urlLock=true;
-    try{ epuletAllit(d); }finally{ urlLock=false; }
+    /* Ha az építés mégis elbukik (az epuletKesz() nem lát mindent), a régi
+       épület épül vissza: félig váltott állapotban a D az új, a ROOM és a kép
+       a régi volt, és az útvonalak a kettő keverékén futottak. */
+    const elozo=D; let jo=true;
+    try{ epuletAllit(d); }
+    catch(err){ jo=false; console.error(err);
+      try{ epuletAllit(elozo); }catch(e2){ console.error(e2); } }
+    finally{ urlLock=false; }
+    if(!jo){ nincs(); return; }
     if(ker.hash){ try{ history.replaceState({},"",ker.hash); }catch(e){}
       epvVisszajatszas=true; try{ applyUrl(); }finally{ epvVisszajatszas=false; }
       try{ history.replaceState({},"",urlOf()); }catch(e){} }
     const e=EPULETEK.epuletek[epItt()];
     if(e) $("epvNev").textContent=e.nev;
+    epvBtnCimke();
+    if(!ker.csendes) say(T().aEpulet.replace("%s",e?e.nev:epItt()));
     hazaFrissit();
     epvZar();
   });
 }
 
-tmGet("data/epuletek.json").then(d=>{
+/* Ha az első letöltés elbukik (offline első indulás), a hálózat
+   visszatérésekor újra: korábban a választógomb a munkamenet végéig el sem
+   jelent meg. */
+let epvToltes=null;
+function epvNyilv(){ if(EPULETEK||epvToltes) return; epvToltes=tmGet("data/epuletek.json").then(d=>{
+  epvToltes=null;
   if(!d || !d.epuletek || !Object.keys(d.epuletek).length) return;
   EPULETEK=d;
   const e=d.epuletek[epItt()];
   if(e) $("epvNev").textContent=e.nev;
   $("epvBtn").hidden=false; $("epvStat").hidden=true;
-  $("epvBtn").setAttribute("aria-label",T().epvOpen);
+  epvBtnCimke();
   hazaFrissit();
   epvRender();
   if(epvVar) epvIsmeretlenKod(epvVar);   // a linkről érkező, félretett kód
@@ -4256,18 +4529,39 @@ tmGet("data/epuletek.json").then(d=>{
   else if(!TOTEM && !PAIRING && !new URLSearchParams(location.search).has("meres") && !epvMegelozte()){
     const a=alapEpulet(); if(a!==epItt()) epuletValt(a,"",{csendes:true});
   }
-});
+}); }
+epvNyilv();
 /* A térkép adata külön fájl: ha nem jön meg, a választó listákkal működik. A
    nyilvántartás előtt vagy után is érkezhet, ezért mindkét sorrendben rajzol. */
-tmGet("data/helyek.json").then(h=>{
+let helyToltes=null;
+function epvHelyek(){ if(HELYEK||helyToltes) return; helyToltes=tmGet("data/helyek.json").then(h=>{
+  helyToltes=null;
   if(!h || !h.epuletek || !h.terkep) return;
   HELYEK=h; epvRender();
+}); }
+epvHelyek();
+/* A nyitott foglalható-terem lista percenként frissül: különben a megnyitás
+   pillanatát mutatta („Szabad 10:45-ig” 11-kor is). A fókuszt a
+   renderTermek() megtartja. */
+setInterval(()=>{ if(S.termek && TM && !document.hidden) renderTermek(); },60e3);
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden && S.termek && TM) renderTermek(); });
+addEventListener("online",()=>{
+  epvNyilv(); epvHelyek();
+  if(!TM && tmDone){ tmHiba=0; if(S.termek) tmLoad().then(()=>{ if(S.termek) renderTermek(); }); }
 });
 
-function toast(msg,ms){
+/* Az élő régió induláskor, üresen jön létre: a felolvasó csak egy már
+   meglévő régió VÁLTOZÁSÁT mondja be — a tartalmával együtt létrejövőt
+   (az első feliratot) többnyire elnyelte. */
+function toastEl(){
   let el=$("toast");
   if(!el){ el=document.createElement("div"); el.id="toast"; el.className="toast"; el.setAttribute("role","status");
     document.body.appendChild(el); }
+  return el;
+}
+toastEl();
+function toast(msg,ms){
+  const el=toastEl();
   /* Nyitott modális ablak (a választó, a QR) fölött a body-beli felirat nem
      látszana — telefonon a választó az egész képernyő —, és a felolvasó sem
      mondaná be, mert a háttér inert. Ilyenkor az ablakba kerül. */
@@ -4282,11 +4576,23 @@ async function shareCurrent(){
   const url=location.origin+location.pathname+(u.startsWith("#")?u:"");
   const nm=c=>{const r=ROOM[c];return r?(r.name||r.cat)+" · "+c:c;};
   const title=(S.from&&S.to) ? t.shareRoute.replace("%s",nm(S.from)).replace("%s",nm(S.to))
-            : t.shareRoom.replace("%s",nm(S.sel||S.to||S.from));
+            : t.shareRoom.replace("%s",nm(S.sel||S.to||S.from)).replace("%s",epItt());   // más épületben is a sajátja
   try{ if(navigator.share){ await navigator.share({title,url}); return; } }
   catch(e){ if(e&&e.name==="AbortError") return; }
   try{ await navigator.clipboard.writeText(url); toast(t.shareCopied); }
-  catch(e){ prompt(t.share,url); }
+  catch(e){ linkAblak(url); }
+}
+/* Ha se megosztás, se vágólap: a link egy lapon belüli ablakban, kijelölve.
+   A prompt() blokkolt — közben a totem időzítője is állt. */
+function linkAblak(url){
+  const t=T(), d=$("qrDlg");
+  d.innerHTML=`<div class="in"><button class="x" id="qrX" aria-label="${esc(t.close)}">×</button>
+    <h2 id="qrH">${t.share}</h2><p>${t.shareManual}</p>
+    <input class="qrlink mono" id="qrLinkIn" readonly value="${esc(url)}" aria-labelledby="qrH"></div>`;
+  $("qrX").onclick=qrBezar;
+  qrVissza=document.activeElement;
+  d.showModal();
+  const i=$("qrLinkIn"); i.focus(); i.select();
 }
 
 /* -------------------------------------------------------- telefonra küldés */
@@ -4475,6 +4781,7 @@ $("qrDlg").addEventListener("close",()=>{
      …&via=lift                     – a liftes változat: a telefonra küldött
                                       útvonal ne lépcsőn nyíljon meg.  */
 let urlLock=false;                    // a visszaállítás ne írjon vissza a címsorba
+let urlKesz=null;                     // az utoljára visszaállított cím (lásd a hashchange-et)
 
 function urlOf(){
   const q=[];
@@ -4488,19 +4795,33 @@ function urlOf(){
 }
 function pushUrl(replace){
   if(urlLock) return;
+  urlKesz=null;
   const u=urlOf();
   if(u===location.hash || (!location.hash && u===location.pathname+location.search)) return;
   try{ history[replace?"replaceState":"pushState"]({},"",u); }catch(e){}
 }
 
+/* Hibatűrő dekódolás: egy csonka vagy kézzel írt „%” (#from=OA00FK1%)
+   korábban URIError-t dobott, és az indulás fele elmaradt — a service worker
+   sem regisztrált, a címsor zárva maradt. Ami nem dekódolható, kimarad. */
+function dekod(x){
+  try{ return decodeURIComponent(x); }
+  catch(e){ return x.replace(/%[0-9a-f]{2}/gi,m=>{ try{ return decodeURIComponent(m); }catch(e2){ return ""; } }).replace(/%/g,""); }
+}
+// tervlapi helyiségkód: épület, szint (X1, 00, 35…), betűjel, sorszám
+const KOD_ALAK=/^[A-Z]{2}[0-9X][0-9][A-Z]{1,2}[0-9]+$/i;
 function readUrl(){
-  const h=decodeURIComponent(location.hash.replace(/^#/,"")).trim();
+  const h=dekod(location.hash.replace(/^#/,"")).trim();
   const out={from:null,to:null,sel:null,via:null};
   if(!h) return out;
-  if(!h.includes("=")){ out.sel=h.toUpperCase(); return out; }   // #OA10E18
-  // a ? is elválasztó: egy link végére írt ?totem a hash-be kerül, és vinné a from-ot
-  for(const part of h.split(/[&?]/)){
-    const [k,v]=part.split("=");
+  /* A ? is elválasztó: egy link végére írt ?totem vagy ?utm_source=… a
+     hash-be kerül, és vinné a from-ot — a rövid alakét (#OA10E18?utm…) is. */
+  const resz=h.split(/[&?]/).map(x=>x.trim()).filter(Boolean);
+  for(const part of resz){
+    const i=part.indexOf("=");
+    // #OA10E18 — egyedül bármi lehet (az applyUrl úgyis csak létező kódot fogad el), toldalékkal csak kódalak
+    if(i<0){ if(!out.sel && (resz.length===1||KOD_ALAK.test(part))) out.sel=part.toUpperCase(); continue; }
+    const k=part.slice(0,i), v=part.slice(i+1);
     if(v && ["from","to","sel"].includes(k)) out[k]=v.toUpperCase();
     else if(k==="via" && v==="lift") out.via=v;
   }
@@ -4516,26 +4837,34 @@ function applyUrl(){
      csendben eltűnt: az ismeretlen kódot elhagyjuk, és a hallgató ugyanezt az
      alaprajzot látta, jelzés nélkül. Most megmondjuk, melyik épületé a kód. */
   const idegen=[u.sel,u.from,u.to].find(c=>c&&!ROOM[c]);
-  urlLock=true; qrBezar();             // a nyitva maradt QR a régi útvonalat mutatná
-  S.from=ok(u.from); S.to=ok(u.to); S.sel=ok(u.sel)||S.to||S.from;
-  recompute();                          // ez lépcsőre állít, a link választása utána jön
-  if(u.via==="lift" && S.hasLift) setVia("lift");
-  if(S.sel){ const r=ROOM[S.sel];
-    if(r && r.level!==S.level){ S.level=r.level; renderRail(); } }
-  refreshSel(); renderPanel(); updateView();
-  urlLock=false;
+  urlKesz=location.href;
+  // a zár hiba esetén se ragadjon be: utána egyetlen lépés sem kerülne a címsorba
+  urlLock=true;
+  try{
+    qrBezar();                          // a nyitva maradt QR a régi útvonalat mutatná
+    S.from=ok(u.from); S.to=ok(u.to); S.sel=ok(u.sel)||S.to||S.from;
+    recompute();                        // ez lépcsőre állít, a link választása utána jön
+    if(u.via==="lift" && S.hasLift) setVia("lift");
+    if(S.sel){ const r=ROOM[S.sel];
+      if(r && r.level!==S.level){ S.level=r.level; renderRail(); } }
+    refreshSel(); renderPanel(); updateView();
+  }finally{ urlLock=false; }
   if(idegen&&!epvVisszajatszas) epvIsmeretlenKod(idegen);
   return !!(S.from||S.to||S.sel);
 }
-addEventListener("popstate",applyUrl);
-addEventListener("hashchange",()=>{ if(!urlLock) applyUrl(); });
+/* A Vissza gomb egy hash-lépésnél popstate-et ÉS hashchange-et is ad: a
+   második ugyanazt a címet állította vissza még egyszer (kétszeres
+   útvonalkeresés). A hashchange csak akkor kell, ha a cím azóta más
+   (urlKesz: az utoljára visszaállított cím, az app saját lépése törli). */
+addEventListener("popstate",()=>{ S.termek=false; S.wc=null; applyUrl(); });
+addEventListener("hashchange",()=>{ if(!urlLock && location.href!==urlKesz) applyUrl(); });
 
 /* ------------------------------------------------------------------ totem */
 /* Totem-mód (?totem a címben, a totem saját helyével: ?totem#from=OA00FK1).
    Az e-totemen ott maradt az előző ember útvonala, nyelve, nézete. Egy perc
    tétlenség után visszaáll a totem saját állapotára: a címben megadott „itt
    vagyok", magyar nyelv, alaprajz, a tervlap rajzolt állása, zárt panel,
-   hallgatói nézet. Tíz másodperccel előtte szól, és bármilyen érintés
+   hallgatói nézet. Húsz másodperccel előtte szól, és bármilyen érintés
    megállítja; gesztus közben soha nem áll vissza. Naponta egyszer újratölt
    (nyugvó állapotban), hogy a friss adat és a friss kód is megjöjjön. Csak
    ha valaki használta: a már alaphelyzetben álló kép percenként nem ugrál. */
@@ -4555,7 +4884,10 @@ const TOTEM=(()=>{
   try{ history.replaceState(null,"",location.pathname+kereso+(hash?"#"+hash:"")); }catch(e){}
   return true;
 })();
-const TOTEM_HAZ=location.hash, TOTEM_IDLE=60e3, TOTEM_SZOL=10e3, TOTEM_UJRA=20*3600e3, BETOLTVE=Date.now();
+/* A figyelmeztetés 20 s-mal előtte jön (WCAG 2.2.1: legalább 20 s kell a
+   válaszra) — a 10 s egy lassabban olvasónak vagy egy kerekesszékből
+   nyúlónak kevés volt. */
+const TOTEM_HAZ=location.hash, TOTEM_IDLE=60e3, TOTEM_SZOL=20e3, TOTEM_UJRA=20*3600e3, BETOLTVE=Date.now();
 let totemUtolso=Date.now(), totemPiszkos=false, totemSzolt=false;
 function totemAlap(){
   if(Date.now()-BETOLTVE>TOTEM_UJRA){
@@ -4578,6 +4910,10 @@ function totemAlap(){
   S.rot={...ROT0}; orientTags(); S.dirty=false; fit();
   setSnap(MOB()?"peek":"full");
 }
+/* A totem közös, érintőképernyős készülék: a „/” billentyűtipp, a téma és a
+   „Minden helyiség” kapcsoló ott csak zaj (és egy arra járó beállítása a
+   következőnek is megmaradna, amíg az alaphelyzet vissza nem állítja). */
+if(TOTEM) app.classList.add("totem");
 if(TOTEM){
   const jel=()=>{ totemUtolso=Date.now(); totemPiszkos=true; if(totemSzolt){ totemSzolt=false; toast.off(); } };
   for(const ev of ["pointerdown","pointermove","keydown","wheel","input"])
@@ -4599,15 +4935,21 @@ S.level=0;
    Ha a címsorban van állapot (megosztott link vagy falra ragasztott QR),
    az dönt. */
 applyLang();
-urlLock=true; const fromUrl=applyUrl(); urlLock=false;
+/* A service worker az első dolgok közt: ha az indulás közben bármi elbukik,
+   az offline példány akkor is megmaradjon (korábban a lap végén állt, és egy
+   hibás link miatt el sem jutott odáig). */
+if("serviceWorker" in navigator)
+  addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+let fromUrl=false;
+urlLock=true;
+try{ fromUrl=applyUrl(); }catch(e){ console.error(e); }
+finally{ urlLock=false; }
 if(!fromUrl){ recompute(); refreshSel(); }
 fit(); syncFlat();
 setSnap(MOB()?"peek":"full");
 // enélkül kívülről nem látszik, hogy a cím totem módot kért-e
 if(TOTEM) toast(T().totemOn,5000);
 addEventListener("orientationchange",()=>setTimeout(()=>{setSnap(snap);fit();},260));
-if("serviceWorker" in navigator)
-  addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
 
 /* Alaprajzzal indulunk. Telefonon ez a nézet 76 fps az Épület 13-ával szemben,
    és nagyításkor éles marad, mert nincs 3D kontextus — a teremkódokat itt lehet

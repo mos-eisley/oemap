@@ -13,9 +13,14 @@ const files = fs.readdirSync(__dirname)
 
 if (!files.length) { console.error("nincs ilyen teszt:", only.join(" ")); process.exit(2); }
 
+/* Egy fájl legfeljebb ennyi ideig futhat: egy beakadt böngésző vagy egy
+   soha be nem érkező válasz korábban az egész sort örökre megállította,
+   kimenet nélkül. A leghosszabb (epuletek, valaszto) ~5 perc. */
+const KORLAT = 15 * 60e3;
 let failed = [];
 for (const f of files) {
-  const r = spawnSync(process.execPath, [path.join(__dirname, f)], { stdio: "inherit" });
+  const r = spawnSync(process.execPath, [path.join(__dirname, f)], { stdio: "inherit", timeout: KORLAT, killSignal: "SIGKILL" });
+  if (r.error && r.error.code === "ETIMEDOUT") console.log(`✗ ${f}: ${KORLAT / 60e3} perc után leállítva`);
   if (r.status !== 0) failed.push(f);
   console.log("");
 }

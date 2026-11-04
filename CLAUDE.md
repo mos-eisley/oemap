@@ -248,7 +248,11 @@ szintneveknél), és kell `meta`, `levels`,
 `rooms`, `grid`, `masks`, `walls`, `stairs`, és a `PORTA`-ban egy porta. Falak
 nélkül a Dijkstra mindenen átmenne, lépcső nélkül a szintek nem érnének össze,
 porta nélkül a gyorsgombok rossz helyről indítanának — ilyenkor az épület
-marad adatlap, és a lista megmondja, hogy nem érhető el. **Ezért a `navigalhato`
+marad adatlap, és a lista megmondja, hogy nem érhető el. A szerkezetet is
+nézi (`epuletEp()`: sokszög, szint, maszk, lépcsőpontok): egy sokszög nélküli
+helyiség korábban az építés KÖZEPÉN dobott hibát, és az app félig váltott (a
+`D` az új épület, a `ROOM` és a kép a régi). Ha az építés ennek ellenére
+elbukik, az `epuletValt()` a régi épületet építi vissza, és üzen. **Ezért a `navigalhato`
 nem azt jelenti, hogy van tervlap**, hanem hogy az app adata kész.
 
 **Hét épület nyitható meg: az OA (beégetve), és a `data/epuletek/`-ből az OD,
@@ -325,6 +329,13 @@ kell:
   tesztgépen, a DOMContentLoaded a válasz végétől). A kint-vizsgálat csak
   akkor fut, ha egy jelölt már a fő hálózaton van: az OA-ban egy sincs ilyen,
   máshol a váltás 3–40 ms-mal hosszabb (a KH-ban a legtöbb, a tesztgépen).
+- **A legközelebbi cella keresése ablakos** (`nearestCell()`, az első menet,
+  `kotesJeloltek()`): csak a 7, 6 m-es, illetve `KOTES_TAV`-os körön belüli
+  cellákat nézi, nem a szint mind a több tízezer celláját, a CELLLIST
+  sorrendjében (soronként, sorszám szerint), így egyenlő távolságnál is
+  ugyanaz a cella nyer. Az `RCELL`, a `PORTAL` és a kötésjelöltek mind a hét
+  épületen bájtra azonosak a teljes bejárásúval (mérve); az OA-n az
+  `epuletRcell()` 4× lassított CPU-val 240 → 49 ms.
 - A `tests/epuletek.js` minden többcellás kötést ellenőriz: a felvett cella a
   helyiségen belül vagy egy élétől legfeljebb `KOTES_TAV`-ra van, a kettő
   közt nincs harmadik, nem közlekedő helyiség, és a portától odavezető út a
@@ -415,7 +426,8 @@ vitte rossz helyre a hallgatót vagy hagyta segítség nélkül, mind javítva, 
 
 ```
 npm install          # playwright (a böngésző a képen már megvan)
-npm test             # mind a 26 tesztfájl
+npm test             # mind a 26 tesztfájl (fájlonként legfeljebb 15 perc)
+node tools/ellenor.js  # böngésző nélkül, másodpercek alatt: a szkriptek fordulnak, az adat ép (a CI is ezt futtatja)
 pip install -r tools/requirements.txt   # csak a tools/ szkriptjeihez
 node tests/run.js url share     # csak egy-kettő
 ```
@@ -428,28 +440,28 @@ hagytak egy hibás kódot.
 | fájl | mit őriz |
 | --- | --- |
 | `tests/view.js` | alaprajz/épület váltás, szintváltás, kiválasztás valódi egérrel és érintéssel (Épület nézetben is), a falak oldallapja — **élesben bejelentett: asztalon kattintásra nem jött elő a terem** |
-| `tests/url.js` | mély linkek, a vissza gomb, hibás link; indulás nélkül a portáról (`START`) tervez — linkből, az „Ide” gombbal, a gyorsgombokkal; a mosdóválasztó (női, férfi, akadálymentes, a dolgozói és a csak más helyiségen át megközelíthető mosdók nélkül) és a büfé gomb célja |
-| `tests/share.js` | megosztás gomb mindkét ága |
+| `tests/url.js` | mély linkek, a vissza gomb, hibás link; indulás nélkül a portáról (`START`) tervez — linkből, az „Ide” gombbal, a gyorsgombokkal; a mosdóválasztó (női, férfi, akadálymentes, a dolgozói és a csak más helyiségen át megközelíthető mosdók nélkül) és a büfé gomb célja; a csonka „%”-os link (az indulás végigfut, a service worker regisztrál, a címsor nem ragad zárva), a rövid alak toldalékkal (`#OA10E18?utm…`), az Esc a címből is törli a kijelölést, az OA nem létező kódjára felirat szól; a Porta gomb CÉL (az indulás marad); a foglalható termek listájának Vissza gombja, és a rendszer Vissza gombja a listát zárja, nem az appot |
+| `tests/share.js` | megosztás gomb mindkét ága; vágólap nélkül lapon belüli linkablak (nem `prompt()`); a totemen nincs megosztás gomb |
 | `tests/gestures.js` | csippentés, forgatás, tolás, a kétujjas felemelés, akadozó képnél is — **élesben bejelentett fagyás**, „csúnya átmenet" és a vissza nem váltó lefelé húzás |
 | `tests/labels.js` | teremszámok Épület nézetben: ott vannak, állnak, a termük fölött, élből nézve is, és nem villognak |
 | `tests/lift.js` | lépcső vs. lift alternatíva |
-| `tests/sheet.js` | az alsó panel aljának elérhetősége |
+| `tests/sheet.js` | az alsó panel aljának elérhetősége; fekvő telefonon (844×390, 667×375) és alacsony asztali ablakban (932×430) a szintsín a fejléc alatt, a +/− gombokon kívül, görgetve, az aktív szint látszik; a zárt menü rejtett, az Esc bezárja, a fókusz a menü gombjára tér vissza |
 | `tests/staff.js` | hallgatói/minden szűrő; a tervtári színkulcs (minden helyiség, a halványított is a saját színében; a jelmagyarázat sorrendje) |
-| `tests/termek.js` | foglalható termek: heti órák, páros/páratlan hét, ünnepnap, a félév előtti és utáni nap, a más karral közös termek, a térképen kiválasztott terem adatlapja, a sorrend (ami most szabad, elöl; az indulástól menetidő szerint), és a deploy után a régi service workerben ragadt fájl |
-| `tests/pwa.js` | manifest, service worker, **offline indulás** (a service worker saját kéréseit is elvágva), a teremadat frissessége és `?v=`-s újrakérése (a friss példány a paraméter nélküli kulcs alá kerül); alkönyvtáras hatókörrel is (`/oemap/`, a régi github.io-s cím alakja; a saját domain gyökérhatókörét az első szakasz méri): a szerver 404-e (kikapcsolt Pages) és egy másik lap (mérőlap) nem kerül a tárolt app helyére, egy másik lap 404-e 404 marad, az átirányítást viszont követi; app nélkül nem települ; aktiváláskor csak a saját régi tárolóit törli |
-| `tests/a11y.js` | billentyűzetes bejárás, felolvasónak szóló jelölés; a panel és a szintválasztó újrarajzolása, a téma váltása nem dobja el a fókuszt |
+| `tests/termek.js` | foglalható termek: heti órák, páros/páratlan hét, ünnepnap, a félév előtti és utáni nap, a más karral közös termek, a térképen kiválasztott terem adatlapja, a sorrend (ami most szabad, elöl; az indulástól menetidő szerint), és a deploy után a régi service workerben ragadt fájl; a szabad terem sora a következő óráig szól („10:45-ig”, nem „-tól”); elbukott letöltésnél „nem sikerült betölteni” (nem „nincs adat”), és a lista újranyitása újrapróbál |
+| `tests/pwa.js` | manifest, service worker, **offline indulás** (a service worker saját kéréseit is elvágva), a teremadat frissessége és `?v=`-s újrakérése (a friss példány a paraméter nélküli kulcs alá kerül); alkönyvtáras hatókörrel is (`/oemap/`, a régi github.io-s cím alakja; a saját domain gyökérhatókörét az első szakasz méri): a szerver 404-e (kikapcsolt Pages) és egy másik lap (mérőlap) nem kerül a tárolt app helyére, egy másik lap 404-e 404 marad, az átirányítást viszont követi; app nélkül nem települ; aktiváláskor csak a saját régi tárolóit törli; lassú (8 s-os) hálózaton ~3 s alatt a tárolt app és teremadat jön; egy 200-as, de nem JSON adatválasz nem írja felül a tárolt példányt; offline egy másik (elgépelt) lap nem az appot kapja |
+| `tests/a11y.js` | billentyűzetes bejárás, felolvasónak szóló jelölés; a panel és a szintválasztó újrarajzolása, a téma váltása nem dobja el a fókuszt; az indulás/cél törlése önálló, megnevezett gomb, billentyűvel is, a fókusz a sorára kerül; a zárt jelmagyarázat rejtett, `aria-expanded`, az Esc a gombjára adja vissza a fókuszt; a lap nyelve (`lang`), címe, h1-e és statikus címkéi a nyelvvel váltanak, a kereső a `<main>`-ben; nagyítva a nyíllal fókuszált terem a képen belül van, a térkép doboza nem görget |
 | `tests/perf.js` | Épület nézet: képkockánként hány renderpass, a telefon (GPU-s) kódútján — **élesben bejelentett akadozás** |
-| `tests/neptun.js` | ajtószámok (Neptun-nevek) a térképen, a keresőben (pont nélkül is: „110”) és az adatlapon; az F06 nem állhat az OA00F03-on (az F09); a földszinten Neptun-névnek látszó tervlapi kód (a büfé „F04”-e) nem állhat feliratként; a foglalható termek listájából a térképre ugrás; a párosító mód (`?parosit`) |
+| `tests/neptun.js` | ajtószámok (Neptun-nevek) a térképen, a keresőben (pont nélkül is: „110”) és az adatlapon; az F06 nem állhat az OA00F03-on (az F09); a földszinten Neptun-névnek látszó tervlapi kód (a büfé „F04”-e) nem állhat feliratként; a foglalható termek listájából a térképre ugrás; a kereső a hallgató szavaival (mosdó, női, akadálymentes, toilet, kávé, bejárat), a dolgozói és a raktárból nyíló mosdó nem elöl, egy kétbetűs töredék nem hoz mosdót; a párosító mód (`?parosit`) |
 | `tests/ajtok.js` | az útvonal az ajtó előtt ér véget, több ajtó közül a közelebbinél; a csak más helyiségen át megközelíthető termekhez (I. emelet E03–E07, II. emelet E03, E04) is van útvonal, és a lépések kiírják, min át |
-| `tests/lepesek.js` | az útvonal lépései: a lépcsőzés egy lépésben, nevén nevezett célszinttel („Lépcsőn fel a II. emeletre”, angolul „…to the 2nd floor”), a félemelet fél emelet, a cél az ajtószámmal |
+| `tests/lepesek.js` | az útvonal lépései: a lépcsőzés egy lépésben, nevén nevezett célszinttel („Lépcsőn fel a II. emeletre”, angolul „…to the 2nd floor”), a félemelet fél emelet, a cél az ajtószámmal; a fordulás lépése azt mondja, mennyi egyenes UTÁN kell fordulni („Fordulj jobbra · ~48 m után”), és a lépések méterei kiadják a szakaszok hosszát |
 | `tests/eler.js` | minden helyiséghez van-e út (lépcsőn a portától, lifttel a földszintről); a kivételek listája két irányba szigorú |
 | `tests/lepcsok.js` | a lépcsőkarok rajza: minden lépcsőház minden szintváltásánál ott a kar, karonként egy kis path a falak alatt, és a vonalára kattintva a lépcsőház jön elő, nem törlődik a kijelölés |
 | `tests/ikonok.js` | mosdó-, lépcső- és liftjel: minden mosdón és lépcsőházon a jó jel, a teremszám helyett, a feliratpontján; Épület nézetben magonként egy jelvény, alapnagyításon mind kint, teremszámra nem lógva |
 | `tests/sharp.js` | Épület nézet asztalon, nagyítva: éles-e a kép, nem mozdul-e a sűrűségtől, nem vált-e mozgás közben, csak az aktív szintnél, telefonon és más motorban nem, Firefoxban a saját kódútján (3D-ben minden szint saját transzformmal, a lapos alaprajzon egyik sem) — **élesben bejelentett „irgalmatlan életlen" asztali 3D, Chrome-ban és Firefoxban, és a Firefoxos „éles, homályos, megint éles" váltás** |
-| `tests/totem.js` | totem mód: egy perc tétlenség után alaphelyzet, tíz másodperccel előtte szól, gesztus közben soha, naponta újratölt — a Playwright órájával, percekig várás nélkül; a nyitott épületválasztót is bezárja, a figyelmeztetés a választó fölött is látszik, a totem választójában nincs alapértelmezett, csillag és GPS, és a forrás nem hivatkozás; egy alaprajz nélküli épület (BA) totemjén az alaphelyzet után a választó nyitva marad az üzenetével; a link végére, a # után írt `?totem` is bekapcsolja — **élesben bejelentett: „nem működik az alaphelyzet"** |
+| `tests/totem.js` | totem mód: egy perc tétlenség után alaphelyzet, húsz másodperccel előtte szól, gesztus közben soha, naponta újratölt — a Playwright órájával, percekig várás nélkül; a nyitott épületválasztót is bezárja, a figyelmeztetés a választó fölött is látszik, a totem választójában nincs alapértelmezett, csillag és GPS, és a forrás nem hivatkozás; egy alaprajz nélküli épület (BA) totemjén az alaphelyzet után a választó nyitva marad az üzenetével; a link végére, a # után írt `?totem` is bekapcsolja — **élesben bejelentett: „nem működik az alaphelyzet"** |
 | `tests/kuld.js` | telefonra küldés: a QR-kódot a képernyőképből olvassa vissza (jsQR), a csendzónát és a sérült kódot külön méri, sötét témában is; a beolvasott link telefonon ugyanazt az útvonalat nyitja meg, lifttel; a totemről `?totem` nélkül |
 | `tests/meres.js` | a telefonos mérőlap (`meres.html`) végigfut a valódi appon, az OA-n akkor is, ha a készüléken más az alapértelmezett épület |
-| `tests/epuletek.js` | épületválasztó és **épületváltás**: mind a 39 épület bent van (településenként végigjárva, mindegyik pontosan egyszer), de csak az nyitható meg, aminek kész az adata; a Tervtár adatai a soron, az adatlapon a nem megnyithatónál nincs megnyitó és alapértelmezett gomb; az Esc csak a választót zárja, a kijelölés marad; más épület kódjára mutató link megnevezi az épületet, nem tűnik el csendben; a váltás mércéje **valódi épületeken mért aranyérték** (épületenként az elérhetetlen helyiségek, az útvonalak összhossza és a gráf élszáma a portától), a váltás utáni **tisztaság** (egyetlen tárolóban, a szintdobozokban sem marad régi bejegyzés), OD → KT → OD (a KT betöltésével); a fő folyosó mellé, de leszakadt szilánkhoz kötött OD-helyiségek (OD00F02, OD35E04) elérhetők, a csak sarkával érintkező OD00F03 nem; minden többcellás kötés egy falnyira van, harmadik helyiség nélkül, és odáig a célszinten az épületen belül vezet az út (pontos geometriával mérve); a homlokzat előtti gyűrűn és ablakrésen át nincs útvonal (KH00F36, KH00F37, KH00F42); a bekötések száma mind a hét épületben rögzített, és a saját foltján belüli út (KHX1PK2 → KHX1P03) megmarad; offline vissza az OA-ra; az `epuletKesz()` egyenként mind a hét kötelező elemre és a portára; a nem elérhető adat üzenete angolul is a kóddal; **nyilvántartás nélkül** (első indulás, letiltott kérés) a gomb el sem jelenik meg, és az app elindul |
+| `tests/epuletek.js` | épületválasztó és **épületváltás**: mind a 39 épület bent van (településenként végigjárva, mindegyik pontosan egyszer), de csak az nyitható meg, aminek kész az adata; a Tervtár adatai a soron, az adatlapon a nem megnyithatónál nincs megnyitó és alapértelmezett gomb; az Esc csak a választót zárja, a kijelölés marad; más épület kódjára mutató link megnevezi az épületet, nem tűnik el csendben; a váltás mércéje **valódi épületeken mért aranyérték** (épületenként az elérhetetlen helyiségek, az útvonalak összhossza és a gráf élszáma a portától), a váltás utáni **tisztaság** (egyetlen tárolóban, a szintdobozokban sem marad régi bejegyzés), OD → KT → OD (a KT betöltésével); a fő folyosó mellé, de leszakadt szilánkhoz kötött OD-helyiségek (OD00F02, OD35E04) elérhetők, a csak sarkával érintkező OD00F03 nem; minden többcellás kötés egy falnyira van, harmadik helyiség nélkül, és odáig a célszinten az épületen belül vezet az út (pontos geometriával mérve); a homlokzat előtti gyűrűn és ablakrésen át nincs útvonal (KH00F36, KH00F37, KH00F42); a bekötések száma mind a hét épületben rögzített, és a saját foltján belüli út (KHX1PK2 → KHX1P03) megmarad; offline vissza az OA-ra; az `epuletKesz()` egyenként mind a hét kötelező elemre és a portára, és hibás szerkezetre (sokszög nélküli helyiség, maszk nélküli szint, hibás lépcsőpont…); ha az építés mégis elbukik, a régi épület épül vissza (nem félig vált); a nem elérhető adat üzenete angolul is a kóddal; **nyilvántartás nélkül** (első indulás, letiltott kérés) a gomb el sem jelenik meg, és az app elindul |
 | `tests/valaszto.js` | a térképes választó: minden címmel bíró épület helye a saját települése és az ország határán belül; Budapesten a jelölők a Duna jó oldalán, a Buda és a Pest felirat is, a III. kerület csoportja a hét óbudai épület; a címkék hat képernyőméreten (telefon, keskeny, fekvő, asztal, alacsony és kis asztali ablak), mind a négy térképen nem fedik egymást és más jelét, és nem lógnak ki, átméretezés után sem; fekve a térkép elfér; a biztonsági sávokkal (CDP-vel emulálva) a forrás a kezdősáv fölött, fekve a térkép a görgető tömbön belül; a házikó felirata telefonon is látszik; az OSM-forrás (ODbL, hivatkozással) a felületen; **alapértelmezett épület**: beállítás, a házikó, induláskor megnyílik, a link, a totem (cím nélkül is) és a párosító mód elsőbbsége, kikapcsolás, hálózat nélkül az OA marad, letiltott tárolóval is fut; **a csendes betöltés közben** választott terem marad, az ugyanarra az épületre mutató link érvényesül, a választott másik épület nyílik meg, a nyitott választó nem csukódik be (és nem mutat „Betöltés…”-t), egy görgetés a térképen megállítja, a házikó nem tölt újra; **GPS**: az OD körvonalán belül, a faltól 9 m-re „itt vagy”, előtte a körvonaltól mért távolság, a már nyitott épületnél nincs megnyitás, az YA-nál az YB is, messziről km, letiltott engedélynél üzenet, a bezárt választónál késve jött hely eldobódik; `helyek.json` nélkül csak a lista; a fókusz (zárt választóban nincs tab-állomás, nyitva bent marad, zárva visszatér, a sorról nem ugrik a jelre, a GPS-eredményre megy, a házikó, a töltés és egy azóta rejtetté vált nyitógomb után sem esik a `<body>`-ra; a GPS-javaslat gombja is „Betöltés…”-t mutat); angolul „1 building”; a felirat a teljes képernyős választó fölött látszik, és újrarajzolás után is megvan; a választó saját szélére koppintva nem zárul be, asztalon a háttérre igen; fekvő telefonon (844×340 és a 900 px-nél szélesebb 932×380) a GPS-eredmény után is elérhető a lista; a dobozban kezdett, kint elengedett húzás nem zár; ugyanazon a nézeten újrarajzolva a görgetés marad; az alapértelmezett doboz gombja „Betöltés…”-t mutat; a linkről indult betöltés alatt választott terem marad; egy soha be nem fejeződő letöltés 20 s után üzenetet ad; az elakadt linkes váltás újrapróbálva a link termét nyitja, a hibalap bezárása után már nem; a két épületet vegyítő link egyszer vált, a history-ba nem tesz közbülső bejegyzést, és a címben sem marad a másik épület kódja |
 | `tests/masepulet.js` | más épületben nincs OA-ra szabott dolog: a foglalható termek (az OA órarendje) nincs kint, a Büfé gomb csak ahol van büfé (OA, FK; az OD-ben nincs); a szintnév és az emeletszám az épület saját szintjeiből (KT I. és IV. emelet, KH tetőtér, OD V. emelet, egy félszint és egy „Pince”, angolul is), a név az elsődleges (a KD-alak félemelete a földszint fölött, a kötőjel nélküli „Pince 2”), de ahol a név és a kód ellentmond (KD, TA) vagy két földszint jönne ki (BA), az épület nem nyílik meg; a 3D-s szintfelirat és a felolvasói név angolul (OA, KT); a liftes megjegyzés a lift nélküli szöveg; a nemre nem jelölt WC nem „Női” és „Férfi” mosdó, hanem semleges sor; a mosdónevek írásmódjai, a kategória nélküli OC-mosdók, a személyzeti WC kizárása; a KH és a KT akadálymentes mosdója ott van; vissza az OA-ra minden OA-s dolog visszajön |
 | `tests/csomag.js` | a Pages-re publikált csomag (`tools/pages-csomag.js`): csak engedélylistás fájl, belső anyag és fejlesztői fájl nincs benne, minden, amire a lapok és a manifest hivatkoznak, benne van; a célkönyvtár nem lehet a repó, a szülője, egy forráskönyvtár, sem egy csomagnevű, de idegen tartalmú könyvtár (a repó-szabály külön is mérve); és az app ebből a csomagból minden épületen végigváltva, a service workerrel együtt egyetlen sikertelen kérés nélkül fut |
@@ -859,8 +871,8 @@ fókusz. A `tests/a11y.js` valódi billentyűvel nyomja végig.
 **Totem mód (`?totem#from=<a totem helye>`).** Az e-totemen ott maradt az
 előző ember útvonala, nyelve, nézete. Egy perc tétlenség után a `totemAlap()`
 mindent visszaállít: a címben megadott „itt vagyok”, magyar nyelv, alaprajz, a
-tervlap rajzolt állása, zárt panel, hallgatói nézet, zárt QR-ablak. Tíz
-másodperccel előtte szól, és bármilyen valódi bevitel megállítja (a `window`-on,
+tervlap rajzolt állása, zárt panel, hallgatói nézet, zárt QR-ablak. Húsz
+másodperccel előtte szól (a WCAG 2.2.1 legalább 20 s-ot kér; korábban 10 volt), és bármilyen valódi bevitel megállítja (a `window`-on,
 capture fázisban figyelt mutató-, billentyű- és görgőesemény); **gesztus közben
 (`.navving`) soha**, mert a kéz alól rántaná ki a képet. Amit senki nem
 használt, ahhoz nem nyúl; 20 óránként, nyugvó állapotban újratölt, hogy a
@@ -992,6 +1004,37 @@ floor”), mellette a lépcsőház kódját és azt, hány szint. **A félemelet
 lépcsőházak pihenője, nem emelet**: az `emelet()` fél emeletnek veszi, így a
 szintváltások száma és a lépcsőzés ideje (22 s emeletenként) sem duplázódik. A
 cél és az átjárók az ajtószámmal állnak (`neptunOf`).
+
+**A fordulás lépése azt mondja, mennyi egyenes UTÁN kell fordulni**
+(„Fordulj jobbra · ~48 m után”). Korábban „Fordulj jobbra · Haladj tovább ~48
+m” állt, amit úgy olvastak, hogy előbb fordulj, aztán menj 48 métert — holott
+a 48 m a fordulás előtti szakasz.
+
+**A link hibatűrő** (`readUrl()`, `dekod()`). Egy csonka „%” (kézzel írt,
+levágott link) korábban URIError-t dobott, és az indulás fele elmaradt: a
+service worker nem regisztrált, a `urlLock` zárva ragadt, és a kiválasztás
+többé nem került a címbe. Most részenként, hibatűrően dekódol, az
+`applyUrl()` zárja `finally`-ben old fel, a service worker pedig az indulás
+elején regisztrál. A rövid alak toldalékkal (`#OA10E18?utm_source=qr`) is
+kiválaszt (csak kódalakú részt fogad el kiválasztásnak). A saját épület nem
+létező kódjára felirat szól (`linkNincs`), nem tűnik el csendben. A kijelölés
+törlése (Esc, a térképre koppintás: `kijelolesTorol()`) a címet is üríti —
+korábban újratöltve visszajött a letett terem. A Vissza gomb popstate-et és
+hashchange-et is ad: a hashchange csak akkor állítja vissza, ha a cím azóta
+más (`urlKesz`), különben kétszer futott az útvonalkeresés.
+
+**A listák saját history-bejegyzést kapnak** (`listaNyit()`): a foglalható
+termek listája telefonon zsákutca volt — se vissza gomb, se bejegyzés, a
+rendszer Vissza gombja kilépett az appból. Most van Vissza gombja, és a
+rendszeré is a listát zárja. A mosdóválasztó ugyanígy.
+
+**A kereső a hallgató szavait is érti** (`KERESO_SZO`): a tervlap „NŐI WC”,
+„AK. MENT. WC”, „BÜFÉ” alakot ír, a hallgató „mosdó”, „akadálymentes”,
+„kávé”, „toilet” szót — ezekre korábban nem volt találat. A dolgozói (iroda,
+raktár, öltöző, személyzeti mosdó) és a csak más helyiségen át megközelíthető
+helyiség egy szinttel hátrébb kerül (kódra keresve elöl marad). Rövid
+töredéknél csak a teljes egyezés számít, különben gépelés közben a „ma” is a
+férfi mosdókat hozta.
 
 **Egy keresés, sok cél: `dijkstra()` és `routeTo()`.** A mosdóválasztó, a
 foglalható termek menetideje és az elérhetőségi teszt egy indulásból sok célhoz
@@ -1250,10 +1293,38 @@ régi service worker válaszol**, a régi gyorsítótárából: ha az régi form
 fájlt ad, a `tmLoad()` egyszer újrakéri, egyedi paraméterrel a cím végén —
 azt a régi gyorsítótár nem ismeri, így a hálózatról jön.
 
+**A hálózat-először időkorláttal megy** (`VARAKOZAS` = 3 s): ha a hálózat
+addig nem válaszol, és van tárolt példány, az jön (az app és a `data/`
+is); a hálózati válasz a háttérben (`waitUntil`) frissíti a tárolót.
+Időkorlát nélkül egy lassú, de élő kapcsolaton (pince, tele előadó) az app
+fél percig sem indult el. Amit még tudni kell:
+- **A `data/` tárolójába csak ép JSON kerül**: egy 200-as, de nem JSON
+  válasz (Wi-Fi-portál, csonka letöltés) korábban felülírta a jó példányt.
+- **Offline egy másik lap nem az appot kapja** (csak az app címe és a
+  hatókör gyökere): a mérőlap vagy egy elgépelt cím a saját címén, rossz
+  alapcímmel indult volna.
+- **A manifest és az ikonok a háttérben frissülnek** (stale-while-revalidate),
+  a betűk nem: a nevük NEM a tartalmukhoz kötött, egy betűcseréhez a `CACHE`
+  nevét is emelni kell.
+- **A telepítés `cache:"no-cache"`-sel kér, és a „./” nincs a készletben**:
+  korábban az első látogatás háromszor töltötte le a ~500 KB-os dokumentumot.
+- Egy elbukott letöltés nem végleges: a teremadatot a lista újranyitása és az
+  `online` esemény, a nyilvántartást és a térképet az `online` esemény
+  próbálja újra, és a hibának saját üzenete van („nem sikerült betölteni”),
+  nem „nincs adat”.
+
 ## Deploy
 
 Push a `main`-re → `deploy-pages.yml` → GitHub Pages. Kézzel:
 Actions → Deploy to GitHub Pages → Run workflow.
+
+**A deploy előtt egy böngésző nélküli kapu fut** (`check` job, pull requesten
+is): `node tools/ellenor.js` (az `index.html` és a `meres.html` beágyazott
+szkriptje és a `sw.js` lefordul, a `data/` minden fájlja ép JSON, a három
+alapfájl és az épületadatok a várt alakúak) és az összeállító őre. Korábban a
+`main` teszt nélkül ment élesbe: egy elírás a beágyazott szkriptben üres appot
+adott volna minden telefonon. A böngészős tesztsor (`npm test`) továbbra is
+helyben fut — a CI-ben nincs böngésző.
 
 **A repó privát, a Pages site NEM az.** Ez a kettő független, és könnyű
 összekeverni: ami bekerül a Pages artifactba, azt bárki letöltheti az oldal

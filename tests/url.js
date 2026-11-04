@@ -113,6 +113,69 @@ run("mély link (URL-állapot)", async ({ t, ctx, base }) => {
   const back = await st(p);
   t.eq("a kiválasztás a címsorba kerül", [h1, h2], ["#OA00F01", "#OA00F03"]);
   t("a vissza gomb az előző teremre lép", back.hash==="#OA00F01" && back.sel==="OA00F01", JSON.stringify(back));
+
+  /* A kijelölés törlése (Esc, a térképre koppintás) a címet is üríti: a
+     #OA00F01 korábban a címben maradt, és újratöltve visszajött a terem. */
+  await p.keyboard.press("Escape"); await p.waitForTimeout(300);
+  const esc = await st(p);
+  t("Esc-re a kijelölés a címből is törlődik", !esc.sel && esc.hash === "", JSON.stringify(esc));
+  await p.reload(); await p.waitForTimeout(1400);
+  t("újratöltve sem jön vissza", !(await st(p)).sel);
+  t("nincs JS hiba", p.jsErrors.length === 0, p.jsErrors.join(" | "));
+  await p.close();
+
+  /* G) Egy csonka „%” (kézzel írt, levágott link) korábban URIError-t
+     dobott: az indulás fele elmaradt — a service worker nem regisztrált, a
+     címsor zárva maradt, és a kiválasztás többé nem került a címbe. */
+  for (const [h, var_] of [["#from=OA00FK1%", { from:"OA00FK1" }], ["#%", {}],
+                           ["#from=OA00FK1&to=OA10E18%E9", { from:"OA00FK1", to:"OA10E18" }]]) {
+    p = await open(ctx, base + h, { settle: 1400 });
+    const g = await p.evaluate(async () => ({ from:S.from, to:S.to, zar:urlLock,
+      sw: !!(await navigator.serviceWorker.getRegistration()), lap: app.classList.contains("flat2d") }));
+    await p.evaluate(() => select("OA20E01")); await p.waitForTimeout(300);
+    const cim = await p.evaluate(() => location.hash);
+    t(`${h}: a link ép része érvényesül`, g.from == (var_.from || null) && g.to == (var_.to || null), JSON.stringify(g));
+    t(`${h}: az indulás végigfut (service worker, lapos alaprajz, nyitott címsor)`, g.sw && g.lap && !g.zar && cim.includes("OA20E01"),
+      JSON.stringify({ ...g, cim }));
+    t(`${h}: nincs JS hiba`, p.jsErrors.length === 0, p.jsErrors.join(" | "));
+    await p.close();
+  }
+
+  // H) a rövid alak toldalékkal (#OA10E18?utm_source=qr) is kiválaszt
+  p = await open(ctx, base + "#OA10E18?utm_source=qr", { settle: 1400 });
+  t.eq("a rövid alak a toldalék mellett is kiválaszt", (await st(p)).sel, "OA10E18");
+  await p.close();
+
+  // I) a saját épület nem létező kódja nem tűnik el szó nélkül
+  p = await open(ctx, base + "#OA99X99", { settle: 1400 });
+  const tos = await p.evaluate(() => { const e = document.getElementById("toast"); return e ? e.textContent : ""; });
+  t("az OA nem létező kódjára felirat szól", tos.includes("OA99X99"), tos);
+  await p.close();
+
+  /* J) A Porta gomb is CÉL, mint a társai: korábban az indulást írta át, és a
+     totemen vagy egy QR-kód után elveszett, hol áll a hallgató. */
+  p = await open(ctx, base + "#from=OA30E01", { settle: 1400 });
+  await p.click('.qbtn[data-q="@ENTRY"]'); await p.waitForTimeout(500);
+  const po = await p.evaluate(() => ({ from:S.from, to:S.to, start:START, ut:!!S.route }));
+  t("indulással a Porta gomb a portához tervez, az indulás marad", po.from === "OA30E01" && po.to === po.start && po.ut, JSON.stringify(po));
+  await p.close();
+  p = await open(ctx, base, { settle: 1400 });
+  await p.click('.qbtn[data-q="@ENTRY"]'); await p.waitForTimeout(500);
+  const po2 = await p.evaluate(() => ({ from:S.from, to:S.to, sel:S.sel, start:START }));
+  t("indulás nélkül megmutatja a portát, de nem állítja indulásnak", !po2.from && !po2.to && po2.sel === po2.start, JSON.stringify(po2));
+
+  /* K) A foglalható termek listája telefonon zsákutca volt: vissza gomb nem
+     volt, és a rendszer Vissza gombja kilépett az appból. */
+  await p.evaluate(() => kijelolesTorol());
+  await p.click('.qbtn[data-q="@ROOMS"]'); await p.waitForTimeout(600);
+  const lista = await p.evaluate(() => ({ termek: S.termek, gomb: !!document.getElementById("listaVissza") }));
+  await p.goBack(); await p.waitForTimeout(500);
+  const visszaL = await p.evaluate(() => ({ termek: S.termek, gyors: !!document.querySelector(".qgrid"), url: location.pathname }));
+  t("a listán van Vissza gomb, és a rendszer Vissza gombja a listát zárja, nem az appot",
+    lista.termek && lista.gomb && !visszaL.termek && visszaL.gyors && /index\.html$/.test(visszaL.url), JSON.stringify({ lista, visszaL }));
+  await p.click('.qbtn[data-q="@ROOMS"]'); await p.waitForTimeout(600);
+  await p.click("#listaVissza"); await p.waitForTimeout(500);
+  t("a lista Vissza gombja is a kezdőpanelre visz", await p.evaluate(() => !S.termek && !!document.querySelector(".qgrid")));
   t("nincs JS hiba", p.jsErrors.length === 0, p.jsErrors.join(" | "));
   await p.close();
 });

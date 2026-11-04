@@ -4,13 +4,13 @@ on:
   push:
     branches:
       - main
+  # az ellenőrzés a pull requesteken is fut; a deploy csak a main-en
+  pull_request:
   workflow_dispatch:
 
-# A GITHUB_TOKEN jogosultságai a Pages-re történő deployhoz.
+# Alapból csak olvasás; a Pages-jogot csak a deploy job kapja meg.
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 # Egyszerre egy deploy fusson; a folyamatban lévőt nem szakítjuk meg.
 concurrency:
@@ -18,14 +18,40 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  # Böngésző nélküli kapu a deploy előtt: a beágyazott szkript lefordul-e, az
+  # adatfájlok ép JSON-ok-e, és az összeállító őr átengedi-e a csomagot.
+  # Korábban a main teszt nélkül ment élesbe: egy elírás az index.html
+  # szkriptjében üres appot adott volna minden telefonon. A teljes, böngészős
+  # tesztsor (npm test, ~25 perc) helyben fut, lásd a CLAUDE.md-t.
+  check:
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Scripts compile, data files are valid
+        run: node tools/ellenor.js
+      - name: The published bundle passes its guard
+        run: node tools/pages-csomag.js "$RUNNER_TEMP/_site"
+
+  deploy:
+    needs: check
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    # A GITHUB_TOKEN jogosultságai a Pages-re történő deployhoz.
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       # A Pages-t egyszer kézzel kell bekapcsolni (Settings → Pages →
       # Source: GitHub Actions). A GITHUB_TOKEN deployolni tud, létrehozni a

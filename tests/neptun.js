@@ -91,6 +91,22 @@ run("Neptun-nevek és párosítás", async ({ t, ctx, browser, base }) => {
   t("a foglalható termek listájából a terem a térképre visz", ugras.sel === "OA10E45" && ugras.szint === 2
     && ugras.cim === "1.10" && !!ugras.felirat && ugras.f05, JSON.stringify(ugras));
   t("mind a 24 órarendi terem a térképen van", ugras.nincsPar.length === 0, ugras.nincsPar.join(", "));
+  /* A hallgató szavaival is talál: a tervlap „NŐI WC”-t, „AK. MENT. WC”-t,
+     „BÜFÉ”-t ír, a hallgató „mosdó”-t, „akadálymentes”-t, „kávé”-t, angolul
+     „toilet”-et. Korábban ezekre nem volt találat, a „wc”-re pedig a dolgozói
+     öltöző mosdói jöttek elöl, a „mosdó”-ra a raktárból nyíló. */
+  const kereso = await p.evaluate(() => { const f = q => search(q).map(r => r.code);
+    const ic = c => (iconsOf(ROOM[c]) || [])[0];
+    return { mosdo: f("mosdó").slice(0, 5).map(ic), wc0: f("wc")[0], noi: f("női mosdó").map(ic), akad: f("akadálymentes").map(ic),
+             toilet: f("toilet").length, kave: f("kávé").map(c => ROOM[c].name), bejarat: f("bejárat").includes(START),
+             wcElsoDolgozoi: DOLGOZOI_WC.has(f("wc")[0]), mosdoElsoVia: !!ROOM[f("mosdó")[0]].via, ma: f("ma").some(c => ic(c)) }; });
+  t("a „mosdó”, „női mosdó”, „akadálymentes”, „toilet”, „kávé”, „bejárat” a hallgató szavaival talál",
+    kereso.mosdo.length === 5 && kereso.mosdo.every(x => ["wc", "wcw", "wcm", "acc"].includes(x)) && kereso.noi.length > 0 &&
+    kereso.noi.every(x => x === "wcw") && kereso.akad.length > 0 && kereso.akad.every(x => x === "acc") && kereso.toilet > 0 &&
+    kereso.kave.length === 1 && kereso.kave[0] === "BÜFÉ" && kereso.bejarat, JSON.stringify(kereso));
+  t("a „wc”-re nem a dolgozói öltöző, a „mosdó”-ra nem a raktárból nyíló mosdó jön elöl",
+    !kereso.wcElsoDolgozoi && !kereso.mosdoElsoVia, JSON.stringify(kereso));
+  t("gépelés közben egy kétbetűs töredék („ma”) nem hoz mosdót", !kereso.ma);
   t("nincs JS hiba", p.jsErrors.length === 0, p.jsErrors.join(" | "));
 
   /* Párosító mód, valódi egérrel: teremre kattintás, a Neptun-név

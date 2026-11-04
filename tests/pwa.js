@@ -139,6 +139,15 @@ const termekVan = p => p.evaluate(async () => {
     const ut = req.url.split("?")[0];
     if (ut === "/uj/index.html") { res.writeHead(200, { "content-type":"text/html; charset=utf-8" });
       return res.end("<title>Új hely</title><p>az app új címe</p>"); }
+    // portál vagy csonka válasz: 200-as, de nem JSON adat
+    if (mod === "rosszjson" && /\/data\/termek\.json$/.test(ut)) { res.writeHead(200, { "content-type":"text/html; charset=utf-8" });
+      return res.end("<title>Bejelentkezés</title><p>Wi-Fi portál</p>"); }
+    // lassú, de élő hálózat: a dokumentum és az adat 8 s múlva jön
+    if (mod === "lassu" && (ut === ELO + "/" || ut === ELO + "/index.html" || ut.includes("/data/"))) {
+      return setTimeout(() => kiszolgal(req, res, ut), 8000); }
+    kiszolgal(req, res, ut);
+  });
+  const kiszolgal = (req, res, ut) => {
     if (mod === "404") { res.writeHead(404, { "content-type":"text/html; charset=utf-8" });
       return res.end("<title>Site not found · GitHub Pages</title><h1>404</h1>"); }
     if (ut === ELO) { res.writeHead(301, { location: ELO + "/" }); return res.end(); }
@@ -153,7 +162,7 @@ const termekVan = p => p.evaluate(async () => {
     if (!file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); return res.end(); }
     res.writeHead(200, { "content-type": MIME[path.extname(file)] || "application/octet-stream", "cache-control":"no-store" });
     fs.createReadStream(file).pipe(res);
-  });
+  };
   await new Promise(r => srv2.listen(0, "127.0.0.1", r));
   const gyoker2 = "http://127.0.0.1:" + srv2.address().port + "/", base2 = gyoker2 + "oemap/";
   const profile2 = fs.mkdtempSync(path.join(os.tmpdir(), "oemap-pwa-"));
@@ -192,6 +201,33 @@ const termekVan = p => p.evaluate(async () => {
       t("a mérőlap megnyitása után offline is az app indul, nem a mérőlap", await app(p, "index.html"),
         await cim(p));
     } finally { await halozat(ctx2, true); }
+    /* Lassú, de élő hálózaton a tárolt app jön, nem várunk a hálózatra:
+       időkorlát nélkül a pincében, egy tele előadóban fél percig sem indult
+       el, holott a telefonon volt. */
+    mod = "lassu";
+    const t0 = Date.now(), lassu = await app(p, "index.html"), lassuMs = Date.now() - t0;
+    const lassuAdat = await termekVan(p);
+    mod = "ok";
+    t("lassú (8 s-os) hálózaton is ~3 s alatt elindul a tárolt appal", lassu && lassuMs < 6500, lassuMs + " ms");
+    t("… és a teremadat sem várja ki a hálózatot", lassuAdat);
+
+    /* Egy 200-as, de nem JSON adatválasz (Wi-Fi-portál, csonka letöltés)
+       korábban felülírta a jó példányt, és offline az sem maradt. */
+    mod = "rosszjson";
+    await p.evaluate(() => fetch("data/termek.json").then(r => r.text()).catch(() => ""));
+    await p.waitForTimeout(600);
+    mod = "ok";
+    await halozat(ctx2, false);
+    try {
+      t("egy 200-as, de nem JSON adatválasz nem írja felül a tárolt teremadatot", await termekVan(p));
+      let mas = "";
+      try { await p.goto(base2 + "nincs-ilyen.html", { waitUntil: "load", timeout: 15000 }); mas = await cim(p); }
+      catch (e) { mas = "hiba: " + e.message.split("\n")[0]; }
+      t("offline egy másik (elgépelt) lap nem az appot kapja a saját címén", !/Teremkereső/.test(mas), mas);
+    } finally { await halozat(ctx2, true); }
+
+    /* A 301-et a böngésző a saját gyorsítótárában megjegyzi: ami utána a
+       sima címre navigál, az már az új helyre megy. Ezért ez az utolsó. */
     mod = "301";
     let hova = "", cimke = "";
     try { await p.goto(base2 + "index.html", { waitUntil: "load", timeout: 15000 });

@@ -101,6 +101,13 @@ run("foglalható termek", async ({ t, ctx, browser, base }) => {
   const l = await panel(eset.lyuk.ido);
   const tl = l.sorok.find(x => x.nev === eset.lyuk.nev);
   t("két óra közt szabadnak mutatja", tl && tl.jel === "free", JSON.stringify(tl) + " @ " + eset.lyuk.ido);
+  /* A szabad terem sora azt mondja, MEDDIG szabad: a következő óra kezdetéig
+     („10:45-ig”). Korábban „10:45-tól” állt, ami úgy hatott, mintha akkortól
+     lenne szabad. */
+  const szabadok = l.sorok.filter(x => x.jel === "free");
+  t("a szabad terem sora a következő óra kezdetéig szól („-ig”), nem „-tól”",
+    szabadok.length > 0 && szabadok.every(x => /\d\d:\d\d-ig|Ma már nincs óra/.test(x.al) && !/-tól/.test(x.al)),
+    JSON.stringify(szabadok.slice(0, 3)));
 
   /* Sorrend: elöl, ami most szabad, aztán a „Szabad?", a foglalt (az előbb
      szabaduló elöl), végül, amiről nincs adat. A szabadok közül, indulás
@@ -199,6 +206,23 @@ run("foglalható termek", async ({ t, ctx, browser, base }) => {
   t("ha az adat a kiválasztás után jön meg, utólag bekerül, és a fókusz a helyén marad",
     !kesve.elotte && kesve.utana && kesve.fokusz === "bF", JSON.stringify(kesve));
   await c3.close();
+
+  /* Egy elbukott letöltés korábban végleges volt, és a lista „Erre a napra
+     nincs adat”-ot mondott (ami mást jelent). Most külön üzenet, és a lista
+     újranyitásakor újrapróbál. */
+  const c4 = await browser.newContext(PHONE);
+  let tilt = true;
+  await c4.route(/\/data\/termek\.json/, r => tilt ? r.abort() : r.continue());
+  const p4 = await open(c4, base, { settle: 900 });
+  const hiba = await p4.evaluate(async () => { quick("@ROOMS"); await new Promise(r => setTimeout(r, 700));
+    return { szoveg:document.getElementById("scroll").textContent.trim(), sor:document.querySelectorAll(".tmrow").length }; });
+  t("elbukott letöltésnél azt mondja, hogy nem sikerült betölteni (nem „nincs adat”)",
+    hiba.sor === 0 && /nem sikerült betölteni/.test(hiba.szoveg) && !/Erre a napra nincs adat/.test(hiba.szoveg), hiba.szoveg);
+  tilt = false;
+  const ujra = await p4.evaluate(async () => { quick("@ROOMS"); await new Promise(r => setTimeout(r, 900));
+    return document.querySelectorAll(".tmrow").length; });
+  t("a lista újranyitásakor újrapróbál, és megjön", ujra === adat.db, "sorok=" + ujra);
+  await c4.close();
 
   /* Egy deploy utáni első megnyitáskor még a régi service worker válaszol, és
      a régi formátumú fájlt adja a gyorsítótárából. Útvonal-elfogással

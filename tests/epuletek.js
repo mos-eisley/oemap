@@ -413,14 +413,51 @@ run("épületválasztó", async ({ t, ctx, browser, base }) => {
     const portaSzobaNelkul = (() => { const c = JSON.parse(JSON.stringify(od));
       c.rooms = c.rooms.filter(r => r.code !== PORTA.OD); return kesz(c); })();
     const portaNelkul = (() => { const v = PORTA.OD; delete PORTA.OD; const r = kesz(od); PORTA.OD = v; return r; })();
+    /* A szerkezet is számít: egy sokszög nélküli helyiség, egy maszk nélküli
+       szint vagy egy hibás lépcsőpont korábban az építés KÖZEPÉN dobott hibát. */
+    const ront = f => { const c = JSON.parse(JSON.stringify(od)); f(c); return kesz(c); };
+    const szerk = { sokszogNelkul: ront(c => { delete c.rooms[5].poly; }),
+      kurtaSokszog: ront(c => { c.rooms[5].poly = c.rooms[5].poly.slice(0, 2); }),
+      rosszPont: ront(c => { c.rooms[5].poly[1] = ["x", 3]; }),
+      idegenSzint: ront(c => { c.rooms[5].level = 99; }),
+      maszkNelkuliSzint: ront(c => { delete c.masks[c.levels[0].level]; }),
+      rosszLepcso: ront(c => { c.stairs[0].pts[0] = [c.levels[0].level, null, 2]; }),
+      racsNulla: ront(c => { c.grid.res = 0; }) };
     return { teljes: kesz(od), meta: nelkul("meta"), rooms: nelkul("rooms"), walls: nelkul("walls"),
              stairs: nelkul("stairs"), masks: nelkul("masks"), grid: nelkul("grid"), levels: nelkul("levels"),
-             portaSzobaNelkul, portaNelkul };
+             portaSzobaNelkul, portaNelkul, szerk };
   });
   t("epuletKesz: a teljes OD-adat kész", kk.teljes === true, JSON.stringify(kk));
   t("epuletKesz: bármelyik kötelező elem (meta, helyiségek, falak, lépcsők, maszk, rács, szintek, a porta helyisége, a PORTA-bejegyzés) hiányával nem kész",
     ["meta", "rooms", "walls", "stairs", "masks", "grid", "levels", "portaSzobaNelkul", "portaNelkul"].every(k => kk[k] === false),
     JSON.stringify(kk));
+
+  t("epuletKesz: hibás szerkezettel (sokszög nélküli vagy kétpontos helyiség, nem szám koordináta, ismeretlen szint, maszk nélküli szint, hibás lépcsőpont, nulla rácsméret) sem kész",
+    Object.values(kk.szerk).every(v => v === false), JSON.stringify(kk.szerk));
+
+  /* Ha az építés mégis elbukik (az epuletKesz() nem lát mindent), a régi
+     épület épül vissza. Korábban az app félig váltott: a D az új épület, a
+     ROOM és a kép a régi, és az útvonalak a kettő keverékén futottak. A hibát
+     az egyik építő szabotálásával idézzük elő, csak az új adatra. */
+  const felig = await p4.evaluate(async () => {
+    const eredeti = epuletPortal;
+    epuletPortal = d => { if (d !== D_OA) throw new Error("szabotált építés"); return eredeti(d); };
+    try {
+      epuletValt("OD");
+      for (let i = 0; i < 100 && !(document.getElementById("epvlist").open && document.getElementById("epvMsg").textContent.trim()); i++)
+        await new Promise(r => setTimeout(r, 100));
+    } finally { epuletPortal = eredeti; }
+    const uz = document.getElementById("epvMsg").textContent.trim();
+    epvZar();
+    const rt = findRoute(ROOM.OAX1A02, ROOM.OA10E18);
+    return { oa: D === D_OA, room: Object.keys(ROOM)[0].slice(0, 2), padlo: document.querySelectorAll(".floor").length,
+             szint: D.levels.length, ut: !!rt, uz, zar: urlLock };
+  });
+  t("ha az építés elbukik, a régi épület épül vissza (nem félig váltott), és működik",
+    felig.oa && felig.room === "OA" && felig.padlo === felig.szint && felig.ut && !felig.zar, JSON.stringify(felig));
+  t("és megmondja, hogy az épület nem érhető el", /nem érhető el/.test(felig.uz), felig.uz);
+  // a szándékosan előidézett hibát az app a konzolra írja: az nem az app hibája
+  p4.jsErrors.splice(0, p4.jsErrors.length, ...p4.jsErrors.filter(m => !m.includes("szabotált építés")));
 
   /* Hiányos adattal NEM váltunk: falak nélkül a Dijkstra mindenen átmenne,
      lépcső nélkül a szintek nem érnének össze. Inkább marad adatlap. */

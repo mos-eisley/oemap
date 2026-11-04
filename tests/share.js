@@ -45,6 +45,29 @@ run("megosztás", async ({ t, browser, base }) => {
   t("elvetett megosztás nem másol vágólapra", (await p.evaluate(() => window.__clip)) === null);
   await ctx.close();
 
+  /* 3b) se megosztás, se vágólap: a link egy lapon belüli ablakban,
+     kijelölve. Korábban prompt() jött, ami blokkolt (a totem órája is állt). */
+  ctx = await browser.newContext(DESKTOP);
+  await ctx.addInitScript(() => { delete Navigator.prototype.share; window.__prompt = 0; window.prompt = () => { window.__prompt++; };
+    Object.defineProperty(navigator, "clipboard", { value:{ writeText: async () => { throw new Error("tiltva"); } }, configurable:true }); });
+  p = await open(ctx, base + "#OA20E01", { settle: 1200 });
+  await p.click(".shr"); await p.waitForTimeout(300);
+  const ablak = await p.evaluate(() => { const d = document.getElementById("qrDlg"), i = document.getElementById("qrLinkIn");
+    return { nyitva:d.open, ertek:i && i.value, kijelolve:i && i.selectionEnd - i.selectionStart === i.value.length && document.activeElement === i,
+             prompt:window.__prompt }; });
+  t("vágólap nélkül a link egy ablakban jön, kijelölve, prompt() nélkül",
+    ablak.nyitva && ablak.ertek && ablak.ertek.endsWith("#OA20E01") && ablak.kijelolve && ablak.prompt === 0, JSON.stringify(ablak));
+  await p.keyboard.press("Escape"); await p.waitForTimeout(200);
+  t("Esc-re bezárul, a kiválasztás marad", await p.evaluate(() => !document.getElementById("qrDlg").open && S.sel === "OA20E01"));
+  await ctx.close();
+
+  /* 3c) A totemen nincs megosztás gomb: a navigator.share kivinné a kioszkot
+     az appból, és onnan a tétlenségi alaphelyzet már nem hozná vissza. */
+  ctx = await browser.newContext(PHONE);
+  p = await open(ctx, base + "?totem#from=OA00FK1&to=OA10E18", { settle: 1200 });
+  t("a totemen nincs megosztás gomb", await p.evaluate(() => !document.querySelector(".shr") && !!S.route));
+  await ctx.close();
+
   // 4) üres állapotban nincs mit megosztani
   ctx = await browser.newContext(DESKTOP);
   p = await open(ctx, base, { settle: 1200 });

@@ -270,7 +270,7 @@ A `from` a totem helye. Induláskor egy felirat jelzi, hogy totem módban fut �
 ha nem jelenik meg, a cím nem kért totem módot. A `totem` a link végére, a `#`
 után írva is működik (`…/#from=OA00FK1?totem`), az app a szokásos alakra
 igazítja. Egy perc tétlenség után minden visszaáll (az indulás, magyar nyelv,
-alaprajz, cél nélkül); tíz másodperccel előtte szól, és egy érintés
+alaprajz, cél nélkül); húsz másodperccel előtte szól, és egy érintés
 megállítja. Mozdulat közben soha nem áll vissza. Naponta egyszer újratölt, hogy
 a friss adat és a friss kód is megjöjjön. A totemről küldött QR-kód linkje már
 nem totem mód: a telefonon nem áll vissza semmi.

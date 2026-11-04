@@ -1,6 +1,6 @@
 /* Totem-mód (?totem). Az e-totemen ott maradt az előző ember útvonala,
    nyelve, nézete. Egy perc tétlenség után alaphelyzet: a totem saját „itt
-   vagyok"-ja (#from=…), magyar nyelv, alaprajz; tíz másodperccel előtte szól,
+   vagyok"-ja (#from=…), magyar nyelv, alaprajz; húsz másodperccel előtte szól,
    és egy érintés megállítja. Gesztus közben soha, és totem-mód nélkül soha.
    Naponta egyszer újratölt. Az időt a Playwright órája ugratja, nem várunk
    percekig; a használat valódi kattintás, mert csak a valódi bevitel számít.
@@ -35,12 +35,14 @@ run("totem-mód", async ({ t, ctx, base }) => {
 
   // az utolsó bevitel most legyen, hogy a számolás innen induljon
   await p.mouse.move(700, 400);
-  await p.clock.fastForward(48000);
+  /* 20 s-mal előtte szól (WCAG 2.2.1: legalább 20 s a válaszra); korábban
+     10 s volt. */
+  await p.clock.fastForward(38000);
   const negyvenkilenc = await allapot(p);
-  t("48 másodperc után még semmi", negyvenkilenc.to === hasznalva.to && !negyvenkilenc.toast, JSON.stringify(negyvenkilenc));
+  t("38 másodperc után még semmi", negyvenkilenc.to === hasznalva.to && !negyvenkilenc.toast, JSON.stringify(negyvenkilenc));
   await p.clock.fastForward(3000);
   const otvenegy = await allapot(p);
-  t("50 másodperc után szól, hogy 10 másodperc múlva visszaáll", otvenegy.toast && /10/.test(otvenegy.szoveg) &&
+  t("40 másodperc után szól, hogy 20 másodperc múlva visszaáll", otvenegy.toast && /20/.test(otvenegy.szoveg) &&
     otvenegy.to === hasznalva.to, JSON.stringify(otvenegy));
   await p.mouse.move(640, 300); await p.mouse.move(660, 320);
   const megallit = await allapot(p);
@@ -82,7 +84,7 @@ run("totem-mód", async ({ t, ctx, base }) => {
     const r = el.getBoundingClientRect(), x = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
     el.style.pointerEvents = "";
     return x && (x === el || el.contains(x)) ? "látszik" : "takarja: " + (x && x.className); });
-  t("a nyitott választó fölött is látszik, hogy 10 másodperc múlva visszaáll", figyel === "látszik", figyel);
+  t("a nyitott választó fölött is látszik, hogy 20 másodperc múlva visszaáll", figyel === "látszik", figyel);
   await p.clock.fastForward(10000); await p.waitForTimeout(1500);
   t("egy perc tétlenség után a választó is bezárul", await p.evaluate(() => !document.getElementById("epvlist").open));
 

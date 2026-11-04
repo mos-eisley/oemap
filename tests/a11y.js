@@ -208,5 +208,57 @@ run("billentyűzet és felolvasó", async ({ t, ctx, base }) => {
     await p.evaluate(() => matchMedia("(prefers-color-scheme: dark)").matches), JSON.stringify({ kod, ...tema }));
   await p.emulateMedia({ colorScheme: "light" });
 
+  /* Az indulás és a cél törlése külön gomb: korábban egy <span> volt a sor
+     gombjában, billentyűzettel elérhetetlen, és a sor neve „Ide … ×” lett. */
+  await p.evaluate(() => { S.from = "OA00F01"; S.to = "OA10E18"; S.sel = null; recompute(); refreshSel(); });
+  await p.waitForTimeout(300);
+  const torlo = await p.evaluate(() => { const b = document.querySelector('[data-clear="to"]'), sor = document.querySelector('[data-ep="to"]');
+    const r = b && b.getBoundingClientRect();
+    return { gomb: !!b && b.tagName === "BUTTON" && !sor.contains(b), nev: b && b.getAttribute("aria-label"),
+             sorNev: sor.textContent.replace(/\s+/g, " ").trim(), meret: r ? [Math.round(r.width), Math.round(r.height)] : null }; });
+  t("a cél törlése önálló, megnevezett gomb, legalább 24×24 px, a sor nevében nincs „×”",
+    torlo.gomb && /törlése/.test(torlo.nev) && !/×/.test(torlo.sorNev) && torlo.meret[0] >= 24 && torlo.meret[1] >= 24, JSON.stringify(torlo));
+  await p.locator('[data-clear="to"]').focus(); await p.keyboard.press("Enter"); await p.waitForTimeout(300);
+  const torolve = await p.evaluate(() => ({ to: S.to, fokusz: document.activeElement.dataset.ep }));
+  t("billentyűvel törölhető, és a fókusz a sorára kerül", !torolve.to && torolve.fokusz === "to", JSON.stringify(torolve));
+
+  /* A zárt jelmagyarázat nem tab-állomás és nem olvasható fel (csak átlátszó
+     volt); az állapota a gombján, és az Esc a gombra adja vissza a fókuszt. */
+  const leg = await p.evaluate(() => ({ lathato: getComputedStyle(document.getElementById("legPop")).visibility,
+    allapot: document.getElementById("legBtn").getAttribute("aria-expanded") }));
+  t("a zárt jelmagyarázat rejtett (visibility), a gombja aria-expanded=false", leg.lathato === "hidden" && leg.allapot === "false", JSON.stringify(leg));
+  await p.locator("#legBtn").focus(); await p.keyboard.press("Enter"); await p.waitForTimeout(350);
+  const nyit = await p.evaluate(() => ({ lathato: getComputedStyle(document.getElementById("legPop")).visibility,
+    allapot: document.getElementById("legBtn").getAttribute("aria-expanded") }));
+  await p.keyboard.press("Escape"); await p.waitForTimeout(350);
+  const zar = await p.evaluate(() => ({ nyitva: S.leg, fokusz: document.activeElement.id }));
+  t("nyitva látszik és aria-expanded=true; az Esc bezárja, a fókusz a gombra kerül",
+    nyit.lathato === "visible" && nyit.allapot === "true" && !zar.nyitva && zar.fokusz === "legBtn", JSON.stringify({ nyit, zar }));
+
+  /* A lap nyelve és címe a felülettel vált: a felolvasó a lang szerint ejt, és
+     a fül címe más épületben is az OA-t mondta. */
+  await p.click("#langEn"); await p.waitForTimeout(200);
+  const en = await p.evaluate(() => ({ lang: document.documentElement.lang, cim: document.title,
+    kereso: document.getElementById("q").getAttribute("aria-label"), tema: document.getElementById("thDark").getAttribute("aria-label"),
+    h1: document.querySelector("h1").textContent }));
+  await p.click("#langHu"); await p.waitForTimeout(200);
+  const hu = await p.evaluate(() => ({ lang: document.documentElement.lang, cim: document.title, main: !!document.querySelector("main #q") }));
+  t("angolul a lap nyelve „en”, a címe, a h1 és a statikus címkék angolok",
+    en.lang === "en" && /Room finder/.test(en.cim) && en.h1 === en.cim && en.kereso === "Search" && en.tema === "Dark", JSON.stringify(en));
+  t("magyarul vissza; a kereső a fő tájékozódási pontban (main) áll", hu.lang === "hu" && /Teremkereső/.test(hu.cim) && hu.main, JSON.stringify(hu));
+
+  /* Nagyítva a nyíllal fókuszált terem a képen kívül állt: a böngésző a térkép
+     dobozát görgette el (overflow:hidden), és a ⤢ sem hozta vissza. */
+  await p.evaluate(() => { S.sel = null; refreshSel(); setLevel(0); S.view.k = 6; S.dirty = true; updateView(); });
+  await p.waitForTimeout(500);
+  await p.locator("#stage").focus();
+  for (let i = 0; i < 12; i++) { await p.keyboard.press("ArrowRight"); await p.waitForTimeout(40); }
+  await p.waitForTimeout(700);
+  const lat = await p.evaluate(() => { const m = document.getElementById("mapwrap"), w = m.getBoundingClientRect(),
+    b = document.activeElement.getBoundingClientRect(), cx = (b.left + b.right) / 2, cy = (b.top + b.bottom) / 2;
+    return { gorgetve: m.scrollTop + m.scrollLeft, bent: cx > w.left && cx < w.right && cy > w.top && cy < w.bottom,
+             kod: document.activeElement.dataset.code }; });
+  t("nagyítva a nyíllal fókuszált terem a képen belül van, a térkép doboza nem görget", lat.gorgetve === 0 && lat.bent && !!lat.kod, JSON.stringify(lat));
+
   t("nincs JS hiba", p.jsErrors.length === 0, p.jsErrors.join(" | "));
 }, DESKTOP);
