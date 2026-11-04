@@ -28,6 +28,8 @@ run("totem-mód", async ({ t, ctx, base }) => {
   const p = await nyit(base + "?totem#from=OA00FK1");
   const indul = await allapot(p);
   t("a totem a saját helyéről indul", indul.from === "OA00FK1" && !indul.to, JSON.stringify(indul));
+  const zaj = await p.evaluate(() => ["#themeSeg", "#staffSeg", ".field kbd"].map(q => getComputedStyle(document.querySelector(q)).display));
+  t("a totemen nincs „/” billentyűtipp, téma- és „Minden helyiség” kapcsoló", zaj.every(d => d === "none"), zaj.join(", "));
   await hasznal(p);
   const hasznalva = await allapot(p);
   t("használat közben útvonal, angol nyelv, Épület nézet", hasznalva.to && hasznalva.lang === "en" && hasznalva.mode === 3,

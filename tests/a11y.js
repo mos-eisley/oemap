@@ -195,6 +195,25 @@ run("billentyűzet és felolvasó", async ({ t, ctx, base }) => {
   const tm = await p.evaluate(() => ({ tm: document.activeElement.dataset.tm, nyitva: S.tmOpen }));
   t("a foglalható termek listájában a kinyitott sor marad fókuszban", tm.nyitva === nev && tm.tm === nev,
     JSON.stringify({ nev, ...tm }));
+  const kinyit = await p.evaluate(nev => ({ nyitott: document.querySelector(`[data-tm="${nev}"]`).getAttribute("aria-expanded"),
+    zart: [...document.querySelectorAll("[data-tm]")].filter(b => b.dataset.tm !== nev).every(b => b.getAttribute("aria-expanded") === "false") }), nev);
+  t("a lenyitható sor állapota a felolvasónak is (aria-expanded)", kinyit.nyitott === "true" && kinyit.zart, JSON.stringify(kinyit));
+
+  /* A kis szöveg kontrasztja (WCAG 1.4.3, 4,5:1): a „Szabad” 3,86, a „Foglalt”
+     3,57, a halvány szöveg a süllyesztett háttéren 3,97:1 volt. */
+  const kontraszt = await p.evaluate(() => {
+    const rgb = c => c.match(/[\d.]+/g).slice(0, 3).map(Number);
+    const L = c => { const v = rgb(c).map(x => { x /= 255; return x <= .03928 ? x / 12.92 : ((x + .055) / 1.055) ** 2.4; });
+      return .2126 * v[0] + .7152 * v[1] + .0722 * v[2]; };
+    const cr = (a, b) => { const x = L(a), y = L(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
+    const jel = k => { const e = document.querySelector(".tmb." + k); if (!e) return null; const s = getComputedStyle(e);
+      return +cr(s.color, s.backgroundColor).toFixed(2); };
+    const minta = document.createElement("div"); minta.style.cssText = "color:var(--muted);background:var(--sunk)";
+    document.body.appendChild(minta); const s = getComputedStyle(minta), muted = +cr(s.color, s.backgroundColor).toFixed(2); minta.remove();
+    return { szabad: jel("free"), foglalt: jel("busy"), muted };
+  });
+  t("a jelvények és a halvány szöveg kontrasztja legalább 4,5:1", [kontraszt.szabad, kontraszt.foglalt, kontraszt.muted]
+    .filter(x => x != null).every(x => x >= 4.5) && kontraszt.muted != null, JSON.stringify(kontraszt));
 
   await p.locator('#rail [data-l="2"]').focus(); await p.keyboard.press("Enter"); await p.waitForTimeout(600);
   const sint = await fokusz();
@@ -246,6 +265,12 @@ run("billentyűzet és felolvasó", async ({ t, ctx, base }) => {
   t("angolul a lap nyelve „en”, a címe, a h1 és a statikus címkék angolok",
     en.lang === "en" && /Room finder/.test(en.cim) && en.h1 === en.cim && en.kereso === "Search" && en.tema === "Dark", JSON.stringify(en));
   t("magyarul vissza; a kereső a fő tájékozódási pontban (main) áll", hu.lang === "hu" && /Teremkereső/.test(hu.cim) && hu.main, JSON.stringify(hu));
+  // a választógomb neve a látható szöveggel kezdődik (WCAG 2.5.3): hangvezérléssel a látott szót kimondva is megnyomható
+  await p.waitForFunction(() => !document.getElementById("epvBtn").hidden, null, { timeout: 10000 }).catch(() => {});
+  const epvNev = await p.evaluate(() => { const b = document.getElementById("epvBtn");
+    return { lathato: document.getElementById("epvNev").textContent.trim(), nev: b.getAttribute("aria-label") || "", rejtve: b.hidden }; });
+  t("az épületválasztó gomb neve a látható szöveggel kezdődik", !epvNev.rejtve && epvNev.lathato && epvNev.nev.startsWith(epvNev.lathato),
+    JSON.stringify(epvNev));
 
   /* Nagyítva a nyíllal fókuszált terem a képen kívül állt: a böngésző a térkép
      dobozát görgette el (overflow:hidden), és a ⤢ sem hozta vissza. */
