@@ -12,11 +12,6 @@ on:
 permissions:
   contents: read
 
-# Egyszerre egy deploy fusson; a folyamatban lévőt nem szakítjuk meg.
-concurrency:
-  group: pages
-  cancel-in-progress: false
-
 jobs:
   # Böngésző nélküli kapu a deploy előtt: a beágyazott szkript lefordul-e, az
   # adatfájlok ép JSON-ok-e, és az összeállító őr átengedi-e a csomagot.
@@ -39,6 +34,13 @@ jobs:
     needs: check
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+    # Egyszerre egy deploy fusson; a folyamatban lévőt nem szakítjuk meg. A
+    # csoport a deploy jobé, nem a workflow-é: egy pull request ellenőrzése
+    # különben kiszorította volna a sorban álló main-deployt (csoportonként
+    # egy futó és egy várakozó lehet, az újabb várakozó a régit törli).
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     # A GITHUB_TOKEN jogosultságai a Pages-re történő deployhoz.
     permissions:
       contents: read

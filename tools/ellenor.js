@@ -51,11 +51,28 @@ const hely = adat["data/helyek.json"];
 if (hely && !(hely.epuletek && hely.terkep)) hiba("data/helyek.json", "hiányzik az epuletek vagy a terkep");
 const tm = adat["data/termek.json"];
 if (tm && !(tm.het1 && tm.rooms && tm.targyak)) hiba("data/termek.json", "nem a várt formátum (het1, rooms, targyak)");
+/* Ugyanaz a szerkezet, amit az app epuletEp()-je megkövetel: ami itt átmegy,
+   az ott is megnyílik — különben egy megnyithatónak jelölt épület élesben
+   „nem érhető el” lenne. */
+const szam = x => typeof x === "number" && isFinite(x);
+const pont = p => Array.isArray(p) && szam(p[0]) && szam(p[1]);
 for (const [f, d] of Object.entries(adat)) {
   if (!/^data\/epuletek\/[a-z]{2}\.json$/.test(f) || !d) continue;
-  for (const k of ["meta", "levels", "rooms", "grid", "masks", "walls", "stairs"]) if (!d[k]) hiba(f, `hiányzik: ${k}`);
-  if (Array.isArray(d.rooms) && d.rooms.some(r => !Array.isArray(r.poly) || r.poly.length < 3))
-    hiba(f, "van helyiség sokszög nélkül");
+  const hiany = ["meta", "levels", "rooms", "grid", "masks", "walls", "stairs"].filter(k => !d[k]);
+  if (hiany.length) { hiba(f, `hiányzik: ${hiany.join(", ")}`); continue; }
+  if (!Array.isArray(d.levels) || !d.levels.length || !Array.isArray(d.rooms) || !d.rooms.length || !Array.isArray(d.stairs))
+    { hiba(f, "a levels, a rooms és a stairs nem (nem üres) tömb"); continue; }
+  if (!szam(d.meta.w) || !szam(d.meta.h)) hiba(f, "a meta.w / meta.h nem szám");
+  if (!(d.grid.w > 0 && d.grid.h > 0 && d.grid.res > 0)) hiba(f, "a rács mérete nem pozitív");
+  const lv = new Set(d.levels.map(l => l && l.level));
+  if (lv.has(undefined)) hiba(f, "van szint level nélkül");
+  for (const l of lv) if (l !== undefined && typeof d.masks[l] !== "string") hiba(f, `a(z) ${l}. szintnek nincs maszkja`);
+  const rossz = d.rooms.filter(r => !r || r.id == null || !lv.has(r.level) || !Array.isArray(r.poly) || r.poly.length < 3 ||
+    !r.poly.every(pont) || (r.doors && (!Array.isArray(r.doors) || !r.doors.every(pont))));
+  if (rossz.length) hiba(f, `${rossz.length} helyiség szerkezete hibás (id, szint, sokszög, ajtók), pl. ${(rossz[0] && rossz[0].code) || "?"}`);
+  const atjaro = x => x && x.id != null && Array.isArray(x.pts) && x.pts.every(q => Array.isArray(q) && lv.has(q[0]) && szam(q[1]) && szam(q[2]));
+  if (!d.stairs.every(atjaro)) hiba(f, "van hibás lépcső (id, pontok)");
+  if (d.lifts != null && !(Array.isArray(d.lifts) && d.lifts.every(atjaro))) hiba(f, "van hibás lift (id, pontok)");
 }
 // amit a nyilvántartás megnyithatónak mond, annak az adatfájlja is legyen meg
 if (ep && ep.epuletek) for (const [kod, e] of Object.entries(ep.epuletek))

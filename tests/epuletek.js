@@ -402,6 +402,50 @@ run("épületválasztó", async ({ t, ctx, browser, base }) => {
     oa1.hossz === oa0.hossz && oa1.graf === oa0.graf && oa1.rail === 7,
     JSON.stringify({ ki: oa1.ki, hossz: oa1.hossz, rail: oa1.rail, ep: oa1.ep }));
 
+  /* Az ablakos keresés (nearestCell, az első menet, kotesJeloltek) csak a
+     hatótávon belüli cellákat nézi: ugyanazt kell adnia, mint a szint minden
+     celláján végigmenő régi változatnak. Az aranyértékek ezt nem látják (a
+     valódi ajtók és lépcsőpontok 2 m-en belül vannak egy cellához), ezért itt
+     közvetlenül: véletlen pontokon és minden helyiségen. */
+  const ablak = await p4.evaluate(async () => {
+    const teljes = (lv, x, y) => { const list = CELLLIST[lv]; let best = -1, bd = 1e9;
+      for (let n = 0; n < list.length; n++) { const k = list[n], i = k % GW, j = (k - i) / GW;
+        const dd = ((i + .5) * RES - x) ** 2 + ((j + .5) * RES - y) ** 2; if (dd < bd) { bd = dd; best = k; } }
+      return bd < 49 ? best : -1; };
+    const elsoMenet = r => { const list = CELLLIST[r.level]; if (!list) return null; let best = -1, bd = 1e9;
+      const cs = r.poly.concat([[r.cx, r.cy]]);
+      for (let n = 0; n < list.length; n++) { const k = list[n], i = k % GW, j = (k - i) / GW, x = (i + .5) * RES, y = (j + .5) * RES;
+        for (const p of cs) { const dd = (p[0] - x) ** 2 + (p[1] - y) ** 2; if (dd < bd) { bd = dd; best = k; } } }
+      return best >= 0 && bd < 36 ? best : null; };
+    const jeloltek = r => { const P = r.poly, L = P.length, xs = P.map(p => p[0]), ys = P.map(p => p[1]), E = 1e-6;
+      const x0 = Math.min(...xs) - KOTES_TAV, x1 = Math.max(...xs) + KOTES_TAV, y0 = Math.min(...ys) - KOTES_TAV, y1 = Math.max(...ys) + KOTES_TAV;
+      const ki = [], list = CELLLIST[r.level] || [];
+      for (let n = 0; n < list.length; n++) { const k = list[n], i = k % GW, j = (k - i) / GW, x = (i + .5) * RES, y = (j + .5) * RES;
+        if (x < x0 || x > x1 || y < y0 || y > y1) continue; let m = 1e9, be = false;
+        for (let e = 0, o = L - 1; e < L; o = e++) { const a = P[o], b = P[e], dx = b[0] - a[0], dy = b[1] - a[1], l = dx * dx + dy * dy;
+          if ((a[1] > y) !== (b[1] > y) && x < (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]) + a[0]) be = !be; if (!l) continue;
+          const t = ((x - a[0]) * dx + (y - a[1]) * dy) / l; if (t > E && t < 1 - E) m = Math.min(m, Math.abs((x - a[0]) * dy - (y - a[1]) * dx) / Math.sqrt(l)); }
+        const tav = be ? 0 : m; if (tav <= KOTES_TAV) ki.push([k, tav]); } return ki; };
+    let mag = 7; const rnd = () => (mag = (mag * 16807) % 2147483647) / 2147483647;
+    const o = {};
+    for (const kod of ["OA", "OD"]) {
+      const d = kod === "OA" ? D_OA : await (await fetch("data/epuletek/od.json")).json();
+      epuletAllit(d);
+      let pont = 0, cellaval = 0, elter = 0;
+      for (const lv of LV) for (let q = 0; q < 300; q++) { const x = rnd() * GW * RES, y = rnd() * GH * RES, b = teljes(lv, x, y);
+        pont++; if (b >= 0) cellaval++; if (nearestCell(lv, x, y) !== b) elter++; }
+      // az első menet: az ajtó nélküli helyiségek kötése (a második menet csak bővít, a régi cella marad)
+      const menet = d.rooms.filter(r => !(r.doors || []).length).filter(r => { const v = elsoMenet(r);
+        return v === null ? false : !(RCELL[r.id] || []).includes(v); }).length;
+      const jel = d.rooms.filter(r => JSON.stringify(kotesJeloltek(r)) !== JSON.stringify(jeloltek(r))).length;
+      o[kod] = { pont, cellaval, elter, menet, jel };
+    }
+    epuletAllit(D_OA);
+    return o;
+  });
+  t("az ablakos cellakeresés ugyanazt adja, mint a teljes bejárás (véletlen pontokon, minden helyiség első kötésén és kötésjelöltjein, OA és OD)",
+    Object.values(ablak).every(x => x.elter === 0 && x.menet === 0 && x.jel === 0 && x.cellaval > 50), JSON.stringify(ablak));
+
   /* Az epuletKesz() a valódi OD-adaton, egyenként egy-egy hiányzó elemmel: egy
      szinte üres adat bármelyik követelmény lazítását elfedné, mert egy
      másikon úgyis elbukna. */

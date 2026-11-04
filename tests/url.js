@@ -176,15 +176,25 @@ run("mély link (URL-állapot)", async ({ t, ctx, base }) => {
   await p.click('.qbtn[data-q="@ROOMS"]'); await p.waitForTimeout(600);
   await p.click("#listaVissza"); await p.waitForTimeout(500);
   t("a lista Vissza gombja is a kezdőpanelre visz", await p.evaluate(() => !S.termek && !!document.querySelector(".qgrid")));
+  /* A listából választva a lista bejegyzése cserélődik: korábban utána egy
+     holt Vissza-lépés maradt (ugyanaz a cím, semmi nem változott). */
+  await p.click('.qbtn[data-q="WC"]'); await p.waitForTimeout(500);
+  await p.click("[data-wc]"); await p.waitForTimeout(600);
+  const valasztva = await p.evaluate(() => ({ to: S.to, lista: !!(history.state && history.state.lista) }));
+  await p.goBack(); await p.waitForTimeout(500);
+  const vissza1 = await p.evaluate(() => ({ to: S.to, lista: !!(history.state && history.state.lista), hash: location.hash }));
+  t("a listából választás után az első Vissza a lista előtti állapotra visz, nem egy holt lépésre",
+    !!valasztva.to && !valasztva.lista && !vissza1.to && !vissza1.lista, JSON.stringify({ valasztva, vissza1 }));
 
   /* L) Az „Ide megyek” után az útvonal a teremkártya alatt, telefonon a
      képernyő alján túl jelent meg: úgy tűnt, nem történt semmi. Most a panel
      odagörget, és az útvonal eleje a képernyőn van. */
-  await p.evaluate(() => select("OA30E01")); await p.waitForTimeout(500);
+  // az Audmax: az órarendi kártyájával az útvonal görgetés nélkül 1176 px-en, a 844 px-es képernyőn túl kezdődött
+  await p.evaluate(() => select("OA10E18")); await p.waitForTimeout(900);
   await p.click("#bT"); await p.waitForTimeout(700);
   const ideUt = await p.evaluate(() => { const s = document.getElementById("routeSec"), b = s && s.getBoundingClientRect();
     return { van: !!s, to: S.to, teteje: b ? Math.round(b.top) : null, alja: innerHeight }; });
-  t("az „Ide megyek” után az útvonal eleje a képernyőn látszik", ideUt.van && ideUt.to === "OA30E01" && ideUt.teteje >= 0 && ideUt.teteje < ideUt.alja - 80,
+  t("az „Ide megyek” után az útvonal eleje a képernyőn látszik", ideUt.van && ideUt.to === "OA10E18" && ideUt.teteje >= 0 && ideUt.teteje < ideUt.alja - 200,
     JSON.stringify(ideUt));
   t("nincs JS hiba", p.jsErrors.length === 0, p.jsErrors.join(" | "));
   await p.close();

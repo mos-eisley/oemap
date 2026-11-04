@@ -135,16 +135,17 @@ const termekVan = p => p.evaluate(async () => {
     ".woff2":"font/woff2", ".png":"image/png", ".webmanifest":"application/manifest+json" };
   const ROOT = path.resolve(__dirname, "..");
   const ELO = "/oemap";
+  let fuggo = 0, rosszDb = 0;   // a lassú mód még függő válaszai; a kiszolgált hibás adatválaszok
   const srv2 = require("http").createServer((req, res) => {
     const ut = req.url.split("?")[0];
     if (ut === "/uj/index.html") { res.writeHead(200, { "content-type":"text/html; charset=utf-8" });
       return res.end("<title>Új hely</title><p>az app új címe</p>"); }
     // portál vagy csonka válasz: 200-as, de nem JSON adat
-    if (mod === "rosszjson" && /\/data\/termek\.json$/.test(ut)) { res.writeHead(200, { "content-type":"text/html; charset=utf-8" });
+    if (mod === "rosszjson" && /\/data\/termek\.json$/.test(ut)) { rosszDb++; res.writeHead(200, { "content-type":"text/html; charset=utf-8" });
       return res.end("<title>Bejelentkezés</title><p>Wi-Fi portál</p>"); }
     // lassú, de élő hálózat: a dokumentum és az adat 8 s múlva jön
     if (mod === "lassu" && (ut === ELO + "/" || ut === ELO + "/index.html" || ut.includes("/data/"))) {
-      return setTimeout(() => kiszolgal(req, res, ut), 8000); }
+      fuggo++; return setTimeout(() => { fuggo--; kiszolgal(req, res, ut); }, 8000); }
     kiszolgal(req, res, ut);
   });
   const kiszolgal = (req, res, ut) => {
@@ -206,20 +207,26 @@ const termekVan = p => p.evaluate(async () => {
        el, holott a telefonon volt. */
     mod = "lassu";
     const t0 = Date.now(), lassu = await app(p, "index.html"), lassuMs = Date.now() - t0;
-    const lassuAdat = await termekVan(p);
+    const t1 = Date.now(), lassuAdat = await termekVan(p), lassuAdatMs = Date.now() - t1;
     mod = "ok";
     t("lassú (8 s-os) hálózaton is ~3 s alatt elindul a tárolt appal", lassu && lassuMs < 6500, lassuMs + " ms");
-    t("… és a teremadat sem várja ki a hálózatot", lassuAdat);
+    t("… és a teremadat sem várja ki a hálózatot", lassuAdat && lassuAdatMs < 6500, lassuAdatMs + " ms");
 
     /* Egy 200-as, de nem JSON adatválasz (Wi-Fi-portál, csonka letöltés)
        korábban felülírta a jó példányt, és offline az sem maradt. */
+    /* Előbb a lassú lépés függő válaszai érjenek be: a böngésző a saját
+       gyorsítótárában ugyanarra a címre sorba állítja a kéréseket, és a
+       hibás válasz különben csak az ellenőrzés UTÁN jött volna meg — a teszt
+       a javítás nélkül is zöld volt. */
+    for (let i = 0; i < 100 && fuggo; i++) await p.waitForTimeout(200);
     mod = "rosszjson";
     await p.evaluate(() => fetch("data/termek.json").then(r => r.text()).catch(() => ""));
-    await p.waitForTimeout(600);
+    for (let i = 0; i < 50 && !rosszDb; i++) await p.waitForTimeout(200);
+    await p.waitForTimeout(800);
     mod = "ok";
     await halozat(ctx2, false);
     try {
-      t("egy 200-as, de nem JSON adatválasz nem írja felül a tárolt teremadatot", await termekVan(p));
+      t("egy 200-as, de nem JSON adatválasz nem írja felül a tárolt teremadatot", rosszDb > 0 && await termekVan(p), "kiszolgált hibás válasz: " + rosszDb);
       let mas = "";
       try { await p.goto(base2 + "nincs-ilyen.html", { waitUntil: "load", timeout: 15000 }); mas = await cim(p); }
       catch (e) { mas = "hiba: " + e.message.split("\n")[0]; }

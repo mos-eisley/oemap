@@ -182,7 +182,7 @@ button{cursor:pointer;background:none;border:0}
 .btn.primary:hover{filter:brightness(1.1);background:var(--accent);color:var(--accent-ink)}
 
 .ends{display:flex;flex-direction:column;gap:6px;position:relative}
-.ends:before{content:"";position:absolute;left:15px;top:26px;bottom:26px;width:2px;
+.ends:before{content:"";position:absolute;left:15px;top:26px;bottom:26px;width:2px;z-index:1;
   background:repeating-linear-gradient(var(--line-2) 0 3px,transparent 3px 7px)}
 .ep{display:flex;align-items:center;gap:11px;background:var(--panel);border:1px solid var(--line);
   border-radius:9px;padding:9px 11px;width:100%;text-align:left;transition:border-color .16s}
@@ -4798,7 +4798,11 @@ function pushUrl(replace){
   urlKesz=null;
   const u=urlOf();
   if(u===location.hash || (!location.hash && u===location.pathname+location.search)) return;
-  try{ history[replace?"replaceState":"pushState"]({},"",u); }catch(e){}
+  /* Ha épp a lista bejegyzésén állunk (listaNyit), a listából választás azt
+     cseréli le: különben egy holt Vissza-lépés maradt utána (ugyanaz a cím,
+     semmi nem változik), és csak a harmadik Vissza lépett tovább. */
+  const lista=!!(history.state&&history.state.lista);
+  try{ history[replace||lista?"replaceState":"pushState"]({},"",u); }catch(e){}
 }
 
 /* Hibatűrő dekódolás: egy csonka vagy kézzel írt „%” (#from=OA00FK1%)
