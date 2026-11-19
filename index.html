@@ -636,6 +636,46 @@ button{cursor:pointer;background:none;border:0}
 .epvpin[aria-pressed="true"]{z-index:2}
 .epvpin[aria-pressed="true"] span{background:var(--accent);color:var(--accent-ink)}
 .epvpin[aria-pressed="true"] span em{color:inherit}
+/* A telephely 3D-s tömegrajza. A falak fénye a --f egyedi tulajdonságból jön
+   (a vetítő számolja ki élenként), a két végpont a téma színe — így sötét
+   témában is a helyén marad, és nem kell két színkészletet karbantartani. */
+.epvcam{position:relative;width:min(100%,calc(var(--epvh,9999px) * 1.45));max-width:760px;margin:0 auto}
+.epvcam svg{display:block;width:100%;height:auto;overflow:hidden}
+.epvep{--fal-vil:color-mix(in srgb,var(--surface) 88%,var(--ink));
+  --fal-sot:color-mix(in srgb,var(--surface) 42%,var(--ink));
+  --tet:color-mix(in srgb,var(--surface) 96%,var(--ink));cursor:pointer}
+.epvep .fal path{fill:color-mix(in srgb,var(--fal-vil) var(--f),var(--fal-sot));stroke:none}
+.epvep .tet{fill:var(--tet);stroke:color-mix(in srgb,var(--ink) 22%,transparent);
+  stroke-width:1;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+/* A talpánál egy halvány folt adja a súlyt; nem valódi árnyék, csak annyi,
+   hogy a ház ne lebegjen a semmiben. */
+.epvep .arny{fill:color-mix(in srgb,var(--ink) 13%,transparent);stroke:none}
+.epvep.pont circle{fill:var(--surface);stroke:var(--line-2);stroke-width:2.5;vector-effect:non-scaling-stroke}
+/* Aminek van alaprajza, az az akcentszínt kapja: a campuson ez a különbség a
+   legfontosabb információ, nem a ház alakja. */
+.epvep.van{--fal-vil:color-mix(in srgb,var(--accent) 62%,white);
+  --fal-sot:color-mix(in srgb,var(--accent) 96%,black);
+  --tet:color-mix(in srgb,var(--accent) 34%,white)}
+.epvep.van.pont circle{fill:var(--accent);stroke:var(--accent)}
+.epvep.van .tet{stroke:color-mix(in srgb,var(--accent) 55%,transparent)}
+.epvep.most .tet{stroke:var(--accent);stroke-width:2.5}
+.epvep:hover .tet{stroke:var(--accent);stroke-width:2}
+/* A talaj a dőlést is megmutatja: a paralelogramma egyik oldala rövidebb. */
+.epvtalaj{fill:color-mix(in srgb,var(--sunk) 70%,var(--surface));stroke:var(--line);
+  stroke-width:1;vector-effect:non-scaling-stroke;pointer-events:none}
+.epvcimke{position:absolute;transform:translate(-50%,calc(-120% + var(--dy,0px)));padding:3px 7px;border-radius:7px;
+  background:var(--surface);border:1px solid var(--line-2);color:var(--ink-2);
+  font:inherit;font-size:11.5px;font-weight:700;letter-spacing:.02em;cursor:pointer;
+  box-shadow:var(--shadow-1);white-space:nowrap;z-index:1}
+.epvcimke.van{border-color:var(--accent);color:var(--accent)}
+.epvcimke.most{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.epvcimke:hover,.epvcimke:focus-visible{z-index:2;border-color:var(--accent)}
+.epvforgat{margin-left:auto;display:flex;gap:6px}
+.epvjel{align-items:center}
+.epvfgomb{display:grid;place-items:center;width:36px;height:36px;border-radius:9px;
+  background:var(--surface);border:1px solid var(--line);color:var(--ink-2);cursor:pointer;box-shadow:var(--shadow-1)}
+.epvfgomb:hover{color:var(--accent);border-color:var(--accent)}
+@media (max-width:900px){ .epvcam{width:100%} }
 .epvjel{display:flex;gap:14px;flex-wrap:wrap;max-width:760px;margin:10px auto 0;font-size:12px;color:var(--ink-2)}
 .epvjel span{display:flex;align-items:center;gap:6px}
 .epvjel i{width:12px;height:12px;box-sizing:border-box;border-radius:6px;border:2px solid var(--accent);background:var(--surface)}
@@ -961,6 +1001,7 @@ const I18N={hu:{
   epvBack:"Vissza: %s", epvCountry:"Magyarország", epvNoPlace:"Hely nélkül",
   epvNoPlaceSub:"a térképen még nem szerepelnek", epvN:"%s épület", epvWithPlan:"%s alaprajzzal",
   epvHasPlan:"van alaprajz", epvDistrict:"kerület", epvAll:"Mind", epvAround:"%s környéke",
+  epvTurnL:"Forgatás balra", epvTurnR:"Forgatás jobbra",
   epvPin:"%s: %s, ebből %s alaprajzzal", epvNotOnMap:"A térképen nem jelölt",
   epvDefault:"Alapértelmezett épület", epvOpenBtn:"Megnyitás", epvIsOpen:"ez van nyitva",
   epvOpenPlan:"Alaprajz megnyitása", epvBackPlan:"Vissza az alaprajzhoz",
@@ -1042,6 +1083,7 @@ const I18N={hu:{
   epvBack:"Back: %s", epvCountry:"Hungary", epvNoPlace:"No location",
   epvNoPlaceSub:"not on the map yet", epvN:"%s buildings", epvWithPlan:"%s with floor plans",
   epvHasPlan:"floor plan", epvDistrict:"district", epvAll:"All", epvAround:"around %s",
+  epvTurnL:"Turn left", epvTurnR:"Turn right",
   epvPin:"%s: %s, %s with floor plans", epvNotOnMap:"Not on the map",
   epvDefault:"Default building", epvOpenBtn:"Open", epvIsOpen:"open now",
   epvOpenPlan:"Open floor plan", epvBackPlan:"Back to the floor plan",
@@ -3879,7 +3921,7 @@ let EPULETEK=null, HELYEK=null, epvMsg="", epvVar="", epvVarHash="", epvVissza=n
 const epItt=()=>(Object.keys(ROOM)[0]||"").slice(0,2);
 /* Hol tart a hallgató a választóban: ország → település (→ csoport) → épület
    adatlapja, és a „Hol vagyok?” eredménye. */
-const EPV={tel:null, csop:null, kod:null, gps:null};
+const EPV={tel:null, csop:null, kod:null, gps:null, irany:0};
 const romaiSzam=n=>[["XX",20],["X",10],["IX",9],["V",5],["IV",4],["I",1]]
   .reduce((s,[r,v])=>{ while(n>=v){ s+=r; n-=v; } return s; },"");
 const epvTel=e=>(e.telephely||"").replace(/\s*\d{4}$/,"");          // „Budapest 1034” → „Budapest”
@@ -3982,6 +4024,192 @@ function epvTerkep(kulcs,pinek,ablak){
   return `<div class="epvmap" style="aspect-ratio:${v.W}/${v.H};--ar:${(v.W/v.H).toFixed(3)}">${svg}${felirat(v,ps)}${pin}</div>`
     +`<div class="epvjel"><span><i class="van"></i>${T().epvHasPlan}</span><span><i></i>${T().epvNoPlan}</span></div>`;
 }
+/* ------------------------------------------------- a telephely 3D-ben */
+/* A campus NEM CSS-3D, hanem egyetlen SVG-be vetített tömegrajz. Az Épület
+   nézet megtanította, hogy minden raszterezett 3D-s sík külön renderpass
+   (lásd „A falak kiemelése…”): húsz épület egyenként megdöntött rétegként
+   telefonon akadozna. Vetítve az egész campus egyetlen raszterezett réteg,
+   és a mélységsorrend meg a fényelés is a kezünkben marad.
+
+   Az alaprajz az OSM körvonala, a magasság a nyilvántartás szintszáma —
+   egyik sem becslés. Amelyik épületnek nincs körvonala, az NEM kap kitalált
+   tömeget: lapos jelként áll a helyén. Egy kitalált alaprajzú ház pont azt a
+   bizalmat ásná alá, amit a többi valódi körvonala megad. */
+const CAMPUS_SZINT = 3.4;     // egy szint magassága méterben
+/* A campus egy kilométer széles, a házak ötven méteresek: valódi arányban
+   telefonon lapos tányérok lennének, amiken a 3D nem is látszik. A magasságot
+   ezért túlozzuk, ahogy a makettek és a városmaketter-térképek is. Az ARÁNYOK
+   így is igazak maradnak: a hétszintes OA másfélszer akkora, mint a hatszintes
+   OC — csak az egész köteg magasabb. */
+const CAMPUS_TULZAS = 2.2;
+const CAMPUS_DOL   = 54;      // a kamera dőlése fokban (0 = felülnézet)
+const CAMPUS_W     = 1000;    // a vetület szélessége a viewBoxban
+
+function campusKamera(dol, irany){
+  const t=dol*Math.PI/180, b=irany*Math.PI/180;
+  const ct=Math.cos(t), st=Math.sin(t), cb=Math.cos(b), sb=Math.sin(b);
+  return {
+    /* helyi méter (kelet, észak, magasság) → képernyő. A képernyő y lefelé nő,
+       ezért az észak és a magasság is negatív előjellel kerül bele: az északabbi
+       pont feljebb, a magasabb pont szintén feljebb kerül. */
+    p:(e,n,z)=>[e*cb+n*sb, -(-e*sb+n*cb)*ct - z*st],
+    melyseg:(e,n)=>-e*sb+n*cb,                 // nagyobb érték = távolabb
+    /* A fal akkor látszik, ha a kifelé mutató normálisa a kamera felé néz,
+       vagyis az elforgatott rendszerben dél felé (negatív észak). */
+    felenk:(nx,ny)=>(-nx*sb+ny*cb)<0,
+    /* Fényelés: a fény a bal felső, elülső irányból jön, a kép síkjában
+       számolva — így forgatás közben a megvilágítás a nézőhöz képest áll,
+       nem forog a házakkal. 0 = árnyék, 1 = teljes fény. */
+    feny:(nx,ny)=>{ const rx=nx*cb+ny*sb, ry=-nx*sb+ny*cb;
+      return Math.max(0, Math.min(1, .5 + .5*(rx*-.55 + ry*-.84))); },
+  };
+}
+
+/* A gyűrűt az óramutatóval ellentétes körüljárásúra fordítjuk, hogy az
+   élek kifelé mutató normálisa egységesen (dy,-dx) legyen. Az OSM körüljárása
+   nem garantált. */
+function campusCcw(g){
+  let a=0;
+  for(let i=0;i<g.length;i++){ const p=g[i], q=g[(i+1)%g.length]; a+=p[0]*q[1]-q[0]*p[1]; }
+  return a<0 ? g.slice().reverse() : g;
+}
+
+/* Egy telephely épületei helyi méterben, a csoport közepéhez képest. */
+function campusAdat(tag){
+  const hs=tag.map(e=>({e,h:epvHely(e)})).filter(x=>x.h);
+  if(!hs.length) return null;
+  const la0=hs.reduce((s,x)=>s+x.h.lat,0)/hs.length,
+        lo0=hs.reduce((s,x)=>s+x.h.lon,0)/hs.length;
+  const KX=111320*Math.cos(la0*Math.PI/180), KY=110540;
+  const m=(lon,lat)=>[(lon-lo0)*KX,(lat-la0)*KY];
+  return hs.map(({e,h})=>{
+    const g=h.kontur&&h.kontur[0]&&h.kontur[0].length>2 ? campusCcw(h.kontur[0].map(([x,y])=>m(x,y))) : null;
+    const sz=Math.max(1, e.szint||1);
+    const kp=g ? g.reduce((s,p)=>[s[0]+p[0]/g.length,s[1]+p[1]/g.length],[0,0]) : m(h.lon,h.lat);
+    return {kod:e.kod, nev:e.nev, van:!!e.navigalhato, most:e.kod===epItt(),
+            gyuru:g, magas:sz*CAMPUS_SZINT*CAMPUS_TULZAS, szint:sz, kp};
+  });
+}
+
+/* A campus SVG-je és a feliratai. Külön függvény, mert forgatáskor csak ez
+   rajzolódik újra, nem az egész választó: az innerHTML a görgetést, a
+   fókuszt és a feliratot is elvinné. */
+function epvCampusBelso(adat, irany){
+  const kam=campusKamera(CAMPUS_DOL, irany), t=T();
+  // minden vetített pont, hogy a kivágat pontosan a campusra álljon
+  const px=[], py=[];
+  const vet=a=>{
+    if(!a.gyuru){ const q=kam.p(a.kp[0],a.kp[1],0); px.push(q[0]); py.push(q[1]); return; }
+    for(const [x,y] of a.gyuru){ for(const z of [0,a.magas]){ const q=kam.p(x,y,z); px.push(q[0]); py.push(q[1]); } }
+  };
+  adat.forEach(vet);
+  const x0=Math.min(...px), x1=Math.max(...px), y0=Math.min(...py), y1=Math.max(...py);
+  const pad=Math.max(x1-x0,y1-y0)*.08 + 8;
+  const s=CAMPUS_W/((x1-x0)+2*pad), H=Math.round(((y1-y0)+2*pad)*s);
+  const P=(e,n,z)=>{ const q=kam.p(e,n,z); return [((q[0]-x0+pad)*s).toFixed(1),((q[1]-y0+pad)*s).toFixed(1)]; };
+  const ut=pts=>"M"+pts.map(q=>q.join(" ")).join("L")+"Z";
+
+  // hátulról előre: a távolabbi épület rajzolódik először
+  const rend=adat.slice().sort((a,b)=>kam.melyseg(b.kp[0],b.kp[1])-kam.melyseg(a.kp[0],a.kp[1]));
+  /* Talaj: a házak különben a semmiben lebegnek, és a dőlés sem látszik rajtuk.
+     A földsík vetülete paralelogramma, ezért a helyi méter-befoglaló négy
+     sarkát vetítjük, nem a képernyős téglalapot. */
+  let mx0=Infinity,mx1=-Infinity,my0=Infinity,my1=-Infinity;
+  for(const a of adat){ for(const [x,y] of (a.gyuru||[a.kp])){
+    if(x<mx0)mx0=x; if(x>mx1)mx1=x; if(y<my0)my0=y; if(y>my1)my1=y; } }
+  /* Bőven a házakon túl ér: a vágás úgyis a kerethez igazítja, forgatás
+     közben viszont egy szűk talaj sarka benézne a képbe. */
+  const tp=Math.max(mx1-mx0,my1-my0)*1.2+40;
+  let svg=`<path class="epvtalaj" d="`+ut([P(mx0-tp,my0-tp,0),P(mx1+tp,my0-tp,0),P(mx1+tp,my1+tp,0),P(mx0-tp,my1+tp,0)])+`"/>`;
+  let cimke="";
+  for(const a of rend){
+    const oszt="epvep"+(a.van?" van":"")+(a.most?" most":"");
+    if(!a.gyuru){
+      // körvonal nélkül: lapos jel a helyén, nem kitalált tömeg
+      const [cx,cy]=P(a.kp[0],a.kp[1],0);
+      svg+=`<g class="${oszt} pont" data-epv="ep:${esc(a.kod)}"><circle cx="${cx}" cy="${cy}" r="9"/></g>`;
+    } else {
+      const g=a.gyuru;
+      let falak="";
+      for(let i=0;i<g.length;i++){
+        const p=g[i], q=g[(i+1)%g.length];
+        const dx=q[0]-p[0], dy=q[1]-p[1], L=Math.hypot(dx,dy);
+        if(!L) continue;
+        const nx=dy/L, ny=-dx/L;                 // ccw gyűrűnél kifelé mutat
+        if(!kam.felenk(nx,ny)) continue;         // hátrafelé néző fal nem látszik
+        falak+=`<path style="--f:${(kam.feny(nx,ny)*100).toFixed(0)}%" d="`
+          +ut([P(p[0],p[1],0),P(q[0],q[1],0),P(q[0],q[1],a.magas),P(p[0],p[1],a.magas)])+`"/>`;
+      }
+      /* A vetett árnyék a fénnyel szemközti irányba tolt talp, a magassággal
+         arányosan: enélkül a „árnyék” pont a ház alatt állna, és semmit nem
+         mondana a tömegéről. */
+      const ae=a.magas*.42, an=a.magas*.30;
+      svg+=`<g class="${oszt}" data-epv="ep:${esc(a.kod)}">`
+        +`<path class="arny" d="${ut(g.map(([x,y])=>P(x+ae,y-an,0)))}"/>`
+        +`<g class="fal">${falak}</g>`
+        +`<path class="tet" d="${ut(g.map(([x,y])=>P(x,y,a.magas)))}"/></g>`;
+    }
+    const [lx,ly]=P(a.kp[0],a.kp[1],a.gyuru?a.magas:0);
+    cimke+=`<button class="epvcimke${a.van?" van":""}${a.most?" most":""}" data-epv="ep:${esc(a.kod)}"`
+      +` style="left:${(lx/CAMPUS_W*100).toFixed(2)}%;top:${(ly/H*100).toFixed(2)}%"`
+      +` aria-label="${esc(a.nev+" · "+(a.van?t.epvHasPlan:t.epvNoPlan))}">`
+      +`<b>${esc(a.kod)}</b></button>`;
+  }
+  return `<svg viewBox="0 0 ${CAMPUS_W} ${H}" aria-hidden="true" focusable="false">${svg}</svg>${cimke}`;
+}
+
+/* Forgatáskor CSAK a campus doboza rajzolódik újra. Az egész választó
+   innerHTML-je elvinné a görgetést, a fókuszt és a bele költözött feliratot
+   is — a gombon álló fókusz a <body>-ra esne, és a következő Tab a lista
+   elejére vinne vissza. */
+function epvForgat(delta){
+  const host=$("epvlist").querySelector(".epvcam"); if(!host) return;
+  EPV.irany=((EPV.irany+delta)%360+360)%360;
+  host.dataset.irany=EPV.irany;
+  const adat=epvRender.camAdat; if(!adat) return;
+  host.innerHTML=epvCampusBelso(adat,EPV.irany);
+  epvCamCimkek($("epvlist"));
+}
+
+/* A campus címkéi a tetők közepén állnak; ahol két ház egymás mögött van, a
+   két címke egymásra esik. A kirajzolt képen mérve toljuk szét őket
+   függőlegesen — becsülni nem lehet, mert a címke szélessége a betűtől és a
+   nyelvtől függ. Ugyanaz az elv, mint a térkép jeleinél (epvCimkek). */
+function epvCamCimkek(d){
+  for(const cam of d.querySelectorAll(".epvcam")){
+    if(!cam.clientHeight) continue;
+    const el=[...cam.querySelectorAll(".epvcimke")];
+    el.forEach(e=>e.style.setProperty("--dy","0px"));
+    for(let kor=0;kor<5;kor++){
+      const r=el.map(e=>e.getBoundingClientRect());
+      let moz=false;
+      for(let i=0;i<el.length;i++) for(let j=i+1;j<el.length;j++){
+        const a=r[i], b=r[j];
+        if(a.left<b.right&&b.left<a.right&&a.top<b.bottom&&b.top<a.bottom){
+          // a feljebb álló megy még feljebb: a hátrébb lévő ház címkéje az
+          const f=a.top<=b.top?i:j;
+          const fed=Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top)+3;
+          const dy=parseFloat(el[f].style.getPropertyValue("--dy"))||0;
+          el[f].style.setProperty("--dy",(dy-fed)+"px"); moz=true;
+        }
+      }
+      if(!moz) break;
+    }
+  }
+}
+
+function epvCampusHtml(tag, irany){
+  const adat=campusAdat(tag);
+  if(!adat||!adat.some(a=>a.gyuru)) return "";   // tömeg nélkül nincs mit 3D-zni
+  const t=T();
+  return `<div class="epvcam" data-irany="${irany}">${epvCampusBelso(adat,irany)}</div>`
+    +`<div class="epvjel"><span><i class="van"></i>${t.epvHasPlan}</span><span><i></i>${t.epvNoPlan}</span>`
+    +`<span class="epvforgat"><button class="epvfgomb" data-epv="forg:-30" aria-label="${esc(t.epvTurnL)}">`
+    +`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14l-4-4 4-4"/><path d="M5 10h9a5 5 0 0 1 0 10h-3"/></svg></button>`
+    +`<button class="epvfgomb" data-epv="forg:30" aria-label="${esc(t.epvTurnR)}">`
+    +`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14l4-4-4-4"/><path d="M19 10h-9a5 5 0 0 0 0 10h3"/></svg></button></span></div>`;
+}
+
 /* A címke a jel mellé kerül: jobbra, ha ott elfér, különben balra, fölé vagy
    alá — az első olyan helyre, ahol nem takar másik jelet vagy címkét, és nem
    lóg ki a térképből; ha egyik sem tiszta, a legkevésbé rossz helyre. A
@@ -4140,6 +4368,15 @@ function epvRender(){
         return {x:c.x,y:c.y,kulcs:"csop:"+c.kulcs,nev:c.nev,db:c.tag.length,van,nyomva:EPV.csop===c.kulcs||!!(k&&c.tag.includes(k)),
           cimke:t.epvPin.replace("%s",c.nev).replace("%s",epvDb(c.tag.length)).replace("%s",van)}; }),ab);
     }
+    /* Kiválasztott csoportnál a telephely 3D-s tömegrajza áll a városi térkép
+       helyén: itt már nem az a kérdés, hol van a csoport, hanem hogy melyik
+       ház melyik. A városi térkép a vissza gombbal jön elő. */
+    epvRender.camAdat=null;
+    if(!k&&EPV.csop){
+      const c=cs.find(c=>c.kulcs===EPV.csop);
+      if(c){ const cam=epvCampusHtml(c.tag,EPV.irany);
+        if(cam){ terkep=cam; epvRender.camAdat=campusAdat(c.tag); } }
+    }
     if(k){ cim=k.nev; ut=t.epvCountry+" › "+(tel||t.epvNoPlace)+" › "+k.kod; lista=epvKartya(k); }
     else {
       const rend=list=>list.slice().sort((a,b)=>(b.navigalhato?1:0)-(a.navigalhato?1:0)||a.kod.localeCompare(b.kod));
@@ -4174,7 +4411,7 @@ function epvRender(){
     +(HELYEK?`<p class="epvforras">${t.epvSource.replace("%s",epvOsm())}</p>`:"");
   if(ttBent) d.appendChild(tt);
   if(gorg) d.querySelectorAll(GORGO).forEach((e,i)=>{ if(gorg[i]) e.scrollTop=gorg[i]; });
-  if(d.open) epvCimkek(d);
+  if(d.open){ epvCimkek(d); epvCamCimkek(d); }
   fokuszUtana(d,fk);
 }
 
@@ -4338,6 +4575,10 @@ $("epvlist").addEventListener("click",ev=>{
   else if(m==="vissza") epvLep(EPV.kod?{kod:null}:{tel:null,csop:null});
   else if(m==="tel") epvLep({tel:arg,csop:null,kod:null});
   else if(m==="csop") epvLep({csop:arg||null,kod:null});
+  else if(m==="ep"){ const e=EPULETEK.epuletek[arg]; if(!e) return;
+    // ugyanaz a szabály, mint a lista sorainál: ami megnyitható, az nyílik
+    if(e.navigalhato) epuletValt(e.kod); else epvLep({kod:e.kod}); }
+  else if(m==="forg") epvForgat(+arg);
   else if(m==="kartya") epvLep({kod:arg,tel:epvTel(EPULETEK.epuletek[arg]||{})});
   else if(m==="nyit") epuletValt(arg);
   else if(m==="gps") epvGps();

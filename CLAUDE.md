@@ -1,9 +1,14 @@
 # OA Épület Teremkereső — fejlesztői jegyzet
 
-Teremkereső és útvonaltervező az Óbudai Egyetem OA épületéhez (Neumann János
-Informatikai Kar, Bécsi út 96/b). **Élő oldal:** https://oemap.maydayprod.app/ — most
-nem él: a repó privát, és ezzel a Pages kikapcsolt (lásd „Deploy”). A régi
-`mayydayy99.github.io/oemap/` cím ebből a repóból már nem szolgálható ki.
+Teremkereső és útvonaltervező az Óbudai Egyetem épületeihez (a kiindulás az OA
+volt: Neumann János Informatikai Kar, Bécsi út 96/b).
+**Élő oldal:** https://mos-eisley.github.io/oemap/ — a repó visszakerült
+publikusra, a Pages újra megy. A **saját domain** (`oemap.maydayprod.app`)
+viszont NEM szolgálja ki: a DNS-e a Pages-re mutat, de a custom domain kiesett
+a repó Pages-beállításából, így `*.github.io` tanúsítványt kap, és a böngésző
+visszautasítja. **A kiragasztott QR-matricák és a totemek ezt a címet
+kódolják**, tehát amíg vissza nem kerül (Settings → Pages → Custom domain),
+azok tanúsítványhibára futnak.
 
 A felhasználói dokumentáció a [README.md](README.md)-ben van. Ez a fájl azt
 gyűjti össze, amit egy új munkamenetnek tudnia kell, mielőtt hozzányúl.
@@ -178,6 +183,42 @@ eltolással, a határ, a Duna és a Margit-sziget egyszerűsítve. Amit tudni ke
     `fokuszElotte()` a kettőt megkülönbözteti, különben újrarajzoláskor a
     fókusz a sorról a jelre ugrott. Töltés közben a gomb `aria-disabled`,
     nem `disabled`: a letiltott gombról a fókusz a `<body>`-ra esne.
+**A telephely 3D-ben** (`epvCampusHtml()`, `epvCampusBelso()`): csoportot
+választva a városi térkép helyére a telephely tömegrajza kerül — ott már nem
+az a kérdés, hol van a csoport, hanem hogy melyik ház melyik. Amit tudni kell:
+- **Nem CSS-3D, hanem egyetlen SVG-be vetített rajz.** Az Épület nézet
+  megtanította, hogy minden raszterezett 3D-s sík külön renderpass (lásd „A
+  falak kiemelése…”): húsz épület egyenként megdöntött rétegként telefonon
+  akadozna. Vetítve az egész campus egy raszterezett réteg, és a
+  mélységsorrend meg a fényelés is a kezünkben marad.
+- **Az alaprajz az OSM körvonala, a magasság a nyilvántartás szintszáma** —
+  egyik sem becslés. Amelyik épületnek nincs körvonala (a 32-ből 14), az NEM
+  kap kitalált tömeget: lapos jelként áll a helyén. Egy kitalált alaprajzú
+  ház pont azt a bizalmat ásná alá, amit a többi valódi körvonala ad.
+- **A magasság túlzott** (`CAMPUS_TULZAS` = 2,2). A campus egy kilométer
+  széles, a házak ötven méteresek: valódi arányban telefonon lapos tányérok
+  lennének. Az ARÁNYOK így is igazak — a hétszintes OA magasabb a hatszintes
+  OC-nél —, csak az egész köteg magasabb.
+- **Hátlapvágás**: csak az a fal rajzolódik, amelyiknek a kifelé mutató
+  normálisa a kamera felé néz, különben a ház belseje látszana át. Mérve a
+  falak 34–64%-a marad meg csoportonként; vágás nélkül ~98% (az OSM gyűrű
+  záró pontja miatt egy él úgyis kimarad — ezért az ARÁNYT kell mérni, nem
+  azt, hogy „kevesebb, mint az élek száma”: az utóbbi vágás nélkül is igaz).
+- **A talaj sosem kap kattintást** (`pointer-events:none`) és vágva van. A
+  vetülete forgatás közben messze túlnyúlik a kereten, és `overflow:visible`
+  mellett elnyelte a jelmagyarázat gombjainak kattintását is.
+- **A címkék a tetők fölött állnak, és a kirajzolt képen mérve toljuk szét
+  őket** (`epvCamCimkek()`), mint a térkép jeleit. Széttolás nélkül mérve a
+  III. kerületben 3, a VIII.-ban 13 ütközés van; a nudge-olás mindet nullára
+  viszi telefonon és asztalon is. Vigyázz: egy ELFORGATOTT álláson mérve
+  véletlenül nem ütköztek, és az állítás a széttolás kikapcsolásával is
+  átment — a kiinduló álláson kell mérni.
+- **Forgatáskor csak a campus doboza rajzolódik újra** (`epvForgat()`), nem az
+  egész választó: az innerHTML a görgetést, a fókuszt és a bele költözött
+  feliratot is elvinné.
+- A házra kattintva ugyanaz a szabály, mint a lista sorainál: ami megnyitható,
+  az megnyílik, a többinek az adatlapja jön (`ep:` ág).
+
 - Egy épület letöltése 20 s után feladja (`EPV_VARAKOZAS`), és üzenetet ad,
   különben egy elakadt kérés örökre „Betöltés…”-en hagyná.
 
@@ -426,7 +467,7 @@ vitte rossz helyre a hallgatót vagy hagyta segítség nélkül, mind javítva, 
 
 ```
 npm install          # playwright (a böngésző a képen már megvan)
-npm test             # mind a 26 tesztfájl (fájlonként legfeljebb 15 perc)
+npm test             # mind a 27 tesztfájl (fájlonként legfeljebb 15 perc)
 node tools/ellenor.js  # böngésző nélkül, másodpercek alatt: a szkriptek fordulnak, az adat ép (a CI is ezt futtatja)
 pip install -r tools/requirements.txt   # csak a tools/ szkriptjeihez
 node tests/run.js url share     # csak egy-kettő
@@ -463,6 +504,7 @@ hagytak egy hibás kódot.
 | `tests/meres.js` | a telefonos mérőlap (`meres.html`) végigfut a valódi appon, az OA-n akkor is, ha a készüléken más az alapértelmezett épület |
 | `tests/epuletek.js` | épületválasztó és **épületváltás**: mind a 39 épület bent van (településenként végigjárva, mindegyik pontosan egyszer), de csak az nyitható meg, aminek kész az adata; a Tervtár adatai a soron, az adatlapon a nem megnyithatónál nincs megnyitó és alapértelmezett gomb; az Esc csak a választót zárja, a kijelölés marad; más épület kódjára mutató link megnevezi az épületet, nem tűnik el csendben; a váltás mércéje **valódi épületeken mért aranyérték** (épületenként az elérhetetlen helyiségek, az útvonalak összhossza és a gráf élszáma a portától), a váltás utáni **tisztaság** (egyetlen tárolóban, a szintdobozokban sem marad régi bejegyzés), OD → KT → OD (a KT betöltésével); a fő folyosó mellé, de leszakadt szilánkhoz kötött OD-helyiségek (OD00F02, OD35E04) elérhetők, a csak sarkával érintkező OD00F03 nem; minden többcellás kötés egy falnyira van, harmadik helyiség nélkül, és odáig a célszinten az épületen belül vezet az út (pontos geometriával mérve); a homlokzat előtti gyűrűn és ablakrésen át nincs útvonal (KH00F36, KH00F37, KH00F42); a bekötések száma mind a hét épületben rögzített, és a saját foltján belüli út (KHX1PK2 → KHX1P03) megmarad; offline vissza az OA-ra; az `epuletKesz()` egyenként mind a hét kötelező elemre és a portára, és hibás szerkezetre (sokszög nélküli helyiség, maszk nélküli szint, hibás lépcsőpont…); ha az építés mégis elbukik, a régi épület épül vissza (nem félig vált); az ablakos cellakeresés véletlen pontokon és minden helyiségen ugyanazt adja, mint a teljes bejárás (OA, OD) — az aranyértékek egy szűkebb ablakot nem vennének észre; a nem elérhető adat üzenete angolul is a kóddal; **nyilvántartás nélkül** (első indulás, letiltott kérés) a gomb el sem jelenik meg, és az app elindul |
 | `tests/valaszto.js` | a térképes választó: minden címmel bíró épület helye a saját települése és az ország határán belül; Budapesten a jelölők a Duna jó oldalán, a Buda és a Pest felirat is, a III. kerület csoportja a hét óbudai épület; a címkék hat képernyőméreten (telefon, keskeny, fekvő, asztal, alacsony és kis asztali ablak), mind a négy térképen nem fedik egymást és más jelét, és nem lógnak ki, átméretezés után sem; fekve a térkép elfér; a biztonsági sávokkal (CDP-vel emulálva) a forrás a kezdősáv fölött, fekve a térkép a görgető tömbön belül; a házikó felirata telefonon is látszik; az OSM-forrás (ODbL, hivatkozással) a felületen; **alapértelmezett épület**: beállítás, a házikó, induláskor megnyílik, a link, a totem (cím nélkül is) és a párosító mód elsőbbsége, kikapcsolás, hálózat nélkül az OA marad, letiltott tárolóval is fut; **a csendes betöltés közben** választott terem marad, az ugyanarra az épületre mutató link érvényesül, a választott másik épület nyílik meg, a nyitott választó nem csukódik be (és nem mutat „Betöltés…”-t), egy görgetés a térképen megállítja, a házikó nem tölt újra; **GPS**: az OD körvonalán belül, a faltól 9 m-re „itt vagy”, előtte a körvonaltól mért távolság, a már nyitott épületnél nincs megnyitás, az YA-nál az YB is, messziről km, letiltott engedélynél üzenet, a bezárt választónál késve jött hely eldobódik; `helyek.json` nélkül csak a lista; a fókusz (zárt választóban nincs tab-állomás, nyitva bent marad, zárva visszatér, a sorról nem ugrik a jelre, a GPS-eredményre megy, a házikó, a töltés és egy azóta rejtetté vált nyitógomb után sem esik a `<body>`-ra; a GPS-javaslat gombja is „Betöltés…”-t mutat); angolul „1 building”; a felirat a teljes képernyős választó fölött látszik, és újrarajzolás után is megvan; a választó saját szélére koppintva nem zárul be, asztalon a háttérre igen; fekvő telefonon (844×340 és a 900 px-nél szélesebb 932×380) a GPS-eredmény után is elérhető a lista; a dobozban kezdett, kint elengedett húzás nem zár; ugyanazon a nézeten újrarajzolva a görgetés marad; az alapértelmezett doboz gombja „Betöltés…”-t mutat; a linkről indult betöltés alatt választott terem marad; egy soha be nem fejeződő letöltés 20 s után üzenetet ad; az elakadt linkes váltás újrapróbálva a link termét nyitja, a hibalap bezárása után már nem; a két épületet vegyítő link egyszer vált, a history-ba nem tesz közbülső bejegyzést, és a címben sem marad a másik épület kódja |
+| `tests/campus.js` | a telephely 3D-s tömegrajza: a csoport nézetében áll (az országén és a településén nem), a csoport minden épülete kint van, tömegként csak a körvonalasak (a többi lapos jel, nem kitalált ház), az akcentszínt a megnyithatók kapják; a magasság a szintszámból jön (OD > OA > OC); a hátrafelé néző falak kimaradnak (arányra mérve); a talaj nem nyel el kattintást; forgatás után is minden gomb működik; a címkék a kiinduló álláson és három csoportban sem fednek; a házra kattintva megnyílik az épület, alaprajz nélkülinél az adatlapja jön |
 | `tests/masepulet.js` | más épületben nincs OA-ra szabott dolog: a foglalható termek (az OA órarendje) nincs kint, a Büfé gomb csak ahol van büfé (OA, FK; az OD-ben nincs); a szintnév és az emeletszám az épület saját szintjeiből (KT I. és IV. emelet, KH tetőtér, OD V. emelet, egy félszint és egy „Pince”, angolul is), a név az elsődleges (a KD-alak félemelete a földszint fölött, a kötőjel nélküli „Pince 2”), de ahol a név és a kód ellentmond (KD, TA) vagy két földszint jönne ki (BA), az épület nem nyílik meg; a 3D-s szintfelirat és a felolvasói név angolul (OA, KT); a liftes megjegyzés a lift nélküli szöveg; a nemre nem jelölt WC nem „Női” és „Férfi” mosdó, hanem semleges sor; a mosdónevek írásmódjai, a kategória nélküli OC-mosdók, a személyzeti WC kizárása; a KH és a KT akadálymentes mosdója ott van; vissza az OA-ra minden OA-s dolog visszajön |
 | `tests/csomag.js` | a Pages-re publikált csomag (`tools/pages-csomag.js`): csak engedélylistás fájl, belső anyag és fejlesztői fájl nincs benne, minden, amire a lapok és a manifest hivatkoznak, benne van; a célkönyvtár nem lehet a repó, a szülője, egy forráskönyvtár, sem egy csomagnevű, de idegen tartalmú könyvtár (a repó-szabály külön is mérve); és az app ebből a csomagból minden épületen végigváltva, a service workerrel együtt egyetlen sikertelen kérés nélkül fut |
 
