@@ -194,6 +194,50 @@ run("telephely 3D-ben", async ({ t, ctx, browser, base }) => {
   t("és az app marad az OA-n", await q.evaluate(() => epItt()), "OA");
   await c2.close();
 
+  /* ---- dioráma az ország térképén ----
+     Keskeny telefonon is: 360-on a térkép 328 px széles, és ott a
+     „Székesfehérvár” kártyája 11,5 px-es betűvel nem fért el a jel bal
+     oldalán — lecsúszott Budapest kártyája alá. 390-en ez nem látszott. */
+  for (const szel of [360, 390]) {
+  let c3 = await browser.newContext({ viewport: { width: szel, height: 780 }, isMobile: true, hasTouch: true });
+  let r3 = await open(c3, base, { settle: 1600 });
+  await r3.click("#epvBtn"); await r3.waitForTimeout(600);
+  const dio = await r3.evaluate(() => {
+    const jel = [...document.querySelectorAll(".epvmap.orszag .epvpin")];
+    const kartya = jel.map(b => b.querySelector("span").getBoundingClientRect());
+    let fed = 0;
+    for (let i = 0; i < kartya.length; i++) for (let j = i + 1; j < kartya.length; j++) {
+      const a = kartya[i], b = kartya[j];
+      if (a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom) fed++;
+    }
+    const m = document.querySelector(".epvmap.orszag").getBoundingClientRect();
+    return {
+      jelek: jel.map(b => b.dataset.epv),
+      dios: jel.filter(b => b.classList.contains("dio")).map(b => b.dataset.epv),
+      hazak: document.querySelectorAll(".epvdio .epvep").length,
+      falak: document.querySelectorAll(".epvdio .fal path").length,
+      fed,
+      kilog: kartya.some(r => r.left < m.left - 1 || r.right > m.right + 1
+                           || r.top < m.top - 1 || r.bottom > m.bottom + 1),
+      // a modell a kártyán belül marad, nem lóg a térképre
+      bent: [...document.querySelectorAll(".epvdio")].every(sv => {
+        const a = sv.getBoundingClientRect(), b = sv.closest("span").getBoundingClientRect();
+        return a.left >= b.left - 1 && a.right <= b.right + 1 && a.top >= b.top - 1 && a.bottom <= b.bottom + 1;
+      }),
+    };
+  });
+  t(`${szel}: minden településnek van jele az ország térképén`, dio.jelek.length >= 3, dio.jelek.join(" "));
+  t(`${szel}: modellt az kap, ahol van körvonalas épület`,
+    dio.dios.length >= 2 && !dio.dios.includes("tel:Nagymaros"), dio.dios.join(" "));
+  t(`${szel}: a modellek valódi házakból állnak`, dio.hazak > 0 && dio.falak > 0,
+    `${dio.hazak} ház, ${dio.falak} fal`);
+  t.eq(`${szel}: a kártyák nem fedik egymást`, dio.fed, 0);
+  t(`${szel}: és nem lógnak ki a térképből`, !dio.kilog);
+  t(`${szel}: a modell a kártyáján belül marad`, dio.bent);
+  t(`${szel}: nincs JS hiba az ország nézetében`, r3.jsErrors.length === 0, r3.jsErrors.join(" | "));
+  await c3.close();
+  }
+
   /* ---- asztalon is ott van ---- */
   const d = await browser.newContext(DESKTOP);
   const w = await open(d, base, { settle: 1600 });

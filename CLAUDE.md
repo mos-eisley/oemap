@@ -183,6 +183,43 @@ eltolással, a határ, a Duna és a Margit-sziget egyszerűsítve. Amit tudni ke
     `fokuszElotte()` a kettőt megkülönbözteti, különben újrarajzoláskor a
     fókusz a sorról a jelre ugrott. Töltés közben a gomb `aria-disabled`,
     nem `disabled`: a letiltott gombról a fókusz a `<body>`-ra esne.
+**A település diorámája az ország térképén** (`epvDioAdat()`, `epvDioSvg()`):
+a Magyarország-térképen minden település jele egy kis 3D-s modell, és az a
+választógomb. Amit tudni kell:
+- **MODELL, nem térkép.** Mérve: egy budapesti épület a VALÓDI elrendezésben
+  1,3 képpont lenne egy ekkora jelben (a város épületei 5168 m-en szórnak
+  szét, egy ház tipikusan 62 m). Ezért a házak egymás mellé állnak: az
+  ALAKJUK és a MAGASSÁGUK ARÁNYA igaz (ugyanaz a körvonal és szintszám, mint
+  a campuson), a HELYÜK nem az. A darabszámot a címke mondja.
+- **Két sorban, nem egyben**: egy sorban mérve a modell 92×27 képpont lett,
+  vékony szalag, amin a 3D nem látszik. A magasabbak hátra kerülnek.
+- Legfeljebb `DIO_MAX` = 5 ház, előbb a megnyithatók, aztán a nagyobb
+  alapterületűek — a jel akkora, hogy azon túl pacni lenne.
+- **Körvonal nélküli település nem kap modellt** (Nagymaros): marad a sima
+  jel. Kitalált házakat nem rajzolunk.
+- **A modell a CÍMKE dobozában ül, nem a jel helyén.** Budapest és
+  Székesfehérvár jele telefonon 44 px-re van egymástól — két modell a jelek
+  helyén egymásra feküdt volna. Így a jel a valódi helyén marad, a kártyát
+  pedig a méréses elhelyezés (`epvCimkek`) rakja le ütközésmentesen.
+- **Az elhelyezés mind a négy oldalt végigpróbálja növekvő távolságon**
+  (`--ki`, 0–120 px), és az első teljesen tiszta hely nyer. A négy fix hely
+  kevés lett, amióta a jel kártyát hord: telefonon az ország térképe
+  358×221, és a 27 px-re lévő Nagymarosra ült rá Budapest 87 px magas
+  kártyája. A települési térképek jelei ugyanezt a kódot használják, és a
+  `tests/valaszto.js` 102 állítása továbbra is zöld.
+- **A kártya szélessége a modellé, de a névhez nőhet** (`min-width`): a
+  „Székesfehérvár" egyetlen szó, tördelni nem lehet, fix 64 px-en kilógott.
+  A név betűje ezért 10 px, nem 11,5: keskeny telefonon (360) a térkép
+  328 px széles, és 11,5 px-szel a kártya 108 lett — a jel bal oldalán már
+  kilógott, ezért lecsúszott Budapest kártyája alá. 390-en ez NEM látszott,
+  a `tests/valaszto.js` keskeny esete fogta meg; azóta a `tests/campus.js`
+  is 360-on és 390-en is méri.
+- **A térkép alaprajzának CSS-szabálya közvetlen gyermekre szól**
+  (`.epvmap>svg`), különben elkapja a jelbe tett dioráma SVG-jét is, abszolút
+  pozícióba teszi és a gombra feszíti — a kártya 30 px magas maradt, a modell
+  meg ráfolyt a térképre. A `.epvdio` ezen felül `position:static`; a teszt
+  mindkét védelem elvételére pirosra fut.
+
 **A telephely 3D-ben** (`epvCampusHtml()`, `epvCampusBelso()`): csoportot
 választva a városi térkép helyére a telephely tömegrajza kerül — ott már nem
 az a kérdés, hol van a csoport, hanem hogy melyik ház melyik. Amit tudni kell:
@@ -504,7 +541,7 @@ hagytak egy hibás kódot.
 | `tests/meres.js` | a telefonos mérőlap (`meres.html`) végigfut a valódi appon, az OA-n akkor is, ha a készüléken más az alapértelmezett épület |
 | `tests/epuletek.js` | épületválasztó és **épületváltás**: mind a 39 épület bent van (településenként végigjárva, mindegyik pontosan egyszer), de csak az nyitható meg, aminek kész az adata; a Tervtár adatai a soron, az adatlapon a nem megnyithatónál nincs megnyitó és alapértelmezett gomb; az Esc csak a választót zárja, a kijelölés marad; más épület kódjára mutató link megnevezi az épületet, nem tűnik el csendben; a váltás mércéje **valódi épületeken mért aranyérték** (épületenként az elérhetetlen helyiségek, az útvonalak összhossza és a gráf élszáma a portától), a váltás utáni **tisztaság** (egyetlen tárolóban, a szintdobozokban sem marad régi bejegyzés), OD → KT → OD (a KT betöltésével); a fő folyosó mellé, de leszakadt szilánkhoz kötött OD-helyiségek (OD00F02, OD35E04) elérhetők, a csak sarkával érintkező OD00F03 nem; minden többcellás kötés egy falnyira van, harmadik helyiség nélkül, és odáig a célszinten az épületen belül vezet az út (pontos geometriával mérve); a homlokzat előtti gyűrűn és ablakrésen át nincs útvonal (KH00F36, KH00F37, KH00F42); a bekötések száma mind a hét épületben rögzített, és a saját foltján belüli út (KHX1PK2 → KHX1P03) megmarad; offline vissza az OA-ra; az `epuletKesz()` egyenként mind a hét kötelező elemre és a portára, és hibás szerkezetre (sokszög nélküli helyiség, maszk nélküli szint, hibás lépcsőpont…); ha az építés mégis elbukik, a régi épület épül vissza (nem félig vált); az ablakos cellakeresés véletlen pontokon és minden helyiségen ugyanazt adja, mint a teljes bejárás (OA, OD) — az aranyértékek egy szűkebb ablakot nem vennének észre; a nem elérhető adat üzenete angolul is a kóddal; **nyilvántartás nélkül** (első indulás, letiltott kérés) a gomb el sem jelenik meg, és az app elindul |
 | `tests/valaszto.js` | a térképes választó: minden címmel bíró épület helye a saját települése és az ország határán belül; Budapesten a jelölők a Duna jó oldalán, a Buda és a Pest felirat is, a III. kerület csoportja a hét óbudai épület; a címkék hat képernyőméreten (telefon, keskeny, fekvő, asztal, alacsony és kis asztali ablak), mind a négy térképen nem fedik egymást és más jelét, és nem lógnak ki, átméretezés után sem; fekve a térkép elfér; a biztonsági sávokkal (CDP-vel emulálva) a forrás a kezdősáv fölött, fekve a térkép a görgető tömbön belül; a házikó felirata telefonon is látszik; az OSM-forrás (ODbL, hivatkozással) a felületen; **alapértelmezett épület**: beállítás, a házikó, induláskor megnyílik, a link, a totem (cím nélkül is) és a párosító mód elsőbbsége, kikapcsolás, hálózat nélkül az OA marad, letiltott tárolóval is fut; **a csendes betöltés közben** választott terem marad, az ugyanarra az épületre mutató link érvényesül, a választott másik épület nyílik meg, a nyitott választó nem csukódik be (és nem mutat „Betöltés…”-t), egy görgetés a térképen megállítja, a házikó nem tölt újra; **GPS**: az OD körvonalán belül, a faltól 9 m-re „itt vagy”, előtte a körvonaltól mért távolság, a már nyitott épületnél nincs megnyitás, az YA-nál az YB is, messziről km, letiltott engedélynél üzenet, a bezárt választónál késve jött hely eldobódik; `helyek.json` nélkül csak a lista; a fókusz (zárt választóban nincs tab-állomás, nyitva bent marad, zárva visszatér, a sorról nem ugrik a jelre, a GPS-eredményre megy, a házikó, a töltés és egy azóta rejtetté vált nyitógomb után sem esik a `<body>`-ra; a GPS-javaslat gombja is „Betöltés…”-t mutat); angolul „1 building”; a felirat a teljes képernyős választó fölött látszik, és újrarajzolás után is megvan; a választó saját szélére koppintva nem zárul be, asztalon a háttérre igen; fekvő telefonon (844×340 és a 900 px-nél szélesebb 932×380) a GPS-eredmény után is elérhető a lista; a dobozban kezdett, kint elengedett húzás nem zár; ugyanazon a nézeten újrarajzolva a görgetés marad; az alapértelmezett doboz gombja „Betöltés…”-t mutat; a linkről indult betöltés alatt választott terem marad; egy soha be nem fejeződő letöltés 20 s után üzenetet ad; az elakadt linkes váltás újrapróbálva a link termét nyitja, a hibalap bezárása után már nem; a két épületet vegyítő link egyszer vált, a history-ba nem tesz közbülső bejegyzést, és a címben sem marad a másik épület kódja |
-| `tests/campus.js` | a telephely 3D-s tömegrajza: a csoport nézetében áll (az országén és a településén nem), a csoport minden épülete kint van, tömegként csak a körvonalasak (a többi lapos jel, nem kitalált ház), az akcentszínt a megnyithatók kapják; a magasság a szintszámból jön (OD > OA > OC); a hátrafelé néző falak kimaradnak (arányra mérve); a talaj nem nyel el kattintást; forgatás után is minden gomb működik; a címkék a kiinduló álláson és három csoportban sem fednek; a házra kattintva megnyílik az épület, alaprajz nélkülinél az adatlapja jön |
+| `tests/campus.js` | a telephely 3D-s tömegrajza: a csoport nézetében áll (az országén és a településén nem), a csoport minden épülete kint van, tömegként csak a körvonalasak (a többi lapos jel, nem kitalált ház), az akcentszínt a megnyithatók kapják; a magasság a szintszámból jön (OD > OA > OC); a hátrafelé néző falak kimaradnak (arányra mérve); a talaj nem nyel el kattintást; forgatás után is minden gomb működik; a címkék a kiinduló álláson és három csoportban sem fednek; a házra kattintva megnyílik az épület, alaprajz nélkülinél az adatlapja jön; **az ország térképén** minden településnek van jele, modellt csak a körvonalas épülettel bíró kap, a kártyák nem fedik egymást és nem lógnak ki a térképből, a modell a kártyáján belül marad |
 | `tests/masepulet.js` | más épületben nincs OA-ra szabott dolog: a foglalható termek (az OA órarendje) nincs kint, a Büfé gomb csak ahol van büfé (OA, FK; az OD-ben nincs); a szintnév és az emeletszám az épület saját szintjeiből (KT I. és IV. emelet, KH tetőtér, OD V. emelet, egy félszint és egy „Pince”, angolul is), a név az elsődleges (a KD-alak félemelete a földszint fölött, a kötőjel nélküli „Pince 2”), de ahol a név és a kód ellentmond (KD, TA) vagy két földszint jönne ki (BA), az épület nem nyílik meg; a 3D-s szintfelirat és a felolvasói név angolul (OA, KT); a liftes megjegyzés a lift nélküli szöveg; a nemre nem jelölt WC nem „Női” és „Férfi” mosdó, hanem semleges sor; a mosdónevek írásmódjai, a kategória nélküli OC-mosdók, a személyzeti WC kizárása; a KH és a KT akadálymentes mosdója ott van; vissza az OA-ra minden OA-s dolog visszajön |
 | `tests/csomag.js` | a Pages-re publikált csomag (`tools/pages-csomag.js`): csak engedélylistás fájl, belső anyag és fejlesztői fájl nincs benne, minden, amire a lapok és a manifest hivatkoznak, benne van; a célkönyvtár nem lehet a repó, a szülője, egy forráskönyvtár, sem egy csomagnevű, de idegen tartalmú könyvtár (a repó-szabály külön is mérve); és az app ebből a csomagból minden épületen végigváltva, a service workerrel együtt egyetlen sikertelen kérés nélkül fut |
 

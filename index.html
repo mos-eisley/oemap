@@ -617,15 +617,15 @@ button{cursor:pointer;background:none;border:0}
    kivágat különben kilógna); telefonon a hasáb görget, ott csak a szélesség köt. */
 .epvmap{position:relative;width:min(100%,calc(var(--epvh,9999px) * var(--ar,1)));max-width:760px;margin:0 auto}
 .epvterkep{--epvh:calc(min(760px,var(--vh100) - 48px) - 190px)}
-.epvmap svg{position:absolute;inset:0;width:100%;height:100%;overflow:hidden}
+.epvmap>svg{position:absolute;inset:0;width:100%;height:100%;overflow:hidden}
 .epvmap .h{fill:var(--surface);stroke:var(--line-2);stroke-width:2.5;stroke-linejoin:round;vector-effect:non-scaling-stroke}
 .epvmap .s{fill:var(--panel);stroke:#8fb7e2;stroke-width:1;vector-effect:non-scaling-stroke}
 .epvmap .d{fill:none;stroke:#8fb7e2;stroke-width:5;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke}
-.epvpin{position:absolute;display:flex;align-items:center;gap:6px;padding:8px 0;transform:translate(-7px,-50%);
-  color:var(--ink);z-index:1}
-.epvpin.bal{flex-direction:row-reverse;transform:translate(calc(-100% + 7px),-50%)}
-.epvpin.fel{flex-direction:column-reverse;gap:4px;padding:0 6px;transform:translate(-50%,calc(-100% + 7px))}
-.epvpin.le{flex-direction:column;gap:4px;padding:0 6px;transform:translate(-50%,-7px)}
+.epvpin{position:absolute;display:flex;align-items:center;gap:6px;padding:8px 0;
+  transform:translate(calc(-7px + var(--ki,0px)),-50%);color:var(--ink);z-index:1}
+.epvpin.bal{flex-direction:row-reverse;transform:translate(calc(-100% + 7px - var(--ki,0px)),-50%)}
+.epvpin.fel{flex-direction:column-reverse;gap:4px;padding:0 6px;transform:translate(-50%,calc(-100% + 7px - var(--ki,0px)))}
+.epvpin.le{flex-direction:column;gap:4px;padding:0 6px;transform:translate(-50%,calc(-7px + var(--ki,0px)))}
 .epvpart{position:absolute;transform:translate(-50%,-50%);font-family:"Metropolis","Open Sans",system-ui,sans-serif;
   font-weight:700;font-size:18px;letter-spacing:.12em;color:var(--line-2);pointer-events:none;text-transform:uppercase}
 .epvpin i{flex:none;width:14px;height:14px;box-sizing:border-box;border-radius:7px;background:var(--surface);border:2.5px solid var(--accent)}
@@ -633,6 +633,28 @@ button{cursor:pointer;background:none;border:0}
 .epvpin span{padding:3px 8px;border-radius:8px;background:var(--surface);border:1px solid var(--accent);
   font-weight:600;font-size:12.5px;white-space:nowrap;box-shadow:var(--shadow-1)}
 .epvpin span em{font-style:normal;font-weight:400;color:var(--ink-2)}
+.epvpin span b{font-weight:600}
+/* A dioráma a címke dobozában ül, a név fölött: a doboz így egy kis kártya,
+   amit a meglévő elhelyezés (epvCimkek) ugyanúgy tesz le ütközés nélkül. */
+/* A kártya szélességét a MODELL adja, nem a városnév: a név tördelhet
+   („Székesfehérvár” egy sorban 121 px, és ekkora kártyákat az ország
+   térképén már nem lehet ütközés nélkül lerakni). */
+/* A doboz a modell szélességével indul, de a névhez nőhet: a
+   „Székesfehérvár” egyetlen szó, tördelni nem lehet, és fix 64 px-en kilógott
+   a kártya keretéből. */
+.epvpin.dio span{display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 6px 4px;
+  white-space:normal;min-width:var(--dio);text-align:center;line-height:1.15}
+.epvpin.dio .epvdio{width:var(--dio)}
+/* Az ország térképén a modell nélküli jel kártyája is keskeny: telefonon a
+   térkép 358×221, és a „Nagymaros 2” egy sorban 97 px — a 27 px-re lévő
+   Budapest kártyájával mérve ütközött. */
+.epvmap.orszag .epvpin:not(.dio) span{white-space:normal;min-width:var(--dio);text-align:center;line-height:1.15}
+.epvpin.dio .epvdio{position:static;display:block;height:auto;overflow:visible}
+/* 10 px, nem 11,5: keskeny telefonon (360) a térkép 328 px széles, és a
+   „Székesfehérvár” kártyája 11,5 px-es betűvel 108 széles — balra már
+   kilógott, ezért lefelé csúszott, Budapest kártyája alá. 10 px-nél 96, és
+   elfér a jel bal oldalán. */
+.epvpin.dio span b{font-size:10px}
 .epvpin[aria-pressed="true"]{z-index:2}
 .epvpin[aria-pressed="true"] span{background:var(--accent);color:var(--accent-ink)}
 .epvpin[aria-pressed="true"] span em{color:inherit}
@@ -4016,12 +4038,13 @@ function epvTerkep(kulcs,pinek,ablak){
   const ps=pinek(v);
   const pin=ps.map(p=>{
     const lx=p.x/v.W*100, ly=p.y/v.H*100;
-    return `<button class="epvpin jobb${p.van?" van":""}" data-epv="${esc(p.kulcs)}"`
+    return `<button class="epvpin jobb${p.van?" van":""}${p.dio?" dio":""}" data-epv="${esc(p.kulcs)}"`
       +(p.nyomva!=null?` aria-pressed="${p.nyomva}"`:"")
       +` style="left:${lx.toFixed(2)}%;top:${ly.toFixed(2)}%" aria-label="${esc(p.cimke)}">`
-      +`<i></i><span>${esc(p.nev)} <em>${p.db}</em></span></button>`;
+      +`<i></i><span style="--dio:${DIO_SZEL}px">${p.dio||""}`
+      +`<b>${esc(p.nev)} <em>${p.db}</em></b></span></button>`;
   }).join("");
-  return `<div class="epvmap" style="aspect-ratio:${v.W}/${v.H};--ar:${(v.W/v.H).toFixed(3)}">${svg}${felirat(v,ps)}${pin}</div>`
+  return `<div class="epvmap${kulcs==="orszag"?" orszag":""}" style="aspect-ratio:${v.W}/${v.H};--ar:${(v.W/v.H).toFixed(3)}">${svg}${felirat(v,ps)}${pin}</div>`
     +`<div class="epvjel"><span><i class="van"></i>${T().epvHasPlan}</span><span><i></i>${T().epvNoPlan}</span></div>`;
 }
 /* ------------------------------------------------- a telephely 3D-ben */
@@ -4210,6 +4233,82 @@ function epvCampusHtml(tag, irany){
     +`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14l4-4-4-4"/><path d="M19 10h-9a5 5 0 0 0 0 10h3"/></svg></button></span></div>`;
 }
 
+/* ---------------------------------------- a település diorámája az országon */
+/* A Magyarország-térképen minden településnek kis 3D-s modellje van, és az a
+   választógomb. Ez MODELL, nem térkép, és ezt tudni kell róla: mérve egy
+   budapesti épület a valódi elrendezésben 1,3 képpont lenne egy ilyen jelben
+   (a város épületei 5168 m-en szórnak szét, egy ház tipikusan 62 m). Ezért a
+   házak egymás mellé állnak: az ALAKJUK és a MAGASSÁGUK ARÁNYA igaz —
+   ugyanaz a körvonal és szintszám, mint a campuson —, a helyük nem az. A
+   címke mondja meg, hány épület van valójában.
+
+   Amelyik településnek egyetlen körvonalas épülete sincs (Nagymaros), az
+   marad a sima jelnél: kitalált házakat nem rajzolunk. */
+const DIO_SZEL = 64;          // a dioráma szélessége képpontban
+const DIO_MAX = 5;            // ennél több ház egy ekkora jelben felismerhetetlen
+const DIO_KOZ = 7;            // méternyi hézag a házak közt a modellben
+
+function epvDioAdat(tag){
+  const h=tag.map(e=>({e,p:epvHely(e)})).filter(x=>x.p&&x.p.kontur&&x.p.kontur[0]&&x.p.kontur[0].length>2);
+  if(!h.length) return null;
+  const KY=110540;
+  const hazak=h.map(({e,p})=>{
+    const g0=p.kontur[0], la=g0.reduce((s,q)=>s+q[1],0)/g0.length, KX=111320*Math.cos(la*Math.PI/180);
+    const g=campusCcw(g0.map(([x,y])=>[x*KX,y*KY]));
+    let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;
+    for(const [x,y] of g){ if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; }
+    // a saját középpontjára húzva, hogy a modellben szabadon elhelyezhető legyen
+    const cx=(x0+x1)/2, cy=(y0+y1)/2;
+    return {kod:e.kod, nev:e.nev, van:!!e.navigalhato, most:e.kod===epItt(),
+            gyuru:g.map(([x,y])=>[x-cx,y-cy]), sz:x1-x0, m:y1-y0,
+            magas:Math.max(1,e.szint||1)*CAMPUS_SZINT*CAMPUS_TULZAS};
+  });
+  /* Előbb amelyiknek van alaprajza — azt tudja a hallgató használni —, utána
+     a nagyobb alapterületű; így a modell a település jellemző házait mutatja. */
+  hazak.sort((a,b)=>(b.van?1:0)-(a.van?1:0) || b.sz*b.m-a.sz*a.m);
+  const valasztott=hazak.slice(0,DIO_MAX);
+  /* KÉT SORBA, nem egybe. Egy sorban mérve a modell 92×27 képpont lett —
+     vékony szalag, amin a 3D nem látszik; két sorral a doboz már közel
+     négyzetes. A magasabbak hátra kerülnek, hogy ne takarják az elülsőket. */
+  valasztott.sort((a,b)=>b.magas-a.magas);
+  const hatul=valasztott.filter((_,i)=>i%2===0), elol=valasztott.filter((_,i)=>i%2===1);
+  const sorSzel=r=>r.reduce((s,b)=>s+b.sz,0)+Math.max(0,r.length-1)*DIO_KOZ;
+  const melyH=Math.max(0,...hatul.map(b=>b.m)), melyE=Math.max(0,...elol.map(b=>b.m));
+  const W=Math.max(sorSzel(hatul),sorSzel(elol));
+  const sorba=(r,ky)=>{ let x=(W-sorSzel(r))/2;
+    for(const b of r){ b.kx=x+b.sz/2; b.ky=ky; x+=b.sz+DIO_KOZ; } };
+  sorba(hatul, (melyH+melyE)/2+DIO_KOZ);          // észak = hátul
+  sorba(elol, -(melyH+melyE)/2-DIO_KOZ);
+  return valasztott;
+}
+
+function epvDioSvg(adat, szel){
+  const kam=campusKamera(CAMPUS_DOL,0);
+  const px=[], py=[];
+  for(const b of adat) for(const [gx,gy] of b.gyuru) for(const z of [0,b.magas]){
+    const q=kam.p(b.kx+gx, b.ky+gy, z); px.push(q[0]); py.push(q[1]); }
+  const x0=Math.min(...px), x1=Math.max(...px), y0=Math.min(...py), y1=Math.max(...py);
+  const s=szel/Math.max(1,x1-x0), H=Math.max(1,Math.round((y1-y0)*s));
+  const P=(e,n,z)=>{ const q=kam.p(e,n,z); return [((q[0]-x0)*s).toFixed(1),((q[1]-y0)*s).toFixed(1)]; };
+  const ut=p=>"M"+p.map(q=>q.join(" ")).join("L")+"Z";
+  let svg="";
+  for(const b of adat.slice().sort((a,c)=>kam.melyseg(c.kx,c.ky)-kam.melyseg(a.kx,a.ky))){
+    let falak="";
+    for(let i=0;i<b.gyuru.length;i++){
+      const p=b.gyuru[i], q=b.gyuru[(i+1)%b.gyuru.length];
+      const dx=q[0]-p[0], dy=q[1]-p[1], L=Math.hypot(dx,dy); if(!L) continue;
+      const nx=dy/L, ny=-dx/L; if(!kam.felenk(nx,ny)) continue;
+      falak+=`<path style="--f:${(kam.feny(nx,ny)*100).toFixed(0)}%" d="`
+        +ut([P(b.kx+p[0],b.ky+p[1],0),P(b.kx+q[0],b.ky+q[1],0),
+             P(b.kx+q[0],b.ky+q[1],b.magas),P(b.kx+p[0],b.ky+p[1],b.magas)])+`"/>`;
+    }
+    svg+=`<g class="epvep${b.van?" van":""}${b.most?" most":""}">`
+      +`<g class="fal">${falak}</g>`
+      +`<path class="tet" d="${ut(b.gyuru.map(([gx,gy])=>P(b.kx+gx,b.ky+gy,b.magas)))}"/></g>`;
+  }
+  return `<svg class="epvdio" viewBox="0 0 ${szel} ${H}" width="${szel}" height="${H}" aria-hidden="true" focusable="false">${svg}</svg>`;
+}
+
 /* A címke a jel mellé kerül: jobbra, ha ott elfér, különben balra, fölé vagy
    alá — az első olyan helyre, ahol nem takar másik jelet vagy címkét, és nem
    lóg ki a térképből; ha egyik sem tiszta, a legkevésbé rossz helyre. A
@@ -4230,11 +4329,26 @@ function epvCimkek(d){
       const {x,y,w,h}=p;
       const hely={jobb:{x0:x+J+6,x1:x+J+6+w,y0:y-h/2,y1:y+h/2}, bal:{x0:x-J-6-w,x1:x-J-6,y0:y-h/2,y1:y+h/2},
         fel:{x0:x-w/2,x1:x+w/2,y0:y-J-4-h,y1:y-J-4}, le:{x0:x-w/2,x1:x+w/2,y0:y+J+4,y1:y+J+4+h}};
-      let jo="jobb", min=Infinity;
-      for(const k in hely){ const r=hely[k], v=tegla.reduce((s,q)=>s+fed(r,q),0)+kilog(r);
-        if(v<min){ jo=k; min=v; } if(!v) break; }
+      /* Mind a négy oldal, növekvő távolságon: az első teljesen tiszta hely
+         nyer, különben a legkevésbé rossz. A fix négy helyből egyik sem volt
+         tiszta, amióta a jel diorámás kártyát hord: telefonon az ország
+         térképe 358×221, és a 27 px-re lévő Nagymarosra ült rá Budapest
+         87 px magas kártyája. A kitolás ezt oldja meg — a kártya a jelétől
+         távolabb kerül, de nem takar másikat. */
+      const ir={jobb:[1,0],bal:[-1,0],fel:[0,-1],le:[0,1]};
+      let jo="jobb", ki=0, min=Infinity, legjobb=hely.jobb;
+      keres: for(let d=0; d<=120; d+=8){
+        for(const k in hely){
+          const h=hely[k], r={x0:h.x0+ir[k][0]*d, x1:h.x1+ir[k][0]*d,
+                              y0:h.y0+ir[k][1]*d, y1:h.y1+ir[k][1]*d};
+          const v=tegla.reduce((s,q)=>s+fed(r,q),0)+kilog(r);
+          if(v<min){ jo=k; ki=d; min=v; legjobb=r; }
+          if(!v) break keres;
+        }
+      }
       p.b.classList.remove("jobb","bal","fel","le"); p.b.classList.add(jo);
-      tegla.push(hely[jo]);
+      p.b.style.setProperty("--ki", ki+"px");
+      tegla.push(legjobb);
     }
   }
 }
@@ -4341,7 +4455,9 @@ function epvRender(){
       const hs=telek.get(n).map(epvHely).filter(Boolean); if(!hs.length) return null;
       const [x,y]=v.p(hs.reduce((s,h)=>s+h.lon,0)/hs.length, hs.reduce((s,h)=>s+h.lat,0)/hs.length);
       const db=telek.get(n).length, van=telek.get(n).filter(e=>e.navigalhato).length;
-      return {x,y,kulcs:"tel:"+n,nev:n,db,van,cimke:t.epvPin.replace("%s",n).replace("%s",epvDb(db)).replace("%s",van)};
+      const da=epvDioAdat(telek.get(n));
+      return {x,y,kulcs:"tel:"+n,nev:n,db,van,dio:da?epvDioSvg(da,DIO_SZEL):"",
+              cimke:t.epvPin.replace("%s",n).replace("%s",epvDb(db)).replace("%s",van)};
     }).filter(Boolean));
     lista=sorrend.map(n=>{ const l=telek.get(n), van=l.filter(e=>e.navigalhato).length;
       const al=n?epvDb(l.length)+" · "+(van?t.epvWithPlan.replace("%s",van):t.epvNoPlan):epvDb(l.length)+" · "+t.epvNoPlaceSub;
