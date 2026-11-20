@@ -631,7 +631,11 @@ button{cursor:pointer;background:none;border:0}
 /* A magasság a képernyőhöz igazodik: a --epvh a régi, arányt tartó térképé
    volt, és telefonon 662 képpontot adott egy 844-es kijelzőn — a jelenet
    fele a lap alján lógott. */
-.epvjel3d{position:relative;height:var(--epvh,420px);min-height:230px;max-height:620px;
+/* min-height 150, nem 230: fekvő telefonon biztonsági sávokkal a számolt
+   magasság 199 képpont, és a 230-as alsó korlát felülírta — a hasáb
+   (padding + jelenet + jelmagyarázat) 9 képponttal kilógott a görgető
+   tömbből. Mérve: 844×390-en, 21 képpontos kezdősávval. */
+.epvjel3d{position:relative;height:var(--epvh,420px);min-height:150px;max-height:620px;
   border-radius:18px;overflow:hidden;touch-action:none;cursor:grab;
   user-select:none;-webkit-user-select:none;border:1px solid var(--line);
   background:linear-gradient(180deg,
