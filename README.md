@@ -41,9 +41,12 @@ egyetemi városnál (Budapest, Székesfehérvár, Nagymaros) ott áll a saját
 szintarányokkal, csak nem méretarányosan, mert valódi méretben egy ház itt
 0,2 képpont lenne. Onnan
 **egyetlen, folytonos mozdulattal** le lehet menni az épületek közé: csippents
-vagy görgess, és a kamera magától leszáll — előbb a városrészek jele jön elő,
-aztán az épületek tömege a valódi helyükön, a saját körvonalukkal és
-szintszámukkal, végül a nevük. A házra koppintva megnyílik az alaprajza.
+vagy görgess, és a kamera magától leszáll. Előbb a városrészek — campusok —
+kis mása jön elő, szintén a valódi helyükön, aztán a valódi épületek, a saját
+körvonalukkal és szintszámukkal, a nevükkel. A házra koppintva megnyílik az
+alaprajza. A rajz szemléltető, nem méretarányos: valódi méretben egy épület a
+város egészét mutató képen alig néhány képpont lenne, azért nő meg — a helye
+viszont végig igaz.
 Közben húzni lehet a képet, és a +/− gomb is nagyít. A térkép mellett mindig
 ott a lista is, mindegyik épületnél a címe, a szintek és a helyiségek száma, az
 alapterülete — az Egyetemi Tervtár adataiból; a listából választva a kamera

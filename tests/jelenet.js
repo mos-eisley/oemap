@@ -35,7 +35,7 @@ const allapot = pg => pg.evaluate(() => ({
   // a modell házai NEM a világ házai: a modell a jel helyén álló kis más
   tomeg: [...document.querySelectorAll(".epvjel3d > svg > g.jHaz")].map(g => g.dataset.epv.slice(3)).sort(),
   pont: [...document.querySelectorAll("circle.jHaz.pont")].map(g => g.dataset.epv.slice(3)).sort(),
-  modell: [...document.querySelectorAll("g.jVar")].map(g => g.dataset.epv.slice(4)).sort(),
+  modell: [...document.querySelectorAll("g.jVar")].map(g => g.dataset.epv.replace(/^[a-z]+:/, "")).sort(),
   modellHaz: [...document.querySelectorAll("g.jVar g.jHaz")].length,
   nev: [...document.querySelectorAll(".jNev")].map(b => b.textContent.trim()).sort(),
 }));
@@ -46,7 +46,9 @@ const allapot = pg => pg.evaluate(() => ({
 async function csoportra(pg) {
   await pg.click("#epvBtn"); await pg.waitForTimeout(250);
   await pg.click('#epvlist .jTel[data-epv="tel:Budapest"]'); await nyugodt(pg);
-  await pg.click('#epvlist .jTel.csop[data-epv="csop:KB"]'); await nyugodt(pg);
+  // a csoport (telephely) bejárata a lista fejléce; a jelenetben a házak már
+  // a nevükkel állnak, ott a ház maga a célpont
+  await pg.click('#epvlist .epvcsop[data-epv="csop:KB"]'); await nyugodt(pg);
   await pg.waitForTimeout(150);
 }
 
@@ -71,7 +73,7 @@ run("jelenet", async ({ t, browser, base }) => {
     const H = document.querySelector(".epvjel3d").getBoundingClientRect();
     const r = [...document.querySelectorAll("g.jVar")].map(g => {
       const b = g.getBoundingClientRect();
-      return { n: g.dataset.epv.slice(4), l: b.left - H.left, t: b.top - H.top, w: b.width, h: b.height };
+      return { n: g.dataset.epv.replace(/^[a-z]+:/, ""), l: b.left - H.left, t: b.top - H.top, w: b.width, h: b.height };
     });
     const jel = [...document.querySelectorAll("circle.jPont")].map(c => [+c.getAttribute("cx"), +c.getAttribute("cy")]);
     const sajatJel = g => +g.dataset.x;
@@ -99,11 +101,33 @@ run("jelenet", async ({ t, browser, base }) => {
   await p.click('#epvlist .jTel[data-epv="tel:Budapest"]'); await nyugodt(p); await p.waitForTimeout(150);
   const b = await allapot(p);
   t("Budapest fölé érve a kamera megdől", b.dol > 10 && b.dol <= 52, String(b.dol));
-  t("és a települések jele helyett a kerületeké jön", !b.tel.length && b.csop.length === 4, JSON.stringify(b.csop));
   t("a nagyítás nőtt (kevesebb méter esik egy képpontra)", b.mpp < o.mpp / 10, `${o.mpp} → ${b.mpp}`);
+  /* SZEMLÉLTETŐ, nem méretarányos — a város egészén az egyes ház pöttynyi
+     (a 23 budapesti épület 10 km-en szór szét), ezért ott a CAMPUSOK kis
+     mása áll, a campus valódi helyén. Élesben a szétszórt pöttyöket
+     jelentették „használhatatlan”-ként. */
+  // a csoport kulcsa az első épületkódja (kód szerint rendezve)
+  t.eq("a város fölött a kerületek modellje áll, nem a szétszórt házak", b.modell,
+    ["BA", "KB", "KP", "YA"]);
+  t("és egyetlen valódi ház sincs kirajzolva (az a következő lépcsőfok)",
+    !b.tomeg.length && !b.pont.length && !b.nev.length, JSON.stringify(b));
+  t.eq("mindegyik modell meg van nevezve", b.csop,
+    ["III. kerület", "VI. kerület", "VIII. kerület", "XIV. kerület"]);
+  const cmod = await p.evaluate(() => [...document.querySelectorAll("g.jVar")].map(g => {
+    const r = g.getBoundingClientRect();
+    return { n: g.dataset.epv, w: Math.round(r.width), haz: g.querySelectorAll("g.jHaz").length };
+  }));
+  t("a modellek jól láthatók (≥30 px) és valódi házakból állnak",
+    cmod.length === 4 && cmod.every(m => m.w >= 30 && m.haz >= 1), JSON.stringify(cmod));
+  /* A modell szélessége a BENNE álló házak számából: különben a VI. kerület
+     egyetlen háza akkora lett, mint a III. kerület öt háza együtt, és a kép
+     azt hazudta, hogy ott a nagyobb telephely. */
+  const hatom = cmod.find(m => m.haz >= 4), egy = cmod.find(m => m.haz === 1);
+  t("a többházas campus modellje szélesebb az egyházasénál",
+    hatom && egy && hatom.w > egy.w * 1.4, JSON.stringify([hatom, egy]));
 
   /* ---- a csoport: valódi tömegek, valódi arányokkal ---- */
-  await p.click('#epvlist .jTel.csop[data-epv="csop:KB"]'); await nyugodt(p); await p.waitForTimeout(150);
+  await p.click('#epvlist .epvcsop[data-epv="csop:KB"]'); await nyugodt(p); await p.waitForTimeout(150);
   const c = await allapot(p);
   const obudai = Object.values(reg).filter(e => (e.telephely || "").startsWith("Budapest 103")).map(e => e.kod);
   const konturos = obudai.filter(k => hely.epuletek[k] && hely.epuletek[k].kontur);

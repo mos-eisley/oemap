@@ -654,11 +654,13 @@ button{cursor:pointer;background:none;border:0}
 .jViz{fill:none;stroke:#a6cbea;stroke-linejoin:round;stroke-linecap:round}
 /* A ház tömegének oldallapjai a saját fényüket kapják (--f a normálisból),
    ugyanúgy, ahogy a campus tömegrajzán. */
-.jHaz{--fv:color-mix(in srgb,var(--surface) 92%,var(--ink));
-  --fs:color-mix(in srgb,var(--surface) 52%,var(--ink));
-  --tet:color-mix(in srgb,var(--surface) 97%,var(--ink));cursor:pointer}
+/* A keverékek az --ink felől: sötét témában a 3–8%-os árnyalat alig vált el
+   a háttértől, és az alaprajz nélküli házak szinte eltűntek a képről. */
+.jHaz{--fv:color-mix(in srgb,var(--ink) 22%,var(--surface));
+  --fs:color-mix(in srgb,var(--ink) 55%,var(--surface));
+  --tet:color-mix(in srgb,var(--ink) 13%,var(--surface));cursor:pointer}
 .jHaz .fal path{fill:color-mix(in srgb,var(--fv) var(--f),var(--fs));stroke:none}
-.jHaz .tet{fill:var(--tet);stroke:color-mix(in srgb,var(--ink) 20%,transparent);
+.jHaz .tet{fill:var(--tet);stroke:color-mix(in srgb,var(--ink) 40%,transparent);
   stroke-width:1;vector-effect:non-scaling-stroke}
 .jHaz.van{--fv:color-mix(in srgb,var(--accent) 52%,white);
   --fs:color-mix(in srgb,var(--accent) 80%,black);
@@ -666,8 +668,13 @@ button{cursor:pointer;background:none;border:0}
 .jHaz.van .tet{stroke:color-mix(in srgb,var(--accent) 60%,transparent)}
 .jHaz.most .tet{stroke:var(--accent);stroke-width:2.5}
 .jHaz:hover .tet{stroke:var(--accent);stroke-width:2}
-circle.jHaz.pont{fill:var(--surface);stroke:var(--line-2);stroke-width:2.5}
-circle.jHaz.pont.van{fill:var(--accent);stroke:var(--accent)}
+/* Körvonal nélküli ház: GYŰRŰ, nem korong. Korongként nagy fehér foltot
+   vágott a mellette álló tömegbe, mintha lyuk lenne a képen. */
+circle.jHaz.pont{fill:color-mix(in srgb,var(--surface) 62%,transparent);
+  stroke:var(--line-2);stroke-width:2.5}
+circle.jHaz.pont.van{fill:color-mix(in srgb,var(--accent) 55%,transparent);stroke:var(--accent)}
+circle.jHaz.pont.most{stroke:var(--accent);stroke-width:3.5}
+circle.jHaz.pont:hover{stroke:var(--accent)}
 path.jHaz.folt{fill:color-mix(in srgb,var(--ink) 34%,transparent);stroke:none}
 path.jHaz.folt.van{fill:var(--accent)}
 /* A ház neve a tető fölött, a település neve a pontja fölött lóg. */
@@ -686,6 +693,10 @@ path.jHaz.folt.van{fill:var(--accent)}
   background:color-mix(in srgb,var(--surface) 92%,transparent);
   font:700 12.5px/1.25 inherit;color:var(--ink)}
 .jTel.csop{font-weight:600;font-size:11.5px;color:var(--ink-2)}
+.epvcsop{display:flex;align-items:center;gap:8px;width:100%;min-height:40px;padding:6px 2px;
+  background:none;border:0;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.epvcsop:hover,.epvcsop:focus-visible{color:var(--accent)}
+.epvcsop svg{margin-left:auto;flex:none;opacity:.7}
 /* A modelles település neve a házai ALATT áll, mint a régi, képes térképek
    házikóinál: fölötte a modell, alatta a név — egy egység. */
 .jTel.alatt{margin-top:4px;transform:translate(calc(-50% + var(--dx,0px)),var(--dy,0px))}
@@ -4067,9 +4078,32 @@ const JEL_MPP_DOLT = 4;         // ezalatt teljes dőlés
    0,2 képpont (nem rajzoljuk), 20-on 3 képpont (folt), 6-on 10 (tömeg). */
 const JEL_MPP_VAROS = 300;      // ezalatt a település határa és a házak foltja
 const JEL_MPP_HAZ = 20;         // ezalatt kihúzott tömeg
-const JEL_MPP_NEV = 7;
+/* SZEMLÉLTETŐ, nem méretarányos. Mérve: a település épületei kilométereken
+   szórnak szét, egy ház 60 m — a település egészét mutató képen tehát a ház
+   1–3 képpont lenne, azaz se látni, se megkoppintani nem lehet. Ezért a
+   házat a saját KÖZEPE körül felnagyítjuk, amíg el nem éri a célméretet: a
+   HELYE igaz marad, a MÉRETE nem. A nagyítás a kamerával együtt csökken, és
+   campus-közelben eléri az 1-et — ott már méretarányos. Ugyanez az eljárás,
+   mint amikor egy térkép az utat a valódinál szélesebbre rajzolja. */
+const JEL_TIPIKUS = 60;         // a tipikus épület mérete méterben (mérve)
+const JEL_CEL_PX = 46;          // ekkorára nagyítjuk a tipikus házat, amíg lehet
+const JEL_NAGY_MAX = 8;         // ennél többször nem: a szomszédok összeérnének
+/* A nagyítás EGYSÉGES — minden ház ugyanannyiszorosára nő —, különben az
+   ARÁNYOK borulnának: házanként a célmérethez igazítva a 101 m-es OA és a
+   24 m-es KD egyforma nagy lett volna, a magasságuk meg (a nagyítással
+   együtt nőve) megfordult: a hétszintes OA alacsonyabb lett a hatszintes
+   OC-nél. A legkisebbek kapnak csak külön ráadást, hogy koppinthatók
+   legyenek — a magasságuk ettől nem nő, azt mindig az egységes szorzó adja. */
+const JEL_MIN_PX = 16;          // ekkora alá egy ház sem mehet
+const JEL_NEV_PX = 24;          // ekkorától van kiírva a ház neve
+const JEL_NEV_DB = 12;          // ennyi házig mindegyiké kint van
+const JEL_MPP_NEV = 15;
+/* Ezalatt a VALÓDI házak állnak a valódi helyükön; fölötte a campusok kis
+   mása. 6 m/képponton egy 800 m-es campus 133 képpont — ott már a házak a
+   téma, nem az, hogy hol van a campus. */
+const JEL_MPP_CSOP = 6;         // ezalatt a csoportok jele már nem kell: a házak neve kint van
 /* A csoport sugara méterben: egy campus együtt maradjon, két telephely ne. */
-const CSOP_M = 600;          // ezalatt a házak neve
+const CSOP_M = 600;
 
 const JEL = { k: 0, cx: 0, cy: 0, W: 0, H: 0, anim: null };
 let JELVET = null;              // a vetület (a HELYEK betöltésekor áll elő)
@@ -4124,7 +4158,7 @@ function jelHaz(e){
   for(const [x,y] of g){ if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; }
   return { kod:e.kod, nev:e.nev, van:!!e.navigalhato, most:e.kod===epItt(), gyuru:g,
            magas:Math.max(1,e.szint||1)*JEL_SZINT, kp:[(x0+x1)/2,(y0+y1)/2],
-           bb:[x0,y0,x1,y1] };
+           sz:Math.max(x1-x0,y1-y0), bb:[x0,y0,x1,y1] };
 }
 /* Körvonal nélkül (a 32-ből 14) NEM rajzolunk kitalált tömeget: lapos jel áll
    a helyén. Enélkül közelről egyszerűen eltűnt az épület — a listában ott
@@ -4150,7 +4184,7 @@ function jelRajz(){
   const s0=jelVilag(0,-JEL.H), s1=jelVilag(JEL.W,JEL.H*1.2);
   const lathato=bb=>bb[2]>=s0[0]&&bb[0]<=s1[0]&&bb[3]>=s1[1]&&bb[1]<=s0[1];
 
-  let svg="", cimke="";
+  let svg="", cimke="", nevDb=0;
   /* 1. réteg: a föld. Az ország határa mindig, a településé csak közelebbről
      (országos nagyításon egybeolvadna a jelével). */
   const M=HELYEK.terkep;
@@ -4175,34 +4209,54 @@ function jelRajz(){
     for(const g of m.sziget||[]) svg+=`<path class="jSziget" d="${vilagUt(g,1)}"/>`;
   }
 
-  /* 3. réteg: a házak. 300 m/px fölött egy ház 0,2 képpont — ott csak a
-     település jele látszik; alatta folt, még közelebb kihúzott tömeg. */
-  if(mpp<=JEL_MPP_VAROS && EPULETEK){
+  /* 3. réteg: a VALÓDI házak, a valódi helyükön — csak campus-közelben.
+     Följebb a campusok kis mása áll helyettük (lásd a 4. réteget). */
+  if(mpp<=JEL_MPP_CSOP && EPULETEK){
     const hazak=Object.values(EPULETEK.epuletek).map(e=>jelHaz(e)||jelPont(e))
-      .filter(Boolean).filter(h=>lathato(h.bb));
-    hazak.sort((a,b)=>kam.melyseg(b.kp[0],b.kp[1])-kam.melyseg(a.kp[0],a.kp[1]));
-    for(const h of hazak){
+      .filter(Boolean);
+    /* A nagyítás a SAJÁT KÖZÉP körül: a ház helye igaz marad, a mérete nem.
+       Campus-közelben 1, tehát ott méretarányos; messzebbről annyi, hogy a
+       ház látható és megkoppintható maradjon (mérve: nélküle a település
+       egészét mutató képen 1–3 képpont, ami használhatatlan). */
+    const gEgy=Math.max(1,Math.min(JEL_NAGY_MAX,JEL_CEL_PX/(JEL_TIPIKUS*kam.k)));
+    const nagy=h=>Math.max(gEgy,Math.min(JEL_NAGY_MAX*2,JEL_MIN_PX/Math.max(1,(h.sz||25)*kam.k)));
+    const lathatoN=h=>{ const g=nagy(h), r=(h.sz||25)*g/2;
+      return lathato([h.kp[0]-r,h.kp[1]-r,h.kp[0]+r,h.kp[1]+r]); };
+    const latszo=hazak.filter(lathatoN);
+    latszo.sort((a,b)=>kam.melyseg(b.kp[0],b.kp[1])-kam.melyseg(a.kp[0],a.kp[1]));
+    for(const h of latszo){
       const o="jHaz"+(h.van?" van":"")+(h.most?" most":"");
+      const g=nagy(h), px=(h.sz||25)*g*kam.k;
+      // a nagyított gyűrű és magasság: az arányok így is igazak maradnak
+      const G=h.gyuru&&h.gyuru.map(([x,y])=>[h.kp[0]+(x-h.kp[0])*g, h.kp[1]+(y-h.kp[1])*g]);
+      const M=h.magas*gEgy;   // a magasság mindig az egységes szorzóval: az emeletek aránya igaz marad
       if(h.pont){
         const [cx,cy]=kam.p(h.kp[0],h.kp[1],0);
-        svg+=`<circle class="${o} pont" data-epv="ep:${esc(h.kod)}" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="5.5"/>`;
-      } else if(mpp>JEL_MPP_HAZ){
+        svg+=`<circle class="${o} pont" data-epv="ep:${esc(h.kod)}" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${Math.max(6.5,Math.min(10,px*0.4)).toFixed(1)}"/>`;
+      } else if(px<8){
         svg+=`<path class="${o} folt" data-epv="ep:${esc(h.kod)}" d="${
-          ut(h.gyuru.map(([x,y])=>P(x,y,0)),1)}"/>`;
+          ut(G.map(([x,y])=>P(x,y,0)),1)}"/>`;
       } else {
         let falak="";
-        for(let i=0;i<h.gyuru.length;i++){
-          const p=h.gyuru[i], q=h.gyuru[(i+1)%h.gyuru.length];
+        for(let i=0;i<G.length;i++){
+          const p=G[i], q=G[(i+1)%G.length];
           const dx=q[0]-p[0], dy=q[1]-p[1], L=Math.hypot(dx,dy); if(!L) continue;
           const nx=dy/L, ny=-dx/L; if(!kam.felenk(nx,ny)) continue;
           falak+=`<path style="--f:${(kam.feny(nx,ny)*100).toFixed(0)}%" d="${
-            ut([P(p[0],p[1],0),P(q[0],q[1],0),P(q[0],q[1],h.magas),P(p[0],p[1],h.magas)],1)}"/>`;
+            ut([P(p[0],p[1],0),P(q[0],q[1],0),P(q[0],q[1],M),P(p[0],p[1],M)],1)}"/>`;
         }
         svg+=`<g class="${o}" data-epv="ep:${esc(h.kod)}"><g class="fal">${falak}</g>`
-          +`<path class="tet" d="${ut(h.gyuru.map(([x,y])=>P(x,y,h.magas)),1)}"/></g>`;
+          +`<path class="tet" d="${ut(G.map(([x,y])=>P(x,y,M)),1)}"/></g>`;
       }
-      if(mpp<=JEL_MPP_NEV){
-        const [lx,ly]=kam.p(h.kp[0],h.kp[1],h.magas);
+      // a név a KIRAJZOLT mérethez igazodik, nem a nagyításhoz: ami elég nagy, az megnevezhető
+      /* A megnyitható épület neve MINDIG kint van: azt tudja a hallgató
+         használni, és a nevén keresi. A többié akkor, ha elég nagyra nőtt,
+         vagy ha kevesen vannak a képen — a campus hét házát mind meg kell
+         nevezni, ott épp az a kérdés, melyik ház melyik; Budapest huszonhárom
+         chipje egymás hegyén-hátán viszont olvashatatlan. */
+      if(px>=JEL_NEV_PX||h.van||latszo.length<=JEL_NEV_DB){
+        nevDb++;
+        const [lx,ly]=kam.p(h.kp[0],h.kp[1],h.pont?0:M);
         if(lx>0&&lx<JEL.W&&ly>0&&ly<JEL.H)
           cimke+=`<button class="jNev${h.van?" van":""}${h.most?" most":""}" data-epv="ep:${esc(h.kod)}"`
             +` style="left:${lx.toFixed(1)}px;top:${ly.toFixed(1)}px"`
@@ -4211,23 +4265,33 @@ function jelRajz(){
     }
   }
 
-  /* 4. réteg: a csoportok (kerület, telephely) jele. Ezen a léptéken az
-     épület még pontnyi, a település jele viszont már semmit nem mond — ez a
-     réteg köti össze a kettőt, és ez a tapintható célpont is: egy 3 képpontos
-     házra senki nem tud koppintani. */
-  if(mpp<=JEL_MPP_VAROS && mpp>JEL_MPP_NEV && EPULETEK){
+  /* 4. réteg: a CSOPORTOK (kerület, telephely) kis mása. Ez a „telephely”
+     szint: a város egészén egy ház pöttynyi, a település jele viszont már
+     semmit nem mond. Itt egy campus = egy modell, a campus saját házaiból, a
+     campus valódi helyén — ugyanaz az elv, mint az ország térképén a
+     városoké, egy lépcsőfokkal lejjebb. Élesben a 23 szétszórt budapesti
+     házat jelentették „használhatatlan”-ként: 10 km-en szórnak szét, és
+     bármekkorára nagyítva is pöttyök maradtak egy üres lapon. */
+  if(mpp<=JEL_MPP_VAROS && mpp>JEL_MPP_CSOP && EPULETEK){
     const tl=new Map();
     for(const e of Object.values(EPULETEK.epuletek)){
       const n=epvTel(e); if(!n||!epvHely(e)) continue;
       if(!tl.has(n)) tl.set(n,[]); tl.get(n).push(e);
     }
-    for(const [,l] of tl) for(const c of epvCsoportok(l,JELVET,CSOP_M)){
+    const csop=[];
+    for(const [,l] of tl) for(const c of epvCsoportok(l,JELVET,CSOP_M)) csop.push(c);
+    for(const c of csop.sort((a,b)=>b.y-a.y)){         // észak hátra
       const [lx,ly]=kam.p(c.x,c.y,0);
-      if(lx<0||lx>JEL.W||ly<0||ly>JEL.H) continue;   // a képen kívüli jel címkéje kilógna
+      if(lx<0||lx>JEL.W||ly<0||ly>JEL.H) continue;     // a képen kívüli jel címkéje kilógna
       const van=c.tag.filter(e=>e.navigalhato).length;
-      svg+=`<circle class="jPont csop" cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="4.5"/>`;
-      cimke+=`<button class="jTel csop" data-epv="csop:${esc(c.kulcs)}"`
-        +` style="left:${lx.toFixed(1)}px;top:${ly.toFixed(1)}px"`
+      const adat=jelVarosAdat(c.tag);
+      let cy=ly;
+      svg+=`<circle class="jPont csop" cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="${adat?"3.5":"4.5"}"/>`;
+      if(adat){
+        const r=jelVarosSvg(adat,lx,ly,jelModellSzel(adat.length),"csop:"+c.kulcs); svg+=r.svg; cy=ly+r.teto;
+      }
+      cimke+=`<button class="jTel csop${adat?" alatt":""}" data-epv="csop:${esc(c.kulcs)}"`
+        +` style="left:${lx.toFixed(1)}px;top:${Math.max(0,cy).toFixed(1)}px"`
         +` aria-label="${esc(t.epvPin.replace("%s",c.nev).replace("%s",epvDb(c.tag.length)).replace("%s",van))}">`
         +`${esc(c.nev)}</button>`;
     }
@@ -4235,7 +4299,7 @@ function jelRajz(){
 
   /* 5. réteg: a települések jele. Közelebbről elhalványul, mert ott már a
      házak mondják meg, hol vagyunk. */
-  if(mpp>JEL_MPP_HAZ && EPULETEK){
+  if(mpp>JEL_MPP_VAROS && EPULETEK){
     const tl=new Map();
     for(const e of Object.values(EPULETEK.epuletek)){
       const n=epvTel(e); if(!n||!epvHely(e)) continue;
@@ -4253,18 +4317,16 @@ function jelRajz(){
        telefonon 38 képpontra van egymástól, úgyhogy egy nagy modell a
        szomszédjára ül. 0,15×keret a legnagyobb településé, a kisebbeké
        arányosan kevesebb — így a modellek megállnak egymás mellett. */
-    const legtobb=Math.max(...telek.map(x=>x.l.length));
     for(const {n,l,w} of telek){
       const [lx,ly]=kam.p(w[0],w[1],0);
       if(lx<0||lx>JEL.W||ly<0||ly>JEL.H) continue;
       const van=l.filter(e=>e.navigalhato).length;
       // a modell csak országos léptéken: alatta már a valódi házak állnak a helyükön
-      const adat=mpp>JEL_MPP_VAROS?jelVarosAdat(l):null;
+      const adat=jelVarosAdat(l);
       let cy=ly;
       svg+=`<circle class="jPont" data-tel="${esc(n)}" cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="${adat?"4":"5.5"}"/>`;
       if(adat){
-        const szel=Math.max(40,Math.min(92,Math.round(JEL.W*0.165*(0.68+0.32*l.length/legtobb))));
-        const r=jelVarosSvg(adat,lx,ly,szel,n); svg+=r.svg; cy=ly+r.teto;
+        const r=jelVarosSvg(adat,lx,ly,jelModellSzel(adat.length),"tel:"+n); svg+=r.svg; cy=ly+r.teto;
       }
       cimke+=`<button class="jTel${adat?" alatt":""}" data-epv="tel:${esc(n)}" style="left:${lx.toFixed(1)}px;top:${Math.max(0,cy).toFixed(1)}px"`
         +` aria-label="${esc(t.epvPin.replace("%s",n).replace("%s",epvDb(l.length)).replace("%s",van))}">`
@@ -4291,6 +4353,12 @@ const VAROS_KOZ = 4;             // a házak köze, méterben: 7-tel a modell sz
                                  // két kupacra, nem egy településnek látszott
 const VAROS_DOL = 52;
 
+/* A modell szélessége a BENNE álló házak számából, nem a csoport méretéből:
+   különben a VI. kerület egyetlen háza akkorára nőtt, mint a III. kerület
+   öt háza együtt — a kép azt hazudta, hogy ott van a nagyobb telephely. */
+function jelModellSzel(db){
+  return Math.round(Math.max(30,Math.min(JEL.W*0.27,22*Math.min(VAROS_MAX,db))));
+}
 function jelVarosAdat(tag){
   const h=tag.map(e=>({e,p:epvHely(e)})).filter(x=>x.p&&x.p.kontur&&x.p.kontur[0]&&x.p.kontur[0].length>2);
   if(!h.length) return null;     // kitalált házat nem rajzolunk: marad a sima jel
@@ -4330,7 +4398,7 @@ function jelVarosAdat(tag){
 /* A modell a saját, rögzített ferde kamerájával rajzolódik (a térkép dőlése
    országos léptéken 0), és a TALPA kerül a település pontjára. Így a lapos
    térképen is állónak látszik, mint a régi, képes térképek házikói. */
-function jelVarosSvg(adat, lx, ly, szel, nev){
+function jelVarosSvg(adat, lx, ly, szel, cel){
   const t=VAROS_DOL*Math.PI/180, ct=Math.cos(t), st=Math.sin(t);
   const px=[], py=[];
   for(const b of adat) for(const [gx,gy] of b.gyuru) for(const z of [0,b.magas]){
@@ -4361,7 +4429,7 @@ function jelVarosSvg(adat, lx, ly, szel, nev){
       +`<path class="tet" d="${ut(b.gyuru.map(([gx,gy])=>P(b.kx+gx,b.ky+gy,b.magas)))}"/></g>`;
   }
   const teto=Math.min(...py)*s - talp;       // a modell teteje a talphoz képest
-  return { svg:`<g class="jVar" data-epv="tel:${esc(nev)}" data-x="${lx.toFixed(1)}" data-y="${(ly+talp).toFixed(1)}"`
+  return { svg:`<g class="jVar" data-epv="${esc(cel)}" data-x="${lx.toFixed(1)}" data-y="${(ly+talp).toFixed(1)}"`
              +` transform="translate(${lx.toFixed(1)},${(ly+talp).toFixed(1)})">${svg}</g>`,
            teto };
 }
@@ -4610,7 +4678,7 @@ function epvJelenetInit(){
   if(!JEL.k){
     const o=jelIlleszt(jelOrszagBB(),1.06); JEL.k=o.k; JEL.cx=o.cx; JEL.cy=o.cy;
     const cel=EPV.kod?jelHazBB(EPV.kod):EPV.tel?jelTelBB(EPV.tel):null;
-    if(cel){ const q=jelIlleszt(cel,EPV.kod?2.6:1.35);
+    if(cel){ const q=jelIlleszt(cel,EPV.kod?2.6:1.32);
       JEL.k=Math.min(JEL.kMax,q.k); JEL.cx=q.cx; JEL.cy=q.cy; }
   }
   if(!host.__kotve){ jelKotes(host); host.__kotve=1; }
@@ -4635,7 +4703,7 @@ function epvOda(mit, arg){
             if(w[0]<a)a=w[0]; if(w[0]>b)b=w[0]; if(w[1]<cc)cc=w[1]; if(w[1]>d)d=w[1]; }
           bb=[a,cc,b,d]; } } }
   }
-  if(bb) jelRepul(jelIlleszt(bb, mit==="ep"?2.6:(mit==="csop"?1.15:1.35)));
+  if(bb) jelRepul(jelIlleszt(bb, mit==="ep"?2.6:(mit==="csop"?1.25:1.32)));
 }
 
 
@@ -4799,7 +4867,14 @@ function epvRender(){
           +`<button class="epvsor" data-epv="csop:" style="min-height:44px;border-top:0"><span class="szov"><i>‹ ${esc(t.epvAll)}: ${esc(epvDb(l.length))}</i></span></button>`
           +utcankent(c.tag);
       } else {
-        lista=cs.map(c=>`<h3>${esc(c.nev)} · ${esc(epvDb(c.tag.length))}</h3>`+utcankent(c.tag)).join("");
+        /* A csoport (kerület, telephely) FEJLÉCE gomb: ez a „telephely” szint
+           bejárata. A jelenetben a csoportok jele csak ott van kint, ahol a
+           házak még névtelenek — közelebbről a ház a célpont —, a listában
+           viszont mindig kell egy út a campus szűkítéséhez. */
+        lista=cs.map(c=>`<h3><button class="epvcsop" data-epv="csop:${esc(c.kulcs)}">`
+          +`<span>${esc(c.nev)} · ${esc(epvDb(c.tag.length))}</span>`
+          +`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button></h3>`
+          +utcankent(c.tag)).join("");
         const kint=l.filter(e=>!cs.some(c=>c.tag.includes(e)));
         if(kint.length) lista+=(cs.length?`<h3>${t.epvNotOnMap}</h3>`:"")+utcankent(kint);
       }
