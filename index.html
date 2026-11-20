@@ -660,7 +660,7 @@ button{cursor:pointer;background:none;border:0}
   --fs:color-mix(in srgb,var(--ink) 55%,var(--surface));
   --tet:color-mix(in srgb,var(--ink) 13%,var(--surface));cursor:pointer}
 .jHaz .fal path{fill:color-mix(in srgb,var(--fv) var(--f),var(--fs));stroke:none}
-.jHaz .tet{fill:var(--tet);stroke:color-mix(in srgb,var(--ink) 40%,transparent);
+.jHaz .tet{fill:var(--tet);stroke:color-mix(in srgb,var(--ink) 26%,transparent);
   stroke-width:1;vector-effect:non-scaling-stroke}
 .jHaz.van{--fv:color-mix(in srgb,var(--accent) 52%,white);
   --fs:color-mix(in srgb,var(--accent) 80%,black);
@@ -4086,16 +4086,21 @@ const JEL_MPP_HAZ = 20;         // ezalatt kihúzott tömeg
    campus-közelben eléri az 1-et — ott már méretarányos. Ugyanez az eljárás,
    mint amikor egy térkép az utat a valódinál szélesebbre rajzolja. */
 const JEL_TIPIKUS = 60;         // a tipikus épület mérete méterben (mérve)
-const JEL_CEL_PX = 46;          // ekkorára nagyítjuk a tipikus házat, amíg lehet
-const JEL_NAGY_MAX = 8;         // ennél többször nem: a szomszédok összeérnének
+const JEL_CEL_PX = 62;          // ekkorára nagyítjuk a tipikus házat, amíg lehet
+const JEL_NAGY_MAX = 8;         // a legkisebbek ráadásának felső határa
+/* Az EGYSÉGES szorzó külön, kisebb korlátja: campus-közelben a szomszédos
+   házak (OA, OC, OD egymás mellett állnak) négyszeresnél jobban nagyítva
+   egyetlen tömbbé olvadnak, és épp azt nem lehet megkülönböztetni, ami ott
+   a kérdés. */
+const JEL_EGY_MAX = 4;
 /* A nagyítás EGYSÉGES — minden ház ugyanannyiszorosára nő —, különben az
    ARÁNYOK borulnának: házanként a célmérethez igazítva a 101 m-es OA és a
    24 m-es KD egyforma nagy lett volna, a magasságuk meg (a nagyítással
    együtt nőve) megfordult: a hétszintes OA alacsonyabb lett a hatszintes
    OC-nél. A legkisebbek kapnak csak külön ráadást, hogy koppinthatók
    legyenek — a magasságuk ettől nem nő, azt mindig az egységes szorzó adja. */
-const JEL_MIN_PX = 16;          // ekkora alá egy ház sem mehet
-const JEL_NEV_PX = 24;          // ekkorától van kiírva a ház neve
+const JEL_MIN_PX = 24;          // ekkora alá egy ház sem mehet
+const JEL_NEV_PX = 34;          // ekkorától van kiírva a ház neve
 const JEL_NEV_DB = 12;          // ennyi házig mindegyiké kint van
 const JEL_MPP_NEV = 15;
 /* Ezalatt a VALÓDI házak állnak a valódi helyükön; fölötte a campusok kis
@@ -4105,7 +4110,17 @@ const JEL_MPP_CSOP = 6;         // ezalatt a csoportok jele már nem kell: a há
 /* A csoport sugara méterben: egy campus együtt maradjon, két telephely ne. */
 const CSOP_M = 600;
 
-const JEL = { k: 0, cx: 0, cy: 0, W: 0, H: 0, anim: null };
+/* A kamera RÖGZÍTETT FOKOKRA áll be, nem tetszőleges nagyításra: minden
+   campus és minden város ugyanúgy, ugyanakkora házakkal nyílik meg, és a
+   hallgató onnan nagyít tovább. A fokok √2-es lépcsők (mint a 3D-s rajz
+   sűrűsége), tehát a legrosszabb eset is 19% eltérés a kívánt kivágattól.
+   Odarepüléskor LEFELÉ kerekítünk (kijjebb), hogy a cél sose lógjon ki;
+   kézi nagyítás után a legközelebbire, hogy a mozdulat „beakadjon”. */
+const JEL_FOK = Math.SQRT2;
+const jelFokLe = k => Math.pow(JEL_FOK, Math.floor(Math.log(k)/Math.log(JEL_FOK)));
+const jelFokRa = k => Math.pow(JEL_FOK, Math.round(Math.log(k)/Math.log(JEL_FOK)));
+
+const JEL = { k: 0, cx: 0, cy: 0, W: 0, H: 0, anim: null, fok: null };
 let JELVET = null;              // a vetület (a HELYEK betöltésekor áll elő)
 
 /* A vetület az ország befoglalójának közepére áll; minden világkoordináta
@@ -4218,7 +4233,7 @@ function jelRajz(){
        Campus-közelben 1, tehát ott méretarányos; messzebbről annyi, hogy a
        ház látható és megkoppintható maradjon (mérve: nélküle a település
        egészét mutató képen 1–3 képpont, ami használhatatlan). */
-    const gEgy=Math.max(1,Math.min(JEL_NAGY_MAX,JEL_CEL_PX/(JEL_TIPIKUS*kam.k)));
+    const gEgy=Math.max(1,Math.min(JEL_EGY_MAX,JEL_CEL_PX/(JEL_TIPIKUS*kam.k)));
     const nagy=h=>Math.max(gEgy,Math.min(JEL_NAGY_MAX*2,JEL_MIN_PX/Math.max(1,(h.sz||25)*kam.k)));
     const lathatoN=h=>{ const g=nagy(h), r=(h.sz||25)*g/2;
       return lathato([h.kp[0]-r,h.kp[1]-r,h.kp[0]+r,h.kp[1]+r]); };
@@ -4467,6 +4482,12 @@ function jelCimkek(h){
                       t:Math.max(2,Math.min(hr.height-r.h-2,r.t)), w:r.w, h:r.h });
   const rect=e=>{ const r=e.getBoundingClientRect();
     return {l:r.left-hr.left, t:r.top-hr.top, w:r.width, h:r.height}; };
+  /* A szár a doboz LEGKÖZELEBBI SZÉLÉIG megy, nem a közepéig: a közepéig
+     húzva átszelte a modellt, mintha vonal lenne rajzolva a házakra. */
+  const szarhoz=(px,py,r)=>{
+    const x=Math.max(r.l,Math.min(r.l+r.w,px)), y=Math.max(r.t,Math.min(r.t+r.h,py));
+    return (x===px&&y===py)?null:[x,y];     // a dobozon belülről nincs mit kötni
+  };
   const szar=(x1,y1,x2,y2)=>{ if(!sv) return;
     const ln=document.createElementNS("http://www.w3.org/2000/svg","line");
     ln.setAttribute("class","jSzar");
@@ -4501,7 +4522,10 @@ function jelCimkek(h){
     const dx=r.l-a.l, dy=r.t-a.t;
     g.setAttribute("transform",`translate(${(+g.dataset.x+dx).toFixed(1)},${(+g.dataset.y+dy).toFixed(1)})`);
     foglalt.push(r);
-    if(Math.abs(dx)+Math.abs(dy)>16) szar(g.dataset.x,g.dataset.y,+g.dataset.x+dx,+g.dataset.y+dy);
+    if(Math.abs(dx)+Math.abs(dy)>16){
+      const v=szarhoz(+g.dataset.x,+g.dataset.y,r);
+      if(v) szar(g.dataset.x,g.dataset.y,v[0],v[1]);
+    }
   });
   /* 2. a címke a MODELLJE fölé kerül (ha van), különben a jele fölé marad. */
   for(const e of el){
@@ -4525,8 +4549,10 @@ function jelCimkek(h){
     el[i].style.setProperty("--dx",(r.l-alap[i].l)+"px");
     el[i].style.setProperty("--dy",(r.t-alap[i].t)+"px");
     kesz.push(r);
-    if(Math.abs(r.l-alap[i].l)+Math.abs(r.t-alap[i].t)>16)
-      szar(pont[i][0],pont[i][1],r.l+r.w/2,r.t+r.h/2);
+    if(Math.abs(r.l-alap[i].l)+Math.abs(r.t-alap[i].t)>16){
+      const v=szarhoz(pont[i][0],pont[i][1],r);
+      if(v) szar(pont[i][0],pont[i][1],v[0],v[1]);
+    }
   }
 }
 /* Egy világbeli befoglalóra illesztés. A dőlés miatt a kép függőlegesen
@@ -4594,6 +4620,20 @@ function jelNagyit(tenyezo, sx, sy){
   JEL.cx+=elotte[0]-utana[0]; JEL.cy+=elotte[1]-utana[1];
   jelFrissit();
 }
+/* A mozdulat végén a nagyítás a legközelebbi fokra akad be, az ujj (vagy az
+   egér) alatti pontot a helyén tartva. A gomb eleve fokot lép, ott nincs
+   mit igazítani. */
+function jelBeakad(sx,sy){
+  clearTimeout(jelBeakad.id);
+  jelBeakad.id=setTimeout(()=>{
+    if(!JEL.k||JEL.anim) return;
+    const cel=Math.max(JEL.kMin,Math.min(JEL.kMax,jelFokRa(JEL.k)));
+    if(Math.abs(cel-JEL.k)<JEL.k*0.004) return;
+    const e=jelVilag(sx,sy), k0=JEL.k;
+    JEL.k=cel; const u=jelVilag(sx,sy); JEL.k=k0;
+    jelRepul({k:cel, cx:JEL.cx+e[0]-u[0], cy:JEL.cy+e[1]-u[1]}, 220);
+  },180);
+}
 
 /* A jelenet gesztusai. Külön a térkép gesztusaitól: ez egy modális ablakban
    él, és a saját kamerája van. */
@@ -4633,13 +4673,19 @@ function jelKotes(host){
       jelFrissit();
     }
   });
-  const fel=ev=>{ ujj.delete(ev.pointerId); if(ujj.size<2) huz=ujj.size?{...[...ujj.values()][0],cx:JEL.cx,cy:JEL.cy}:null; };
+  const fel=ev=>{
+    const volt=ujj.size;
+    ujj.delete(ev.pointerId);
+    if(ujj.size<2) huz=ujj.size?{...[...ujj.values()][0],cx:JEL.cx,cy:JEL.cy}:null;
+    if(volt>=2) jelBeakad(JEL.W/2,JEL.H/2);      // csippentés után beakad a fokra
+  };
   host.addEventListener("pointerup",fel);
   host.addEventListener("pointercancel",fel);
   host.addEventListener("wheel",ev=>{
     ev.preventDefault();
     const h=hely(ev);
     jelNagyit(Math.pow(1.0022,-ev.deltaY), h.x, h.y);
+    jelBeakad(h.x,h.y);
   },{passive:false});
   host.__moz=()=>moz;
 }
@@ -4678,8 +4724,8 @@ function epvJelenetInit(){
   if(!JEL.k){
     const o=jelIlleszt(jelOrszagBB(),1.06); JEL.k=o.k; JEL.cx=o.cx; JEL.cy=o.cy;
     const cel=EPV.kod?jelHazBB(EPV.kod):EPV.tel?jelTelBB(EPV.tel):null;
-    if(cel){ const q=jelIlleszt(cel,EPV.kod?2.6:1.32);
-      JEL.k=Math.min(JEL.kMax,q.k); JEL.cx=q.cx; JEL.cy=q.cy; }
+    if(cel){ const q=jelIlleszt(cel,EPV.kod?2.4:1.08);
+      JEL.k=Math.min(JEL.kMax,jelFokLe(q.k)); JEL.cx=q.cx; JEL.cy=q.cy; }
   }
   if(!host.__kotve){ jelKotes(host); host.__kotve=1; }
   jelFrissit();
@@ -4703,7 +4749,9 @@ function epvOda(mit, arg){
             if(w[0]<a)a=w[0]; if(w[0]>b)b=w[0]; if(w[1]<cc)cc=w[1]; if(w[1]>d)d=w[1]; }
           bb=[a,cc,b,d]; } } }
   }
-  if(bb) jelRepul(jelIlleszt(bb, mit==="ep"?2.6:(mit==="csop"?1.25:1.32)));
+  if(!bb) return;
+  const q=jelIlleszt(bb, mit==="ep"?2.4:(mit==="csop"?1.05:1.08));
+  jelRepul({k:jelFokLe(q.k), cx:q.cx, cy:q.cy});
 }
 
 
@@ -5075,7 +5123,11 @@ $("epvlist").addEventListener("click",ev=>{
   else if(m==="ep"){ const e=EPULETEK.epuletek[arg]; if(!e) return;
     // ugyanaz a szabály, mint a lista sorainál: ami megnyitható, az nyílik
     if(e.navigalhato) epuletValt(e.kod); else { epvLep({kod:e.kod}); epvOda("ep",e.kod); } }
-  else if(m==="zoom") jelNagyit(arg==="be"?1.9:1/1.9, JEL.W/2, JEL.H*0.62);
+  else if(m==="zoom"){
+    // a gomb egész fokot lép, a már beállt fokról: így mindig fokon marad
+    const cel=Math.max(JEL.kMin,Math.min(JEL.kMax,jelFokRa(JEL.k)*(arg==="be"?2:0.5)));
+    jelNagyit(cel/JEL.k, JEL.W/2, JEL.H*0.62);
+  }
   else if(m==="kartya"){ epvLep({kod:arg,tel:epvTel(EPULETEK.epuletek[arg]||{})});
     epvOda("ep",arg); }
   else if(m==="nyit") epuletValt(arg);

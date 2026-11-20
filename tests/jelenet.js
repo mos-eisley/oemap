@@ -190,6 +190,21 @@ run("jelenet", async ({ t, browser, base }) => {
   t("a + gomb nagyít", (await p.evaluate(() => JEL.k)) > k0 * 1.5);
   await p.click('[data-epv="zoom:ki"]'); await p.waitForTimeout(200);
   t("a − gomb vissza", Math.abs((await p.evaluate(() => JEL.k)) - k0) < k0 * 0.02);
+  /* A kamera RÖGZÍTETT FOKOKRA áll be: minden campus és minden város
+     ugyanúgy, ugyanakkora házakkal nyílik meg, és a hallgató onnan nagyít
+     tovább. A fokok √2-es lépcsők. */
+  const fokon = k => Math.abs(Math.log(k) / Math.log(Math.SQRT2) - Math.round(Math.log(k) / Math.log(Math.SQRT2))) < 0.01;
+  t("a gombbal lépve a nagyítás fokon marad", fokon(await p.evaluate(() => JEL.k)));
+  const beakadt = await p.evaluate(async () => {
+    jelNagyit(1.27, JEL.W / 2, JEL.H / 2);          // fokok közé állunk
+    const kozott = JEL.k;
+    const h = jelHost();
+    h.dispatchEvent(new WheelEvent("wheel", { deltaY: -1, bubbles: true, cancelable: true }));
+    await new Promise(r => setTimeout(r, 900));
+    return { kozott, utana: JEL.k };
+  });
+  t("és a kézi nagyítás után beakad a legközelebbi fokra",
+    !fokon(beakadt.kozott) && fokon(beakadt.utana), JSON.stringify(beakadt));
   t("az országnál kijjebb nem lehet menni", await p.evaluate(() => {
     for (let i = 0; i < 30; i++) jelNagyit(1 / 1.9, JEL.W / 2, JEL.H / 2);
     return Math.abs(JEL.k - JEL.kMin) < JEL.kMin * 0.01;

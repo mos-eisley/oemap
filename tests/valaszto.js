@@ -84,9 +84,11 @@ run("térképes választó", async ({ t, ctx, browser, base }) => {
       return { nev: b.textContent.trim(), oldal: x < f[0] ? "Buda" : "Pest" };
     });
   });
-  const oldal = Object.fromEntries(part.map(x => [x.nev.replace(/\s+\d+$/, ""), x.oldal]));
+  // rendezve: a jelek sorrendje a mélységtől függ, az állítás nem arról szól
+  const oldal = Object.fromEntries(part.map(x => [x.nev.replace(/\s+\d+$/, ""), x.oldal])
+    .sort((a, b) => a[0].localeCompare(b[0], "hu")));
   t.eq("Budapesten kerületenként egy jel: az óbudai Budán, a többi Pesten", oldal,
-    { "III. kerület": "Buda", "VIII. kerület": "Pest", "XIV. kerület": "Pest", "VI. kerület": "Pest" });
+    { "III. kerület": "Buda", "VI. kerület": "Pest", "VIII. kerület": "Pest", "XIV. kerület": "Pest" });
   /* A tájékozódást a folyó adja: a városi léptéken a település saját, részletes
      Duna-szakasza fut (az országos, durvább vonal nem, mert a kettő egymásra
      rajzolva kereszteződő szalagoknak látszott). */
