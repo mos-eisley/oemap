@@ -35,8 +35,11 @@ oldal külső szolgáltató nélkül működik, és offline is: az OA mindig, a 
 ## Az egyetem épületei
 
 A fejlécben az épület neve egyben választógomb: egy nagyítható térkép nyílik
-meg az egyetem **mind a 39 épületével**. Magyarország fölött indul, a
-települések jelével (Budapest, Székesfehérvár, Nagymaros), és onnan
+meg az egyetem **mind a 39 épületével**. Magyarország fölött indul: minden
+egyetemi városnál (Budapest, Székesfehérvár, Nagymaros) ott áll a saját
+épületeiből összerakott kis 3D-s mása — valódi alakkal és valódi
+szintarányokkal, csak nem méretarányosan, mert valódi méretben egy ház itt
+0,2 képpont lenne. Onnan
 **egyetlen, folytonos mozdulattal** le lehet menni az épületek közé: csippents
 vagy görgess, és a kamera magától leszáll — előbb a városrészek jele jön elő,
 aztán az épületek tömege a valódi helyükön, a saját körvonalukkal és

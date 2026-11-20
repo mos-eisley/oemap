@@ -682,6 +682,11 @@ path.jHaz.folt.van{fill:var(--accent)}
   background:color-mix(in srgb,var(--surface) 92%,transparent);
   font:700 12.5px/1.25 inherit;color:var(--ink)}
 .jTel.csop{font-weight:600;font-size:11.5px;color:var(--ink-2)}
+/* A modelles település neve a házai ALATT áll, mint a régi, képes térképek
+   házikóinál: fölötte a modell, alatta a név — egy egység. */
+.jTel.alatt{margin-top:4px;transform:translate(calc(-50% + var(--dx,0px)),var(--dy,0px))}
+.jVar{cursor:pointer}
+.jArny{fill:color-mix(in srgb,var(--ink) 12%,transparent)}
 .jSzar{stroke:color-mix(in srgb,var(--accent) 45%,transparent);stroke-width:1.5}
 .jPont{fill:var(--accent);stroke:color-mix(in srgb,var(--accent) 22%,var(--surface));stroke-width:3.5}
 .jPont.csop{fill:color-mix(in srgb,var(--accent) 72%,var(--surface))}
@@ -4227,25 +4232,134 @@ function jelRajz(){
   /* 5. réteg: a települések jele. Közelebbről elhalványul, mert ott már a
      házak mondják meg, hol vagyunk. */
   if(mpp>JEL_MPP_HAZ && EPULETEK){
-    const telek=new Map();
+    const tl=new Map();
     for(const e of Object.values(EPULETEK.epuletek)){
-      const n=epvTel(e), h=epvHely(e); if(!n||!h) continue;
-      if(!telek.has(n)) telek.set(n,[]);
-      telek.get(n).push(h);
+      const n=epvTel(e); if(!n||!epvHely(e)) continue;
+      if(!tl.has(n)) tl.set(n,[]);
+      tl.get(n).push(e);
     }
-    for(const [n,hs] of telek){
-      const w=hs.reduce((s,h)=>{ const q=JELVET.p(h.lon,h.lat); return [s[0]+q[0]/hs.length,s[1]+q[1]/hs.length]; },[0,0]);
+    /* Északról dél felé: a távolabbi település modellje kerül hátra, hogy a
+       közelebbi takarja — ugyanaz a festőalgoritmus, mint a házaknál. */
+    const telek=[...tl].map(([n,l])=>{
+      const hs=l.map(epvHely);
+      const w=hs.reduce((a,h)=>{ const q=JELVET.p(h.lon,h.lat); return [a[0]+q[0]/hs.length,a[1]+q[1]/hs.length]; },[0,0]);
+      return {n,l,w};
+    }).sort((a,b)=>b.w[1]-a.w[1]);
+    /* A modell mérete: Budapest és Székesfehérvár jele az ország térképén
+       telefonon 38 képpontra van egymástól, úgyhogy egy nagy modell a
+       szomszédjára ül. 0,15×keret a legnagyobb településé, a kisebbeké
+       arányosan kevesebb — így a modellek megállnak egymás mellett. */
+    const legtobb=Math.max(...telek.map(x=>x.l.length));
+    for(const {n,l,w} of telek){
       const [lx,ly]=kam.p(w[0],w[1],0);
       if(lx<0||lx>JEL.W||ly<0||ly>JEL.H) continue;
-      const mind=Object.values(EPULETEK.epuletek).filter(e=>epvTel(e)===n);
-      const van=mind.filter(e=>e.navigalhato).length;
-      svg+=`<circle class="jPont" cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="5.5"/>`;
-      cimke+=`<button class="jTel" data-epv="tel:${esc(n)}" style="left:${lx.toFixed(1)}px;top:${ly.toFixed(1)}px"`
-        +` aria-label="${esc(t.epvPin.replace("%s",n).replace("%s",epvDb(mind.length)).replace("%s",van))}">`
+      const van=l.filter(e=>e.navigalhato).length;
+      // a modell csak országos léptéken: alatta már a valódi házak állnak a helyükön
+      const adat=mpp>JEL_MPP_VAROS?jelVarosAdat(l):null;
+      let cy=ly;
+      svg+=`<circle class="jPont" data-tel="${esc(n)}" cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="${adat?"4":"5.5"}"/>`;
+      if(adat){
+        const szel=Math.max(40,Math.min(92,Math.round(JEL.W*0.165*(0.68+0.32*l.length/legtobb))));
+        const r=jelVarosSvg(adat,lx,ly,szel,n); svg+=r.svg; cy=ly+r.teto;
+      }
+      cimke+=`<button class="jTel${adat?" alatt":""}" data-epv="tel:${esc(n)}" style="left:${lx.toFixed(1)}px;top:${Math.max(0,cy).toFixed(1)}px"`
+        +` aria-label="${esc(t.epvPin.replace("%s",n).replace("%s",epvDb(l.length)).replace("%s",van))}">`
         +`${esc(n)}</button>`;
     }
   }
   return `<svg viewBox="0 0 ${JEL.W} ${JEL.H}" aria-hidden="true" focusable="false">${svg}</svg>${cimke}`;
+}
+
+/* ------------------------------------- a település kis 3D-s mása (modell) */
+/* Országos léptéken egy ház 0,2 képpont lenne — ott tehát NEM méretarányos
+   rajz kell, hanem MODELL: a település jellemző házai egymás mellé állítva,
+   a saját OSM-körvonalukkal és a saját szintszámuk arányával. Az ALAK és a
+   MAGASSÁGOK ARÁNYA igaz, a HELYÜK a modellen belül nem az — a darabszámot a
+   címke mondja meg.
+
+   Ami megkülönbözteti a korábbi, elvetett változattól: a modell nem egy
+   kártyában ül a jel MELLETT, hanem a település SAJÁT PONTJÁN áll, a
+   jelenet talaján, ugyanabban a fényelésben — része a világnak, nem rátett
+   csempe. */
+const VAROS_SZINT = 3.4 * 2.2;   // szintmagasság, túlozva: valódi aránnyal lapos tányérok lennének
+const VAROS_MAX = 5;             // ennél több ház ekkora jelben pacni
+const VAROS_KOZ = 4;             // a házak köze, méterben: 7-tel a modell szétesett
+                                 // két kupacra, nem egy településnek látszott
+const VAROS_DOL = 52;
+
+function jelVarosAdat(tag){
+  const h=tag.map(e=>({e,p:epvHely(e)})).filter(x=>x.p&&x.p.kontur&&x.p.kontur[0]&&x.p.kontur[0].length>2);
+  if(!h.length) return null;     // kitalált házat nem rajzolunk: marad a sima jel
+  const KY=110540;
+  const hazak=h.map(({e,p})=>{
+    const g0=p.kontur[0], la=g0.reduce((s,q)=>s+q[1],0)/g0.length, KX=111320*Math.cos(la*Math.PI/180);
+    const g=campusCcw(g0.map(([x,y])=>[x*KX,y*KY]));
+    let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;
+    for(const [x,y] of g){ if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; }
+    const cx=(x0+x1)/2, cy=(y0+y1)/2;      // a saját közepére húzva, hogy elhelyezhető legyen
+    return {kod:e.kod, van:!!e.navigalhato, most:e.kod===epItt(),
+            gyuru:g.map(([x,y])=>[x-cx,y-cy]), sz:x1-x0, m:y1-y0,
+            magas:Math.max(1,e.szint||1)*VAROS_SZINT};
+  });
+  /* Előbb amelyiknek van alaprajza — azt tudja a hallgató használni —, utána
+     a nagyobb alapterületű: a modell a település jellemző házait mutatja. */
+  hazak.sort((a,b)=>(b.van?1:0)-(a.van?1:0) || b.sz*b.m-a.sz*a.m);
+  const v=hazak.slice(0,VAROS_MAX);
+  /* KÉT SORBA, nem egybe: egy sorban mérve a modell 92×27 képpont lett, vékony
+     szalag, amin a 3D nem látszik. A magasabbak hátra, hogy ne takarjanak. */
+  v.sort((a,b)=>b.magas-a.magas);
+  const hatul=v.filter((_,i)=>i%2===0), elol=v.filter((_,i)=>i%2===1);
+  const sorSzel=r=>r.reduce((s,b)=>s+b.sz,0)+Math.max(0,r.length-1)*VAROS_KOZ;
+  const melyH=Math.max(0,...hatul.map(b=>b.m)), melyE=Math.max(0,...elol.map(b=>b.m));
+  const W=Math.max(sorSzel(hatul),sorSzel(elol));
+  const sorba=(r,ky)=>{ let x=(W-sorSzel(r))/2;
+    for(const b of r){ b.kx=x-W/2+b.sz/2; b.ky=ky; x+=b.sz+VAROS_KOZ; } };
+  /* A két sor mélységben ÖSSZEÉR (0,62): teljes mélységgel a hosszú házak
+     két külön kupacnak látszottak egy település helyett. Az átfedést a
+     festőalgoritmus kezeli — az elülső sor takar, és ettől lesz sűrű város. */
+  const koz=(melyH+melyE)/2*0.62+VAROS_KOZ;
+  sorba(hatul, koz);          // észak = hátul
+  sorba(elol, -koz);
+  return v;
+}
+
+/* A modell a saját, rögzített ferde kamerájával rajzolódik (a térkép dőlése
+   országos léptéken 0), és a TALPA kerül a település pontjára. Így a lapos
+   térképen is állónak látszik, mint a régi, képes térképek házikói. */
+function jelVarosSvg(adat, lx, ly, szel, nev){
+  const t=VAROS_DOL*Math.PI/180, ct=Math.cos(t), st=Math.sin(t);
+  const px=[], py=[];
+  for(const b of adat) for(const [gx,gy] of b.gyuru) for(const z of [0,b.magas]){
+    px.push(b.kx+gx); py.push(-((b.ky+gy)*ct)-z*st); }
+  const sz=Math.max(1,Math.max(...px)-Math.min(...px));
+  const s=szel/sz;
+  const P=(e,n,z)=>[(e*s).toFixed(1),((-(n*ct)-(z||0)*st)*s).toFixed(1)];
+  const ut=p=>"M"+p.map(q=>q.join(" ")).join("L")+"Z";
+  const feny=(nx,ny)=>Math.max(0,Math.min(1,.5+.5*(nx*-.55+ny*-.84)));
+  // a talp: a földszinti pontok legalsó vetülete, hogy a modell a ponton álljon
+  const talp=Math.max(...adat.flatMap(b=>b.gyuru.map(([gx,gy])=>-((b.ky+gy)*ct)*s)));
+  let svg="";
+  for(const b of adat.slice().sort((a,c)=>(c.ky)-(a.ky))){     // hátulról előre
+    let falak="";
+    for(let i=0;i<b.gyuru.length;i++){
+      const q0=b.gyuru[i], q1=b.gyuru[(i+1)%b.gyuru.length];
+      const dx=q1[0]-q0[0], dy=q1[1]-q0[1], L=Math.hypot(dx,dy); if(!L) continue;
+      const nx=dy/L, ny=-dx/L; if(ny>=0) continue;             // hátlapvágás
+      falak+=`<path style="--f:${(feny(nx,ny)*100).toFixed(0)}%" d="`
+        +ut([P(b.kx+q0[0],b.ky+q0[1],0),P(b.kx+q1[0],b.ky+q1[1],0),
+             P(b.kx+q1[0],b.ky+q1[1],b.magas),P(b.kx+q0[0],b.ky+q0[1],b.magas)])+`"/>`;
+    }
+    /* Házanként saját kis árnyék, nem egy közös folt a modell alatt: egy
+       ellipszissel a hátsó sor a levegőben lógott. */
+    const [ax,ay]=P(b.kx,b.ky,0);
+    svg+=`<ellipse class="jArny" cx="${ax}" cy="${ay}" rx="${(b.sz*s*.62).toFixed(1)}" ry="${(b.sz*s*.2).toFixed(1)}"/>`
+      +`<g class="jHaz${b.van?" van":""}${b.most?" most":""}"><g class="fal">${falak}</g>`
+      +`<path class="tet" d="${ut(b.gyuru.map(([gx,gy])=>P(b.kx+gx,b.ky+gy,b.magas)))}"/></g>`;
+  }
+  const teto=Math.min(...py)*s - talp;       // a modell teteje a talphoz képest
+  return { svg:`<g class="jVar" data-epv="tel:${esc(nev)}" data-x="${lx.toFixed(1)}" data-y="${(ly+talp).toFixed(1)}"`
+             +` transform="translate(${lx.toFixed(1)},${(ly+talp).toFixed(1)})">${svg}</g>`,
+           teto };
 }
 
 /* ---------------------------------------------------- a kamera vezérlése */
@@ -4264,58 +4378,83 @@ function jelFrissit(){
   h.dataset.mpp=jelMpp().toFixed(2);
   jelCimkek(h);
 }
-/* A címkék helyét a KIRAJZOLT képen mérjük ki, nem előre számoljuk: a jelek
-   3D-ben vetülnek, a chip szélességét meg a betű adja. Mind a négy oldalt
-   végigpróbáljuk növekvő távolságon, és az első teljesen tiszta hely nyer —
-   ugyanaz az eljárás, mint a régi térkép jeleinél. Egyszerű
-   függőleges széttolás nem elég: Nagymaros és Budapest az ország térképén
-   22 képpontra van egymástól, és a széttolt chip 200 képpontra szállt el a
-   saját pontjától. */
+/* A rátétek (a települések modellje és minden címke) helyét a KIRAJZOLT
+   képen mérjük ki: négy oldal, növekvő távolságon, az első teljesen tiszta
+   hely nyer — ugyanaz az eljárás, mint a régi térkép jeleinél. A JEL a
+   helyén marad (az SVG-ben van), a rátét mozdul, és ha messzire került,
+   szár köti vissza. Egyszerű széttolás nem elég: Nagymaros és Budapest az
+   ország térképén 22 képpontra van egymástól, és a széttolt chip 200
+   képpontra szállt el a saját pontjától. */
 function jelCimkek(h){
   const el=[...h.querySelectorAll(".jTel,.jNev")];
-  if(!el.length||el.length>40) return;     // ennél többnél a mérés többe kerül, mint amennyit ér
-  el.forEach(e=>{ e.style.setProperty("--dx","0px"); e.style.setProperty("--dy","0px"); });
-  const hr=h.getBoundingClientRect();
-  const alap=el.map(e=>{ const r=e.getBoundingClientRect();
-    return {l:r.left-hr.left, t:r.top-hr.top, w:r.width, h:r.height}; });
-  const pont=el.map(e=>[parseFloat(e.style.left)||0, parseFloat(e.style.top)||0]);
+  const mod=[...h.querySelectorAll("g.jVar")];
+  if((!el.length&&!mod.length)||el.length>40) return;
+  const hr=h.getBoundingClientRect(), sv=h.querySelector("svg");
   const fed=(a,b)=>a.l<b.l+b.w&&b.l<a.l+a.w&&a.t<b.t+b.h&&b.t<a.t+a.h;
   const keretbe=r=>({ l:Math.max(2,Math.min(hr.width-r.w-2,r.l)),
                       t:Math.max(2,Math.min(hr.height-r.h-2,r.t)), w:r.w, h:r.h });
+  const rect=e=>{ const r=e.getBoundingClientRect();
+    return {l:r.left-hr.left, t:r.top-hr.top, w:r.width, h:r.height}; };
+  const szar=(x1,y1,x2,y2)=>{ if(!sv) return;
+    const ln=document.createElementNS("http://www.w3.org/2000/svg","line");
+    ln.setAttribute("class","jSzar");
+    ln.setAttribute("x1",(+x1).toFixed(1)); ln.setAttribute("y1",(+y1).toFixed(1));
+    ln.setAttribute("x2",x2.toFixed(1)); ln.setAttribute("y2",y2.toFixed(1));
+    sv.appendChild(ln); };
+  /* Az első tiszta hely: `tilt` a már elfoglalt téglalapok, `jelek` a pontok,
+     amikre nem szabad ráülni (a sajátjára igen: a modell azon ÁLL). */
+  const hova=(a,tilt,jelek,sajat,tav)=>{
+    for(const ki of tav) for(const [dx,dy] of (ki?[[0,-ki],[ki,0],[-ki,0],[0,ki]]:[[0,0]])){
+      const r=keretbe({l:a.l+dx, t:a.t+dy, w:a.w, h:a.h});
+      if(tilt.some(q=>fed(r,q))) continue;
+      if(jelek.some(([x,y],j)=>j!==sajat&&x>r.l-5&&x<r.l+r.w+5&&y>r.t-5&&y<r.t+r.h+5)) continue;
+      return r;
+    }
+    return null;
+  };
+  /* 1. a települések modellje. Országos léptéken Budapest és Székesfehérvár
+     jele 38 képpontra van egymástól, a modellek viszont 60–90 szélesek:
+     egymásra ültek, és egy házkupacnak látszottak két város helyett. */
+  /* MINDEN település pontja számít, nem csak a modelleseké: Nagymarosnak
+     nincs körvonalas épülete (tehát modellje sem), és Budapest modellje
+     pont ráült a jelére. */
+  const jelek=[...h.querySelectorAll("circle.jPont")].map(c=>[+c.getAttribute("cx"),+c.getAttribute("cy")]);
+  const mPont=mod.map(g=>jelek.findIndex(q=>Math.abs(q[0]-g.dataset.x)<1));
+  const foglalt=[];
+  // 9 képpont köz: összeérve a két modell egyetlen házkupacnak látszott
+  const koz=r=>({l:r.l-9, t:r.t-9, w:r.w+18, h:r.h+18});
+  mod.forEach((g,i)=>{
+    const a=rect(g);
+    const r=hova(a,foglalt.map(koz),jelek,mPont[i],[0,18,34,52,74,98])||keretbe(a);
+    const dx=r.l-a.l, dy=r.t-a.t;
+    g.setAttribute("transform",`translate(${(+g.dataset.x+dx).toFixed(1)},${(+g.dataset.y+dy).toFixed(1)})`);
+    foglalt.push(r);
+    if(Math.abs(dx)+Math.abs(dy)>16) szar(g.dataset.x,g.dataset.y,+g.dataset.x+dx,+g.dataset.y+dy);
+  });
+  /* 2. a címke a MODELLJE fölé kerül (ha van), különben a jele fölé marad. */
+  for(const e of el){
+    const g=mod.find(g=>g.dataset.epv===e.dataset.epv); if(!g) continue;
+    const r=rect(g);
+    e.style.left=(r.l+r.w/2).toFixed(1)+"px";
+    e.style.top=(e.classList.contains("alatt")?r.t+r.h:r.t).toFixed(1)+"px";
+  }
+  el.forEach(e=>{ e.style.setProperty("--dx","0px"); e.style.setProperty("--dy","0px"); });
+  const alap=el.map(rect);
+  const pont=el.map(e=>[parseFloat(e.style.left)||0, parseFloat(e.style.top)||0]);
   // a fontosabb kapja az első helyet: település, csoport, végül a házak neve
   const rang=e=>e.classList.contains("jTel")?(e.classList.contains("csop")?1:2):0;
   const sorrend=el.map((e,i)=>i).sort((a,b)=>rang(el[b])-rang(el[a]));
-  const kesz=[];
+  const kesz=foglalt.slice();
   for(const i of sorrend){
-    let jo=null;
-    for(const ki of [0,14,28,44,62,84,110]){
-      for(const [dx,dy] of (ki?[[0,-ki],[ki,0],[-ki,0],[0,ki]]:[[0,0]])){
-        const r=keretbe({l:alap[i].l+dx, t:alap[i].t+dy, w:alap[i].w, h:alap[i].h});
-        if(kesz.some(q=>fed(r,q))) continue;
-        // jelet nem takarhat el — a sajátját sem: azon ülve nem látszik, hová mutat
-        if(pont.some(([x,y])=>x>r.l-5&&x<r.l+r.w+5&&y>r.t-5&&y<r.t+r.h+5)) continue;
-        jo=[r.l-alap[i].l, r.t-alap[i].t]; break;
-      }
-      if(jo) break;
-    }
     /* Ha egyetlen hely sem tiszta, a keretbe szorítva marad: egy kilógó
        címke rosszabb, mint egy takaró. */
-    if(!jo){ const r=keretbe({l:alap[i].l, t:alap[i].t-84, w:alap[i].w, h:alap[i].h});
-      jo=[r.l-alap[i].l, r.t-alap[i].t]; }
-    el[i].style.setProperty("--dx",jo[0]+"px");
-    el[i].style.setProperty("--dy",jo[1]+"px");
-    kesz.push({l:alap[i].l+jo[0], t:alap[i].t+jo[1], w:alap[i].w, h:alap[i].h});
-    /* Messzire tolt címkéhez szár kell: három jel és három chip közt magától
-       nem derül ki, melyik melyiké. A szár az SVG-be megy, tehát a chip ALÁ:
-       a chip takarja a saját végét. */
-    if(Math.abs(jo[0])+Math.abs(jo[1])>16){
-      const r=kesz[kesz.length-1], sv=h.querySelector("svg");
-      if(sv){ const ln=document.createElementNS("http://www.w3.org/2000/svg","line");
-        ln.setAttribute("class","jSzar");
-        ln.setAttribute("x1",pont[i][0]); ln.setAttribute("y1",pont[i][1]);
-        ln.setAttribute("x2",(r.l+r.w/2).toFixed(1)); ln.setAttribute("y2",(r.t+r.h/2).toFixed(1));
-        sv.appendChild(ln); }
-    }
+    const r=hova(alap[i],kesz,pont,-1,[0,14,28,44,62,84,110])
+          ||keretbe({l:alap[i].l, t:alap[i].t-84, w:alap[i].w, h:alap[i].h});
+    el[i].style.setProperty("--dx",(r.l-alap[i].l)+"px");
+    el[i].style.setProperty("--dy",(r.t-alap[i].t)+"px");
+    kesz.push(r);
+    if(Math.abs(r.l-alap[i].l)+Math.abs(r.t-alap[i].t)>16)
+      szar(pont[i][0],pont[i][1],r.l+r.w/2,r.t+r.h/2);
   }
 }
 /* Egy világbeli befoglalóra illesztés. A dőlés miatt a kép függőlegesen

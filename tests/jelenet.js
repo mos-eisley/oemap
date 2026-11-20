@@ -32,8 +32,11 @@ const allapot = pg => pg.evaluate(() => ({
   dol: +jelDol().toFixed(1),
   tel: [...document.querySelectorAll(".jTel:not(.csop)")].map(b => b.dataset.epv).sort(),
   csop: [...document.querySelectorAll(".jTel.csop")].map(b => b.textContent.trim()).sort(),
-  tomeg: [...document.querySelectorAll("g.jHaz")].map(g => g.dataset.epv.slice(3)).sort(),
+  // a modell házai NEM a világ házai: a modell a jel helyén álló kis más
+  tomeg: [...document.querySelectorAll(".epvjel3d > svg > g.jHaz")].map(g => g.dataset.epv.slice(3)).sort(),
   pont: [...document.querySelectorAll("circle.jHaz.pont")].map(g => g.dataset.epv.slice(3)).sort(),
+  modell: [...document.querySelectorAll("g.jVar")].map(g => g.dataset.epv.slice(4)).sort(),
+  modellHaz: [...document.querySelectorAll("g.jVar g.jHaz")].length,
   nev: [...document.querySelectorAll(".jNev")].map(b => b.textContent.trim()).sort(),
 }));
 
@@ -57,8 +60,40 @@ run("jelenet", async ({ t, browser, base }) => {
   const o = await allapot(p);
   t.eq("országos léptéken a települések jele látszik", o.tel,
     ["tel:Budapest", "tel:Nagymaros", "tel:Székesfehérvár"]);
-  t("és se csoport, se ház, se házról szóló név", !o.csop.length && !o.tomeg.length && !o.pont.length && !o.nev.length,
+  t("és se csoport, se a világban álló ház, se házról szóló név", !o.csop.length && !o.tomeg.length && !o.pont.length && !o.nev.length,
     JSON.stringify(o));
+  /* A városok kis 3D-s mása: ott áll a saját pontjukon. Nagymarosnak nincs
+     körvonalas épülete, tehát modellje sem — kitalált házat nem rajzolunk. */
+  t.eq("a körvonalas épülettel bíró településnek 3D-s modellje van", o.modell, ["Budapest", "Székesfehérvár"]);
+  t("a modellben legfeljebb 5-5 ház áll (ennél több ekkora jelben pacni)",
+    o.modellHaz > 3 && o.modellHaz <= 10, String(o.modellHaz));
+  const modellek = await p.evaluate(() => {
+    const H = document.querySelector(".epvjel3d").getBoundingClientRect();
+    const r = [...document.querySelectorAll("g.jVar")].map(g => {
+      const b = g.getBoundingClientRect();
+      return { n: g.dataset.epv.slice(4), l: b.left - H.left, t: b.top - H.top, w: b.width, h: b.height };
+    });
+    const jel = [...document.querySelectorAll("circle.jPont")].map(c => [+c.getAttribute("cx"), +c.getAttribute("cy")]);
+    const sajatJel = g => +g.dataset.x;
+    const baj = [];
+    for (const a of r) {
+      if (a.w < 30) baj.push(a.n + " modellje apró: " + Math.round(a.w));
+      if (a.l < 0 || a.t < 0 || a.l + a.w > H.width || a.t + a.h > H.height) baj.push(a.n + " modellje kilóg");
+      for (const b of r) if (a !== b && a.n < b.n && a.l < b.l + b.w && b.l < a.l + a.w && a.t < b.t + b.h && b.t < a.t + a.h)
+        baj.push(a.n + " × " + b.n + " modellje fedi egymást");
+    }
+    // egy modell nem ülhet rá MÁSIK település jelére (a sajátján áll)
+    [...document.querySelectorAll("g.jVar")].forEach((g, i) => {
+      const a = r[i];
+      for (const [x, y] of jel) {
+        if (Math.abs(x - sajatJel(g)) < 2) continue;         // a saját jele
+        if (x > a.l && x < a.l + a.w && y > a.t && y < a.t + a.h) baj.push(a.n + " modellje takarja a (" + Math.round(x) + "," + Math.round(y) + ") jelet");
+      }
+    });
+    return baj;
+  });
+  t("a modellek jól láthatók: nem fedik egymást, nem lógnak ki, és nem takarnak másik jelet",
+    !modellek.length, modellek.join("; "));
   t("az ország fölött a kép felülnézet (a ferde országtérkép értelmetlen)", o.dol === 0, String(o.dol));
 
   await p.click('#epvlist .jTel[data-epv="tel:Budapest"]'); await nyugodt(p); await p.waitForTimeout(150);

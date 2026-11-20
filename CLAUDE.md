@@ -231,17 +231,38 @@ eltolással, a határ, a Duna és a Margit-sziget egyszerűsítve. Amit tudni ke
     `fokuszElotte()` a kettőt megkülönbözteti, különben újrarajzoláskor a
     fókusz a sorról a jelre ugrott. Töltés közben a gomb `aria-disabled`,
     nem `disabled`: a letiltott gombról a fókusz a `<body>`-ra esne.
-**A dioráma és a külön campus-rajz megszűnt.** Volt egy változat, amelyben az
-ország térképén minden település jele egy kis 3D-s modellt hordott, a
-települési térkép helyén pedig a telephely külön tömegrajza állt, saját
-forgatógombokkal. Élesben ez „csempékre tett” kártyáknak látszott, és joggal:
-a modell nem a helyén állt, csak a jele mellett. A folytonos jelenet ugyanazt
-az információt adja — ugyanaz a körvonal, ugyanaz a szintszám, ugyanaz a
-vetítés és fényelés —, csak a valódi helyén, és a nagyítás viszi oda. Amit a
-dioráma mért és továbbra is igaz: egy ház a valódi elrendezésben 1,3 képpont
-lenne egy ekkora jelben; és hogy minden raszterizált 3D-s sík külön
-renderpass, ezért a jelenet is EGYETLEN vetített SVG, nem CSS-3D rétegek
-(lásd „A falak kiemelése…”).
+**A városok kis 3D-s mása az ország térképén** (`jelVarosAdat()`,
+`jelVarosSvg()`): országos léptéken egy ház 0,2 képpont lenne, tehát ott NEM
+méretarányos rajz kell, hanem MODELL — a település jellemző házai egymás
+mellé állítva. Az ALAK és a MAGASSÁGOK ARÁNYA igaz (ugyanaz az OSM-körvonal
+és szintszám, mint közelről), a HELYÜK a modellen belül nem az; a darabszámot
+a címke mondja meg. Amit tudni kell:
+- **A modell a település SAJÁT PONTJÁN áll**, a jelenet talaján, saját
+  árnyékkal — nem egy kártyában a jel mellett. Egy korábbi változat kártyába
+  tette, és „csempékre tett” rátétnek látszott; ez a különbség, nem a rajz.
+- **Fix, ferde saját kamerával rajzolódik** (52°), mert a térkép dőlése
+  országos léptéken 0: így a lapos térképen is állónak látszik, mint a régi,
+  képes térképek házikói. A talpa kerül a pontra.
+- **Két sorba, mélységben összeérve** (0,62): egy sorban mérve a modell
+  92×27 képpont lett, vékony szalag, amin a 3D nem látszik; teljes mélységgel
+  viszont a hosszú házak két külön kupacnak látszottak egy település helyett.
+  Az átfedést a festőalgoritmus kezeli, és ettől lesz sűrű város.
+  Házanként saját kis árnyék van, nem egy közös folt: azon a hátsó sor
+  a levegőben lógott.
+- **Legfeljebb 5 ház** (`VAROS_MAX`), előbb a megnyithatók, aztán a nagyobb
+  alapterületűek; **körvonal nélküli településnek nincs modellje**
+  (Nagymaros): marad a sima jel, kitalált házakat nem rajzolunk.
+- **A modell ELMOZDULHAT a pontjától** (`jelCimkek()` első menete): Budapest
+  és Székesfehérvár jele az ország térképén 38 képpontra van egymástól, a
+  modellek 60–90 szélesek — egymásra ültek, és egy házkupacnak látszottak két
+  város helyett. A pont a helyén marad, a modell a mért elhelyezéssel (négy
+  oldal, növekvő távolság, 9 képpont köz) odébb kerül, és szár köti vissza.
+  **Másik település jelére nem ülhet rá** — a sajátjára igen, azon áll.
+- **A modelles település neve a házai ALATT áll** (`.jTel.alatt`), nem
+  fölöttük: a név fölött a modell, alatta a név, egy egység — és a chip így
+  nem takarja el a saját jelét.
+- A modell csak 300 m/px fölött van; alatta már a valódi házak állnak a
+  valódi helyükön.
 
 - Egy épület letöltése 20 s után feladja (`EPV_VARAKOZAS`), és üzenetet ad,
   különben egy elakadt kérés örökre „Betöltés…”-en hagyná.
@@ -528,7 +549,7 @@ hagytak egy hibás kódot.
 | `tests/meres.js` | a telefonos mérőlap (`meres.html`) végigfut a valódi appon, az OA-n akkor is, ha a készüléken más az alapértelmezett épület |
 | `tests/epuletek.js` | épületválasztó és **épületváltás**: mind a 39 épület bent van (településenként végigjárva, mindegyik pontosan egyszer), de csak az nyitható meg, aminek kész az adata; a Tervtár adatai a soron, az adatlapon a nem megnyithatónál nincs megnyitó és alapértelmezett gomb; az Esc csak a választót zárja, a kijelölés marad; más épület kódjára mutató link megnevezi az épületet, nem tűnik el csendben; a váltás mércéje **valódi épületeken mért aranyérték** (épületenként az elérhetetlen helyiségek, az útvonalak összhossza és a gráf élszáma a portától), a váltás utáni **tisztaság** (egyetlen tárolóban, a szintdobozokban sem marad régi bejegyzés), OD → KT → OD (a KT betöltésével); a fő folyosó mellé, de leszakadt szilánkhoz kötött OD-helyiségek (OD00F02, OD35E04) elérhetők, a csak sarkával érintkező OD00F03 nem; minden többcellás kötés egy falnyira van, harmadik helyiség nélkül, és odáig a célszinten az épületen belül vezet az út (pontos geometriával mérve); a homlokzat előtti gyűrűn és ablakrésen át nincs útvonal (KH00F36, KH00F37, KH00F42); a bekötések száma mind a hét épületben rögzített, és a saját foltján belüli út (KHX1PK2 → KHX1P03) megmarad; offline vissza az OA-ra; az `epuletKesz()` egyenként mind a hét kötelező elemre és a portára, és hibás szerkezetre (sokszög nélküli helyiség, maszk nélküli szint, hibás lépcsőpont…); ha az építés mégis elbukik, a régi épület épül vissza (nem félig vált); az ablakos cellakeresés véletlen pontokon és minden helyiségen ugyanazt adja, mint a teljes bejárás (OA, OD) — az aranyértékek egy szűkebb ablakot nem vennének észre; a nem elérhető adat üzenete angolul is a kóddal; **nyilvántartás nélkül** (első indulás, letiltott kérés) a gomb el sem jelenik meg, és az app elindul |
 | `tests/valaszto.js` | a választó: minden címmel bíró épület helye a saját települése és az ország határán belül; Budapesten a csoportok jele a Duna jó oldalán (a III. kerületé Budán), a Duna a képen fut a nagyításhoz mért szélességgel, a III. kerület csoportja a hét óbudai épület; a címkék hat képernyőméreten (telefon, keskeny, fekvő, asztal, alacsony és kis asztali ablak), négy nézetben nem fedik egymást és más jelét, és nem lógnak ki, átméretezés után sem; fekve a jelenet doboza elfér; a biztonsági sávokkal (CDP-vel emulálva) a forrás a kezdősáv fölött, fekve a jelenet a görgető tömbön belül; a házikó felirata telefonon is látszik; az OSM-forrás (ODbL, hivatkozással) a felületen; **alapértelmezett épület**: beállítás, a házikó, induláskor megnyílik, a link, a totem (cím nélkül is) és a párosító mód elsőbbsége, kikapcsolás, hálózat nélkül az OA marad, letiltott tárolóval is fut; **a csendes betöltés közben** választott terem marad, az ugyanarra az épületre mutató link érvényesül, a választott másik épület nyílik meg, a nyitott választó nem csukódik be (és nem mutat „Betöltés…”-t), egy görgetés megállítja, a házikó nem tölt újra; **GPS**: az OD körvonalán belül, a faltól 9 m-re „itt vagy”, előtte a körvonaltól mért távolság, a már nyitott épületnél nincs megnyitás, az YA-nál az YB is, messziről km, letiltott engedélynél üzenet, a bezárt választónál késve jött hely eldobódik; `helyek.json` nélkül csak a lista; a fókusz (zárt választóban nincs tab-állomás, nyitva bent marad, zárva visszatér, a sorról nem ugrik a jelenet címkéjére, a GPS-eredményre megy, a házikó, a töltés és egy azóta rejtetté vált nyitógomb után sem esik a `<body>`-ra); angolul „1 building”; a felirat a teljes képernyős választó fölött látszik, és újrarajzolás után is megvan; a választó saját szélére koppintva nem zárul be, asztalon a háttérre igen; fekvő telefonon (844×340 és a 900 px-nél szélesebb 932×380) a GPS-eredmény után is elérhető a lista; a dobozban kezdett, kint elengedett húzás nem zár; ugyanazon a nézeten újrarajzolva a görgetés marad; az alapértelmezett doboz gombja „Betöltés…”-t mutat; a linkről indult betöltés alatt választott terem marad; egy soha be nem fejeződő letöltés 20 s után üzenetet ad; az elakadt linkes váltás újrapróbálva a link termét nyitja, a hibalap bezárása után már nem; a két épületet vegyítő link egyszer vált, a history-ba nem tesz közbülső bejegyzést, és a címben sem marad a másik épület kódja |
-| `tests/jelenet.js` | a folytonosan nagyítható jelenet: országos léptéken csak a települések jele és felülnézet, Budapest fölött a kerületek jele és megdőlt kamera, a csoport fölött teljes dőlés; a csoport minden épülete kint van, tömegként csak a körvonalasak (a többi lapos jel, nem kitalált ház); a magasság a szintszámból jön (OD > OA > OC); a hátrafelé néző falak kimaradnak (ARÁNYRA mérve); a húzás a kamerát mozdítja és nem nyit épületet, a koppintás megnyitja (alaprajz nélkülinél az adatlapját); a +/− gomb nagyít-kicsinyít, és az országnál kijjebb nem lehet menni; a címkék telefonon, keskeny telefonon és asztalon sem fednek és nem lógnak ki, a doboz a képernyőn belül van |
+| `tests/jelenet.js` | a folytonosan nagyítható jelenet: országos léptéken csak a települések jele és felülnézet, a körvonalas épülettel bíró településnek 3D-s modellje van (Budapest, Székesfehérvár — Nagymarosnak nincs), a modellek jól láthatók, nem fedik egymást, nem lógnak ki és nem takarnak másik jelet; Budapest fölött a kerületek jele és megdőlt kamera, a csoport fölött teljes dőlés; a csoport minden épülete kint van, tömegként csak a körvonalasak (a többi lapos jel, nem kitalált ház); a magasság a szintszámból jön (OD > OA > OC); a hátrafelé néző falak kimaradnak (ARÁNYRA mérve); a húzás a kamerát mozdítja és nem nyit épületet, a koppintás megnyitja (alaprajz nélkülinél az adatlapját); a +/− gomb nagyít-kicsinyít, és az országnál kijjebb nem lehet menni; a címkék telefonon, keskeny telefonon és asztalon sem fednek és nem lógnak ki, a doboz a képernyőn belül van |
 | `tests/masepulet.js` | más épületben nincs OA-ra szabott dolog: a foglalható termek (az OA órarendje) nincs kint, a Büfé gomb csak ahol van büfé (OA, FK; az OD-ben nincs); a szintnév és az emeletszám az épület saját szintjeiből (KT I. és IV. emelet, KH tetőtér, OD V. emelet, egy félszint és egy „Pince”, angolul is), a név az elsődleges (a KD-alak félemelete a földszint fölött, a kötőjel nélküli „Pince 2”), de ahol a név és a kód ellentmond (KD, TA) vagy két földszint jönne ki (BA), az épület nem nyílik meg; a 3D-s szintfelirat és a felolvasói név angolul (OA, KT); a liftes megjegyzés a lift nélküli szöveg; a nemre nem jelölt WC nem „Női” és „Férfi” mosdó, hanem semleges sor; a mosdónevek írásmódjai, a kategória nélküli OC-mosdók, a személyzeti WC kizárása; a KH és a KT akadálymentes mosdója ott van; vissza az OA-ra minden OA-s dolog visszajön |
 | `tests/csomag.js` | a Pages-re publikált csomag (`tools/pages-csomag.js`): csak engedélylistás fájl, belső anyag és fejlesztői fájl nincs benne, minden, amire a lapok és a manifest hivatkoznak, benne van; a célkönyvtár nem lehet a repó, a szülője, egy forráskönyvtár, sem egy csomagnevű, de idegen tartalmú könyvtár (a repó-szabály külön is mérve); és az app ebből a csomagból minden épületen végigváltva, a service workerrel együtt egyetlen sikertelen kérés nélkül fut |
 
