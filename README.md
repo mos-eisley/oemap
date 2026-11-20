@@ -34,14 +34,17 @@ oldal külső szolgáltató nélkül működik, és offline is: az OA mindig, a 
 
 ## Az egyetem épületei
 
-A fejlécben az épület neve egyben választógomb: egy térkép nyílik meg az
-egyetem **mind a 39 épületével**. Előbb Magyarország, rajta a települések
-(Budapest, Székesfehérvár, Nagymaros); egy településre koppintva annak térképe
-jön, rajta az épületek csoportjai: Budapesten kerületenként, máshol
-környékenként egy jel, az épületeik közepén. A jelre koppintva a lista az ott álló épületekre
-szűkül, és az épület sora nyitja meg az alaprajzot. A térkép mellett mindig ott a
-lista is, mindegyik épületnél a címe, a szintek és a helyiségek száma, az
-alapterülete — az Egyetemi Tervtár adataiból. Az épületek helye az
+A fejlécben az épület neve egyben választógomb: egy nagyítható térkép nyílik
+meg az egyetem **mind a 39 épületével**. Magyarország fölött indul, a
+települések jelével (Budapest, Székesfehérvár, Nagymaros), és onnan
+**egyetlen, folytonos mozdulattal** le lehet menni az épületek közé: csippents
+vagy görgess, és a kamera magától leszáll — előbb a városrészek jele jön elő,
+aztán az épületek tömege a valódi helyükön, a saját körvonalukkal és
+szintszámukkal, végül a nevük. A házra koppintva megnyílik az alaprajza.
+Közben húzni lehet a képet, és a +/− gomb is nagyít. A térkép mellett mindig
+ott a lista is, mindegyik épületnél a címe, a szintek és a helyiségek száma, az
+alapterülete — az Egyetemi Tervtár adataiból; a listából választva a kamera
+odarepül. Az épületek helye az
 OpenStreetMapből jön (© OpenStreetMap-közreműködők, ODbL), a közös telken
 állóknál a Tervtár helyszínrajzaiból számolva; hét épületnek (FA, FB, KM, SA,
 SB, SC, UV) nincs helye a térképen — a nyilvántartásban címük sincs —, ezek a

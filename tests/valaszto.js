@@ -64,42 +64,49 @@ run("térképes választó", async ({ t, ctx, browser, base }) => {
   const p = await open(ctx, base, { settle: 600 });
   await p.waitForFunction(() => typeof HELYEK !== "undefined" && HELYEK && EPULETEK, null, { timeout: 10000 });
   await p.click("#epvBtn"); await p.waitForTimeout(250);
-  const orszag = await p.evaluate(() => [...document.querySelectorAll("#epvlist .epvpin")].map(b => b.dataset.epv));
+  const orszag = await p.evaluate(() => [...document.querySelectorAll("#epvlist .jTel")].map(b => b.dataset.epv));
   t.eq("Magyarország térképén a három település jele", orszag.sort(), ["tel:Budapest", "tel:Nagymaros", "tel:Székesfehérvár"]);
   const helyNelkul = await p.evaluate(() => (document.querySelector('#epvlist .epvsor[data-epv="tel:"]') || {}).textContent || "");
   // az UV egyik helyszínrajzon sincs rajta: a felirat mindegyikükre igaz legyen
   // (korábban „a nyilvántartásban nincs címük” — igaz, de hivatali; a hallgatónak az számít, hogy a térképen nincsenek rajta)
   t("a hely nélküli épületek csoportja azt mondja, ami mindegyikre igaz (a térképen nem szerepelnek)", /térképen még nem szerepelnek/.test(helyNelkul), helyNelkul);
-  await p.click('#epvlist .epvpin[data-epv="tel:Budapest"]'); await p.waitForTimeout(250);
+  await p.click('#epvlist .jTel[data-epv="tel:Budapest"]'); await p.waitForTimeout(1200);
+  /* A csoport jele a saját pontján ül (a chip ettől elmozdulhat, lásd
+     jelCimkek), ezért a földrajzot a PONTON mérjük, nem a chipen. */
   const part = await p.evaluate(() => {
-    const svg = document.querySelector("#epvlist .epvmap svg"), d = [...svg.querySelectorAll("path.d")];
-    const pont = []; for (const u of d) { const L = u.getTotalLength(), m = u.getScreenCTM();
+    const h = document.querySelector("#epvlist .epvjel3d"), H = h.getBoundingClientRect();
+    const d = [...h.querySelectorAll("path.jViz")], pont = [];
+    for (const u of d) { const L = u.getTotalLength(), m = u.getScreenCTM();
       for (let i = 0; i <= 200; i++) { const q = u.getPointAtLength(L * i / 200).matrixTransform(m); pont.push([q.x, q.y]); } }
-    return [...document.querySelectorAll("#epvlist .epvpin")].map(b => {
-      const r = b.querySelector("i").getBoundingClientRect(), x = r.x + r.width / 2, y = r.y + r.height / 2;
+    return [...h.querySelectorAll(".jTel.csop")].map(b => {
+      const x = H.left + parseFloat(b.style.left), y = H.top + parseFloat(b.style.top);
       const f = pont.reduce((a, q) => Math.abs(q[1] - y) < Math.abs(a[1] - y) ? q : a);
-      return { nev: b.querySelector("span").textContent.trim(), oldal: x < f[0] ? "Buda" : "Pest" };
+      return { nev: b.textContent.trim(), oldal: x < f[0] ? "Buda" : "Pest" };
     });
   });
   const oldal = Object.fromEntries(part.map(x => [x.nev.replace(/\s+\d+$/, ""), x.oldal]));
   t.eq("Budapesten kerületenként egy jel: az óbudai Budán, a többi Pesten", oldal,
     { "III. kerület": "Buda", "VIII. kerület": "Pest", "XIV. kerület": "Pest", "VI. kerület": "Pest" });
-  // a két part neve a folyó jó oldalán: e nélkül fordítva is olvashatná a térképet
-  const partNev = await p.evaluate(() => {
-    const d = [...document.querySelectorAll("#epvlist .epvmap svg path.d")], pont = [];
+  /* A tájékozódást a folyó adja: a városi léptéken a település saját, részletes
+     Duna-szakasza fut (az országos, durvább vonal nem, mert a kettő egymásra
+     rajzolva kereszteződő szalagoknak látszott). */
+  const viz = await p.evaluate(() => {
+    const h = document.querySelector("#epvlist .epvjel3d");
+    const d = [...h.querySelectorAll("path.jViz")], H = h.getBoundingClientRect();
+    let bent = 0;
     for (const u of d) { const L = u.getTotalLength(), m = u.getScreenCTM();
-      for (let i = 0; i <= 200; i++) { const q = u.getPointAtLength(L * i / 200).matrixTransform(m); pont.push([q.x, q.y]); } }
-    return [...document.querySelectorAll("#epvlist .epvpart")].map(s => { const r = s.getBoundingClientRect(), x = r.x + r.width / 2, y = r.y + r.height / 2;
-      const f = pont.reduce((a, q) => Math.abs(q[1] - y) < Math.abs(a[1] - y) ? q : a);
-      return s.textContent + ":" + (x < f[0] ? "nyugat" : "kelet"); }).sort();
+      for (let i = 0; i <= 100; i++) { const q = u.getPointAtLength(L * i / 100).matrixTransform(m);
+        if (q.x >= H.left && q.x <= H.right && q.y >= H.top && q.y <= H.bottom) bent++; } }
+    return { db: d.length, bent, szel: d.length ? parseFloat(getComputedStyle(d[0]).strokeWidth) : 0 };
   });
-  t.eq("a Buda felirat a Dunától nyugatra, a Pest keletre áll", partNev, ["Buda:nyugat", "Pest:kelet"]);
+  t("Budapest fölött a Duna a képen fut, a nagyításhoz mért szélességgel",
+    viz.db === 3 && viz.bent > 20 && viz.szel > 6 && viz.szel <= 44, JSON.stringify(viz));
   const forras = await p.evaluate(() => { const f = document.querySelector("#epvlist .epvforras"), a = f && f.querySelector("a");
     return { szoveg: f ? f.textContent : "", href: a ? a.getAttribute("href") : "" }; });
   t("a felületen ott a forrásmegjelölés: OpenStreetMap, ODbL, a szerzői jogi oldalra mutatva",
     /OpenStreetMap/.test(forras.szoveg) && /ODbL/.test(forras.szoveg) && forras.href === "https://www.openstreetmap.org/copyright", JSON.stringify(forras));
   // a jel a csoportot választja: a lista a csoport épületeire szűkül
-  await p.click('#epvlist .epvpin[data-epv="csop:KB"]'); await p.waitForTimeout(200);
+  await p.click('#epvlist .jTel.csop[data-epv="csop:KB"]'); await p.waitForTimeout(1200);
   const csop = await p.evaluate(() => ({ sorok: [...document.querySelectorAll("#epvlist .epvrow")].map(b => b.dataset.ep).sort().join(),
     fokusz: document.activeElement && document.activeElement.id }));
   t("a III. kerület jele a hét óbudai épületet listázza, és a lista címére visz",
@@ -115,17 +122,23 @@ run("térképes választó", async ({ t, ctx, browser, base }) => {
      képpontszélességéből. Egy állandó becslés alacsony asztali ablakban, ahol
      a magasság köti a térképet, a felére tévedett, és a címkék egymásra meg a
      szomszéd jelére estek. Mindhárom térképen, a kirajzolt képen mérjük. */
+  /* A címke helyét a kód a kirajzolt képen méri ki (négy oldal, növekvő
+     távolság). Egy állandó becslés alacsony asztali ablakban a felére
+     tévedett, és a címkék egymásra meg a szomszéd jelére estek. A jelet most
+     a chip `left/top`-ja adja: a pont ott marad, a chip elmozdulhat. */
+  const nyugodt = pg => pg.waitForFunction(() => !JEL.anim, null, { timeout: 5000 }).catch(() => {});
   const cimkeHiba = pg => pg.evaluate(() => {
-    const m = document.querySelector("#epvlist .epvmap"); if (!m) return ["nincs térkép"];
+    const m = document.querySelector("#epvlist .epvjel3d"); if (!m) return ["nincs jelenet"];
     const R = m.getBoundingClientRect(), h = [];
     const fed = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
-    const ps = [...m.querySelectorAll(".epvpin")].map(b => ({ n: b.querySelector("span").textContent.trim(),
-      s: b.querySelector("span").getBoundingClientRect(), i: b.querySelector("i").getBoundingClientRect() }));
+    const ps = [...m.querySelectorAll(".jTel,.jNev")].map(b => ({ n: b.textContent.trim(),
+      s: b.getBoundingClientRect(),
+      p: { x: R.left + parseFloat(b.style.left), y: R.top + parseFloat(b.style.top) } }));
     for (const a of ps) {
       if (a.s.left < R.left - 1 || a.s.right > R.right + 1 || a.s.top < R.top - 1 || a.s.bottom > R.bottom + 1) h.push(a.n + " kilóg");
-      for (const b of ps) if (a !== b) {
-        if (fed(a.s, b.i)) h.push(a.n + " takarja: " + b.n);
-        if (a.n < b.n && fed(a.s, b.s)) h.push(a.n + " × " + b.n);
+      for (const b of ps) {
+        if (b.p.x > a.s.left - 5 && b.p.x < a.s.right + 5 && b.p.y > a.s.top - 5 && b.p.y < a.s.bottom + 5) h.push(a.n + " takarja: " + b.n + " jelét");
+        if (a !== b && a.n < b.n && fed(a.s, b.s)) h.push(a.n + " × " + b.n);
       }
     }
     return h;
@@ -143,13 +156,14 @@ run("térképes választó", async ({ t, ctx, browser, base }) => {
     let magas = null;
     for (const tel of [null, "Budapest", "Székesfehérvár", "Nagymaros"]) {
       if (tel) { await g.click(`#epvlist .epvsor[data-epv="tel:${tel}"]`); await g.waitForTimeout(200); }
+      await nyugodt(g); await g.waitForTimeout(120);
       h.push(...(await cimkeHiba(g)).map(x => (tel || "ország") + ": " + x));
-      if (tel === "Budapest") magas = await g.evaluate(() => ({ h: document.querySelector("#epvlist .epvmap").getBoundingClientRect().height, ih: innerHeight }));
-      if (tel) { await g.click('#epvlist [data-epv="vissza"]'); await g.waitForTimeout(150); }
+      if (tel === "Budapest") magas = await g.evaluate(() => ({ h: document.querySelector("#epvlist .epvjel3d").getBoundingClientRect().height, ih: innerHeight }));
+      if (tel) { await g.click('#epvlist [data-epv="vissza"]'); await g.waitForTimeout(150); await nyugodt(g); }
     }
     t(`${nev}: a címkék nem fedik egymást és más jelét, és a térképen belül maradnak`, !h.length, h.join("; "));
     // fekve a négyzetes Budapest-térkép korábban két képernyőnyi lett, a jelek és a lista a képen kívül
-    t(`${nev}: a Budapest-térkép elfér a képernyőn`, magas && magas.h <= magas.ih - 100, JSON.stringify(magas));
+    t(`${nev}: a jelenet doboza elfér a képernyőn`, magas && magas.h <= magas.ih - 100, JSON.stringify(magas));
     await c.close();
   }
 
@@ -344,7 +358,7 @@ run("térképes választó", async ({ t, ctx, browser, base }) => {
   await cN.route("**/data/helyek.json", r => r.fulfill({ status: 404, body: "" }));
   q = await open(cN, base, { settle: 800 });
   await q.click("#epvBtn"); await q.waitForTimeout(200);
-  const nt = await q.evaluate(() => ({ terkep: !!document.querySelector("#epvlist .epvmap"), gps: !!document.querySelector('#epvlist [data-epv="gps"]'),
+  const nt = await q.evaluate(() => ({ terkep: !!document.querySelector("#epvlist .epvjel3d"), gps: !!document.querySelector('#epvlist [data-epv="gps"]'),
     tel: [...document.querySelectorAll('#epvlist .epvsor[data-epv^="tel:"]')].length, forras: !!document.querySelector("#epvlist .epvforras") }));
   t("helyadat nélkül nincs térkép, GPS és OSM-forrás, de a települések ott vannak", !nt.terkep && !nt.gps && !nt.forras && nt.tel === 4, JSON.stringify(nt));
   await q.click('#epvlist [data-epv="tel:Budapest"]'); await q.waitForTimeout(150);
@@ -420,8 +434,9 @@ run("térképes választó", async ({ t, ctx, browser, base }) => {
   q = await open(cW, base, { settle: 600 });
   await q.waitForFunction(() => EPULETEK && HELYEK, null, { timeout: 10000 });
   await q.click("#epvBtn"); await q.waitForTimeout(200);
-  await q.click('#epvlist .epvpin[data-epv="tel:Budapest"]'); await q.waitForTimeout(250);
+  await q.click('#epvlist .jTel[data-epv="tel:Budapest"]'); await q.waitForTimeout(1200);
   await q.setViewportSize({ width: 1100, height: 560 }); await q.waitForTimeout(500);
+  await nyugodt(q);
   const atmer = await cimkeHiba(q);
   t("átméretezés után is: a címkék nem fedik egymást és más jelét", !atmer.length, atmer.join("; "));
   await q.close(); await cW.close();
@@ -494,7 +509,7 @@ run("térképes választó", async ({ t, ctx, browser, base }) => {
     let { top, bottom } = sor.getBoundingClientRect(); bottom = Math.min(bottom, innerHeight); top = Math.max(top, 0);
     for (let a = sor.parentElement; a && a !== document.body; a = a.parentElement) { const cs = getComputedStyle(a);
       if (cs.overflowY !== "visible" || cs.overflowX !== "visible") { const r = a.getBoundingClientRect(); top = Math.max(top, r.top); bottom = Math.min(bottom, r.bottom); } }
-    const m = document.querySelector("#epvlist .epvmap").getBoundingClientRect();
+    const m = document.querySelector("#epvlist .epvjel3d").getBoundingClientRect();
     return { sorLathato: Math.round(Math.max(0, bottom - top)), terkep: [Math.round(m.top), Math.round(m.bottom)], ih: innerHeight }; });
   t(`fekvő telefonon (${fw}×${fh}) a GPS-eredmény után is odagörgethető a településlista, és a térkép a képen marad`,
     fekvo.sorLathato >= 40 && fekvo.terkep[0] >= 0 && fekvo.terkep[1] <= fekvo.ih, JSON.stringify(fekvo));
@@ -545,8 +560,8 @@ run("térképes választó", async ({ t, ctx, browser, base }) => {
   await q.waitForFunction(() => EPULETEK && HELYEK, null, { timeout: 10000 });
   await q.evaluate(() => { const b = document.getElementById("langEn"); b && b.click(); });
   await q.click("#epvBtn"); await q.waitForTimeout(200);
-  await q.click('#epvlist .epvsor[data-epv="tel:Budapest"]'); await q.waitForTimeout(150);
-  const angol = await q.evaluate(() => [...document.querySelectorAll("#epvlist .epvpin")].map(b => b.getAttribute("aria-label")));
+  await q.click('#epvlist .epvsor[data-epv="tel:Budapest"]'); await q.waitForTimeout(1200);
+  const angol = await q.evaluate(() => [...document.querySelectorAll("#epvlist .jTel")].map(b => b.getAttribute("aria-label")));
   t("angolul a jel neve „1 building”, nem „1 buildings”", angol.some(a => /\b1 building,/.test(a)) && !angol.some(a => /\b1 buildings/.test(a)), angol.join(" | "));
   // a csillag felirata a teljes képernyős választó fölött látszik (nem alatta)
   await q.click('#epvlist [data-epv="kartya:OD"]'); await q.waitForTimeout(150);
