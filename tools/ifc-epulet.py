@@ -29,7 +29,10 @@ közös falak az IFC-ben az alsó szinthez tartoznak). A lépcsőkarok szabálya
 az `ifc-lepcsok.py`-é. Az illesztést, a vetületet és a karok fokait onnan
 veszi, hogy ugyanaz a kód adja.
 
-Használat:  python3 -I tools/ifc-epulet.py <OE_XX.ifc> data/epuletek/<kód>.json
+A `--lepcso` kapcsolóval a függőleges kapcsolatokat (`stairs`) is az IFC
+karjaiból írja (lásd `ifc_lepcsok()`); enélkül a tervlapiak maradnak.
+
+Használat:  python3 -I tools/ifc-epulet.py <OE_XX.ifc> data/epuletek/<kód>.json [--lepcso]
 Az IFC belső anyag: ne tedd a repóba.
 """
 import sys, re, json, math, importlib.util, collections, unicodedata
@@ -54,6 +57,13 @@ L = _betolt("ifc_lepcsok", "ifc-lepcsok.py")
 ROM = {"I": 1, "II": 2, "III": 3, "IV": 4, "V": 5, "VI": 6, "VII": 7, "VIII": 8, "IX": 9, "X": 10}
 AJTO_MAG = 1.8      # m, ennél alacsonyabb nyílás nem ajtó (szellőző, aknaajtó)
 PADLO = 0.3         # m, a nyílás alja legfeljebb ennyivel a gazdafal alja fölött
+# A fal neve exportonként más: „Fal - 012” (OA, OD, OB…), „W112 (…)” (TB, TA-TC).
+FAL = re.compile(r"Fal\b|W\d")
+# A szint padlója és a kar vége közt ennyi eltérés még ugyanaz a szint: az
+# első fok teteje egy fokmagassággal a padló fölött van, és a padló a
+# lépcsőnél helyenként eltér a szint magasságától (az OB-ben a pincéből jövő
+# kar −0,65 m-en ér fel a 0,00-s földszintre).
+TUR_Z = 0.8
 
 
 def emelet(nev):
@@ -65,6 +75,7 @@ def emelet(nev):
     m = re.fullmatch(r"P(\d)", s) or re.fullmatch(r"PINCE\s*-?\s*(\d)", s)
     if m: return -int(m[1])
     if s == "FÉLEMELET": return 0.5
+    if s == "EMELET": return 1          # az FC és az FS egyetlen emelete
     m = re.fullmatch(r"(\d+)\.\s*EMELET", s)
     if m: return int(m[1])
     m = re.fullmatch(r"([IVX]+)\.\s*EMELET", s)
@@ -82,6 +93,19 @@ def zsav(S, e):
     return float(v[:, 2].min()), float(v[:, 2].max())
 
 
+VIZES = re.compile(r"WC|MOSDÓ|MOSD\.|ZUHANY|ZUH\.|PISZOÁR|KÉZMOSÓ")
+
+
+def mosdon_at(r, v):
+    """Megközelíthető-e az `r` helyiség a `v`-n át. Mosdón át csak raktár
+    (a takarítószer-raktár sokszor a mosdóból nyílik: OC, OB) vagy maga is
+    vizes helyiség (WC az előtere mögött). A TB portája az IFC-ben csak a
+    szomszédos NŐI WC felé kapott ajtót, és az útvonal „Kijárat ezen át: NŐI
+    WC” lépéssel indult."""
+    if not VIZES.search((v.get("name") or "").upper()): return True
+    return bool(VIZES.search((r.get("name") or "").upper())) or "RAKTÁR" in (r.get("cat") or "").upper()
+
+
 def tiszta(o):
     if isinstance(o, float): return int(o) if o == int(o) else o
     if isinstance(o, list): return [tiszta(x) for x in o]
@@ -89,11 +113,9 @@ def tiszta(o):
     return o
 
 
-def main(ifc, js):
-    D = json.load(open(js, encoding="utf-8"))
-    f = ifcopenshell.open(ifc)
-    S = G.settings(); S.set(S.USE_WORLD_COORDS, True)
-
+def illesztes(f, S, D):
+    """Az IFC szintjei a térkép szintjeihez, a falak vetülete szintenként, és
+    az IFC → térkép merev transzform. Kiírja, mi mire illeszkedett."""
     dlv = {}
     for l in D["levels"]:
         k = emelet(l.get("name"))
@@ -113,7 +135,7 @@ def main(ifc, js):
 
     falak_ifc = collections.defaultdict(list)
     for e in f.by_type("IfcBuildingElementProxy"):
-        if not (e.Name or "").startswith("Fal") or hova.get(e.id()) is None: continue
+        if not FAL.match(e.Name or "") or hova.get(e.id()) is None: continue
         g = A.vetulet(S, e)
         if g is not None: falak_ifc[hova[e.id()]].append(g)
     dfal = lambda lv: [Polygon(w).buffer(0) for w in D["walls"].get(str(lv), [])]
@@ -127,6 +149,105 @@ def main(ifc, js):
         if not dfal(lv): continue
         d, _ = cKDTree(A.mintak([tr(g) for g in falak_ifc[lv]], 0.1)).query(A.mintak(dfal(lv), 0.1))
         print(f"   szint {lv:>2}: {np.mean(d < 0.1):.0%}")
+    return dlv, hova, falak_ifc, dfal, tr
+
+
+def ifc_lepcsok(f, S, D, dlv, tr):
+    """A függőleges kapcsolatok (`D.stairs`) az IFC lépcsőkaraiból.
+
+    A tervlapból kinyert lépcsőpontok (`epulet-json.py`, a LÉPCSŐK-LIFTEK
+    réteg foltjai) sok épületben rossz helyre esnek, vagy egy szinten
+    hiányoznak: az OB-ben, az YC-ben és a TG-ben a szintek ettől nem érnek
+    össze, és a helyiségek fele elérhetetlen. Az IFC-ben minden kar fokonként
+    megvan, magassággal. Ezért:
+    - a karokat lépcsőházakba vonjuk össze: ha a vetületük 1 m-en belül ér
+      egymáshoz (U alakú lépcső: a karok egymás mellett), vagy az egyik
+      felső foka után 6 m-en és 0,6 m magasságon belül indul a másik (egyenes
+      lépcső: köztük a pihenő; az OB-ben a két kar vége 3 m-nél messzebb);
+    - a lépcsőház minden szintjén ott a pont, ahol egy kar ezen a szinten indul
+      (a legalsó foka a szint padlójához legközelebb), vagy ahová megérkezik
+      (a legfelső foka a szint padlója alatt legfeljebb egy fokkal);
+    - két szomszédos szint akkor kapcsolódik, ha a lépcsőház mindkettőn
+      megvan, és a karjai a kettő közti magasságot végig lefedik."""
+    import ifcopenshell.util.unit as U
+    sk = U.calculate_unit_scale(f)
+    szintz = {}
+    for st in f.by_type("IfcBuildingStorey"):
+        lv = dlv.get(emelet(st.Name))
+        if lv is not None and st.Elevation is not None:
+            szintz[lv] = min(szintz.get(lv, 1e9), st.Elevation * sk)
+    karok = []
+    for e in f.by_type("IfcBuildingElementProxy"):
+        if not (e.Name or "").startswith("LK SZERKEZET"): continue
+        fk = L.fokok(S, e)
+        if len(fk) < 2: continue
+        lapok = [(z, tr(g)) for z, g in fk]
+        alap = shapely.union_all([g for _, g in lapok])
+        karok.append({"z0": lapok[0][0], "z1": lapok[-1][0], "alap": alap,
+                      "also": (lapok[0][1].centroid.x, lapok[0][1].centroid.y),
+                      "felso": (lapok[-1][1].centroid.x, lapok[-1][1].centroid.y)})
+    szulo = list(range(len(karok)))
+    def gy(a):
+        while szulo[a] != a: a = szulo[a]
+        return a
+    for i in range(len(karok)):
+        for j in range(i):
+            a_, b_ = karok[i], karok[j]
+            folytat = any(0 < y["z0"] - x["z1"] < 0.6 and math.dist(x["felso"], y["also"]) < 6.0
+                          for x, y in ((a_, b_), (b_, a_)))
+            if folytat or a_["alap"].distance(b_["alap"]) < 1.0: szulo[gy(i)] = gy(j)
+    hazak = collections.defaultdict(list)
+    for i, k in enumerate(karok): hazak[gy(i)].append(k)
+    itt = collections.defaultdict(list)
+    for r in D["rooms"]: itt[r["level"]].append((r, Polygon(r["poly"]).buffer(0)))
+    def kodja(lv, p):
+        P = Point(*p)
+        r = next((r for r, g in itt[lv] if g.contains(P)), None)
+        return (r or {}).get("code") or ""
+    szintek = sorted(szintz)
+    ki = []
+    for ks in hazak.values():
+        pts = {}
+        for lv in szintek:
+            z = szintz[lv]
+            indul = [k for k in ks if abs(k["z0"] - z) < TUR_Z]
+            erkez = [k for k in ks if -0.1 < z - k["z1"] < TUR_Z]
+            if indul: pts[lv] = min(indul, key=lambda k: abs(k["z0"] - z))["also"]
+            elif erkez: pts[lv] = min(erkez, key=lambda k: abs(k["z1"] - z))["felso"]
+        sor = [lv for lv in szintek if lv in pts]
+        # csak a karokkal lefedett szomszédos szintpárok: a közbülső magasság se maradjon ki
+        jo = []
+        for a, b in zip(sor, sor[1:]):
+            za, zb = szintz[a], szintz[b]
+            fed = sorted((k["z0"], k["z1"]) for k in ks if k["z1"] > za and k["z0"] < zb)
+            h = za
+            for z0, z1 in fed:
+                if z0 - h > 0.6: break
+                h = max(h, z1)
+            if zb - h < TUR_Z: jo.append((a, b))
+        if not jo: continue
+        # összefüggő láncokra bontva (ahol egy pár hiányzik, ott két külön lépcső)
+        lanc = [list(jo[0])]
+        for a, b in jo[1:]:
+            if a == lanc[-1][-1]: lanc[-1].append(b)
+            else: lanc.append([a, b])
+        for l in lanc:
+            ki.append({"id": len(ki), "pts": [[lv, round(float(pts[lv][0]), 2), round(float(pts[lv][1]), 2),
+                                               kodja(lv, pts[lv])] for lv in l]})
+    return ki
+
+
+def main(ifc, js, lepcso=False):
+    D = json.load(open(js, encoding="utf-8"))
+    f = ifcopenshell.open(ifc)
+    S = G.settings(); S.set(S.USE_WORLD_COORDS, True)
+    dlv, hova, falak_ifc, dfal, tr = illesztes(f, S, D)
+
+    if lepcso:
+        uj = ifc_lepcsok(f, S, D, dlv, tr)
+        print(f"lépcsők az IFC-ből: {len(uj)} (a tervlapból {len(D['stairs'])}): "
+              + "; ".join("→".join(str(p[0]) for p in st["pts"]) for st in uj))
+        if uj: D["stairs"] = uj
 
     # --- ajtók ---
     toltes = {r.RelatingOpeningElement.id(): r.RelatedBuildingElement.Name or "" for r in f.by_type("IfcRelFillsElement")}
@@ -195,6 +316,7 @@ def main(ifc, js):
         u = sor.pop(0)
         for w in sorted(szomszed.get(u, ()), key=lambda w: rid[w]["code"]):
             if w in latott or kodok[rid[u]["code"]] > 1: continue
+            if not mosdon_at(rid[w], rid[u]): continue
             latott.add(w); rid[w]["via"] = rid[u]["code"]; sor.append(w)
 
     # --- lépcsőkarok ---
@@ -228,6 +350,7 @@ def main(ifc, js):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
+    av = [a for a in sys.argv[1:] if a != "--lepcso"]
+    if len(av) != 2:
         sys.exit(__doc__)
-    main(*sys.argv[1:])
+    main(*av, lepcso="--lepcso" in sys.argv)

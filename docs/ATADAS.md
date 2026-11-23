@@ -5,9 +5,33 @@ A projekt általános tudnivalói a [CLAUDE.md](../CLAUDE.md)-ben vannak — azt
 olvasd el először. Ez itt csak azt rögzíti, ami ebben a munkában történt, és
 hogy mi a következő lépés.
 
-Állapot (2026-10-29, a térképes épületválasztó és annak átnézése után): **39
-épület a nyilvántartásban, ebből 7 megnyitható** (OA, OD, FF, FK, KH, KT, OC),
-összesen 1515 helyiséggel. Mind a 26 tesztfájl zöld.
+Állapot (2026-11-23, az IFC-modellek után): **39 épület a nyilvántartásban,
+ebből 10 megnyitható** (OA, OD, FF, FK, KH, KT, OC, és az IFC-vel OB, TB,
+YC), összesen 1755 helyiséggel. A tesztek zöldek, a `tests/perf.js`
+kivételével, ami a mostani tesztkörnyezetben a módosítás előtt is bukott (a
+böngésző nem a GPU-s kódúton fut: `gpu:false`).
+
+## IFC-modellek (2026-11)
+
+A felhasználó 14 épület IFC-jét adta át (OD, FF, FK, OC, OB, FC, FS, YC,
+TA-TC, TB, TG, TT-TN, CS3, CS6; a feltöltött fájlok, a repóba nem kerülnek).
+Ami elkészült, a CLAUDE.md „Ajtók más épületben” és „Új épület az IFC-vel”
+szakaszában. Ami nem nyílt meg, és miért (a `tervlap-batch.py` →
+`ifc-helyisegek.py` → `ifc-epulet.py --lepcso` lánc után, a portától mérve):
+
+| épület | elérhető | ami hiányzik |
+| --- | --- | --- |
+| TG | 5% | A kivágásban a pecsétek elcsúsztak: az oszlopos aulán (a maszkon kívül) a `TG00F12` ELŐADÓ pecsétje áll, a `TG00FK2` AULA-é a folyosón. A portát (`TG00F01`) csak az aula köti a folyosókhoz. A tervlapon kell megnézni, melyik pecsét hová tartozik. |
+| TT | 26% | Nincs portája (`PORTA`), és a földszint közepe a TORNATEREM: a többi helyiség azon át érhető el, de az nem közlekedő. Döntés kell: a tornaterem átjárható-e, és a bejárat az `TT00F13` ELŐTÉR-e. |
+| TN | 100% | Csak a porta hiányzik (8 helyiség; a `TN00F01` ELŐTÉR szinte biztosan a bejárat, lásd 3.). Egy döntés. |
+| FC, FS | — | A porta (`FC00FK1`, `FS00FK1`) a táblában megvan, de a kivágó nem vágta ki, ezért az `epuletKesz()` nem nyitja meg. Az FS kivágása gyenge is (±3%: 51%), a tetőtéri falak az IFC-re 44%-ban illeszkednek. |
+| TA, TC | — | A szintsor ellentmondó (a TA-ban az I. emelet után a III. és az V. jön, a TC-ben két „V. emelet” van): az `epulet-json.py` szintkiosztását kell javítani (lásd lent, 1. és a CLAUDE.md szintneves pontja). Az IFC szintjei („C 2. EMELET”, „C 4. EMELET”) a C szárnyét külön adják, ez segíthet. |
+| CS3, CS6 | — | Nincsenek a 39 épület nyilvántartásában. |
+
+A négy már megnyitott IFC-s épületre (OD, FF, FK, OC) a `--lepcso` és az
+`ifc-helyisegek.py` még nem futott: náluk a tervlapi lépcsők maradtak. Az OD
+−2. szintje épp egy rossz helyre eső lépcsőpont miatt elérhetetlen, ott ez
+segíthet — mérni kell, és utána az aranyértékeket átírni.
 
 ## Egy mondatban
 
@@ -292,10 +316,9 @@ kinyerés mellékterméke; a javítása az eszközben van (a maszkot a helyiség
   fülke, és használhatják-e a hallgatók, az helyszíni ellenőrzés kérdése —
   addig ezekben az épületekben nincs lépcső nélküli útvonal, és az app ezt
   meg is mondja.
-- **Ajtók**: 2026-11-ben megjött 14 IFC (OD, FF, FK, OC, OB, FC, FS, YC,
-  TA-TC, TB, TG, TT-TN, CS3, CS6; a feltöltött fájlok, nem a repóban). A
-  négy megnyitható épületben (OD, FF, FK, OC) az ajtók, a `via` és a
-  lépcsőkarok már ezekből jönnek (`tools/ifc-epulet.py`, CLAUDE.md „Ajtók más
+- **Ajtók**: 2026-11-ben megjött 14 IFC (lásd fent, „IFC-modellek”). Az
+  OD, FF, FK, OC, OB, TB és YC ajtói, `via`-ja és lépcsőkarjai már ezekből
+  jönnek (`tools/ifc-epulet.py`, CLAUDE.md „Ajtók más
   épületben”). A KH-nak és a KT-nak nincs IFC-je: ott az útvonal a
   legközelebbi cellánál ér véget, vagy ha az leszakadt foltban áll, a fő
   hálózat egy falnyira eső cellájánál. A CS3 és a CS6 nincs a 39 épület

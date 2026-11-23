@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-19",
+ "generated": "2026-11-23",
  "osszes": {
   "epulet": 39,
   "helyiseg": 4643,
@@ -313,7 +313,7 @@
    "ajtoszam": 0,
    "kar": "Kandó Kálmán Villamosmérnöki Kar",
    "terv": true,
-   "navigalhato": false
+   "navigalhato": true
   },
   "OC": {
    "kod": "OC",
@@ -417,7 +417,7 @@
    "ajtoszam": 0,
    "kar": "Kandó Kálmán Villamosmérnöki Kar",
    "terv": true,
-   "navigalhato": false
+   "navigalhato": true
   },
   "TC": {
    "kod": "TC",
@@ -521,7 +521,7 @@
    "ajtoszam": 1,
    "kar": "Ybl Miklós Építéstudományi Kar",
    "terv": true,
-   "navigalhato": false
+   "navigalhato": true
   }
  }
 }

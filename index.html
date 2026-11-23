@@ -702,7 +702,9 @@ path.jHaz.folt.van{fill:var(--accent)}
 .jTel.alatt{margin-top:4px;transform:translate(calc(-50% + var(--dx,0px)),var(--dy,0px))}
 .jVar{cursor:pointer}
 .jArny{fill:color-mix(in srgb,var(--ink) 12%,transparent)}
-.jSzar{stroke:color-mix(in srgb,var(--accent) 45%,transparent);stroke-width:1.5}
+/* A szár a jel fölött is átfuthat (a VIII. kerületben a TA lapos jele fölött):
+   ne kapja el a koppintást a jel elől. */
+.jSzar{stroke:color-mix(in srgb,var(--accent) 45%,transparent);stroke-width:1.5;pointer-events:none}
 .jPont{fill:var(--accent);stroke:color-mix(in srgb,var(--accent) 22%,var(--surface));stroke-width:3.5}
 .jPont.csop{fill:color-mix(in srgb,var(--accent) 72%,var(--surface))}
 .jTel:hover,.jTel:focus-visible{border-color:var(--accent);color:var(--accent)}

@@ -190,7 +190,9 @@ run("épületválasztó", async ({ t, ctx, browser, base }) => {
     OA: { ki: 3, hossz: 13223, el: 26, lel: 30 }, FF: { ki: 1, hossz: 979, el: 18, lel: 0 },
     FK: { ki: 11, hossz: 2922, el: 8, lel: 0 }, KH: { ki: 14, hossz: 7270, el: 22, lel: 0 },
     KT: { ki: 8, hossz: 15059, el: 86, lel: 0 }, OC: { ki: 5, hossz: 2428, el: 28, lel: 0 },
-    OD: { ki: 6, hossz: 4293, el: 14, lel: 0 }
+    OD: { ki: 6, hossz: 4293, el: 14, lel: 0 },
+    OB: { ki: 1, hossz: 745, el: 4, lel: 0 }, TB: { ki: 3, hossz: 3854, el: 14, lel: 0 },
+    YC: { ki: 1, hossz: 686, el: 6, lel: 0 }
   };
   const aranyOf = m => ({ ki: m.ki, hossz: m.hossz, el: m.el, lel: m.lel });
   const p4 = await open(ctx, base + "#from=OA00FK1&to=OA10E18", { settle: 1500 });
@@ -373,11 +375,13 @@ run("épületválasztó", async ({ t, ctx, browser, base }) => {
     }
     return { db, hiba };
   });
-  const kapott = {}, kotesek = {};
+  const kapott = {}, kotesek = {}, portaMosdo = {};
   for (const kod of Object.keys(ARANY)) {
     await p4.evaluate(k => epuletValt(k), kod); await kesz(p4, kod);
     const m = await meres(p4); kapott[kod] = m.ep === kod ? aranyOf(m) : "nem nyílt meg";
     kotesek[kod] = await kotesHiba(p4);
+    portaMosdo[kod] = await p4.evaluate(() => entryOf(ROOM[START]).chain.map(r => r.code + " " + r.name)
+      .filter(x => /WC|MOSDÓ|ZUHANY|PISZOÁR/.test(x)));
     if (kod === "KH") kotesek.KHpince = await p4.evaluate(() => {
       const r1 = ROOM[START], k = dijkstra(r1, PORTAL, null);
       return { pince: !!findRoute(ROOM.KHX1PK2, ROOM.KHX1P03, PORTAL),
@@ -389,12 +393,19 @@ run("épületválasztó", async ({ t, ctx, browser, base }) => {
     Object.keys(ARANY).every(k => !kotesek[k].hiba.length), JSON.stringify(kotesek));
   /* Az ajtós helyiséghez a kötés nem nyúl: az OD-ben és az FK-ban az IFC-ajtók
      óta egy sincs (korábban 2-2). */
-  t.eq("új kötés épületenként (KH 4, KT 3; az ajtós OD, FK, FF, OC 0)", db, { OA: 0, FF: 0, FK: 0, KH: 4, KT: 3, OC: 0, OD: 0 });
+  t.eq("új kötés épületenként (KH 4, KT 3; az ajtós OD, FK, FF, OC, OB, TB, YC 0)", db,
+    { OA: 0, FF: 0, FK: 0, KH: 4, KT: 3, OC: 0, OD: 0, OB: 0, TB: 0, YC: 0 });
   t("a régi kötés megmarad: a KH pincéjében az előtérből a műhelyhez továbbra is van út (KHX1PK2 → KHX1P03)",
     kotesek.KHpince.pince === true);
   t("a homlokzat előtti gyűrűn vagy ablakrésen át nincs útvonal (KH00F36, KH00F37, KH00F42)",
     !kotesek.KHpince.kint.length, kotesek.KHpince.kint.join());
   t.eq("minden megnyitható épületben a portától mért aranyértékek (elérhetetlen, összhossz, élek)", kapott, ARANY);
+  /* Az IFC-ből jött `via` a portát egyszer egy mosdón át vezette ki (TB: csak
+     a NŐI WC felé volt ajtaja): az útvonal „Kijárat ezen át: NŐI WC” lépéssel
+     indult. Mosdón át csak raktár vagy vizes helyiség közelíthető meg
+     (tools/ifc-epulet.py, mosdon_at()). */
+  t("egyik épületben sem a mosdón át indul az út a portáról",
+    Object.values(portaMosdo).every(l => !l.length), JSON.stringify(portaMosdo));
   const nyithato = await p4.evaluate(() => Object.keys(EPULETEK.epuletek).filter(k => EPULETEK.epuletek[k].navigalhato).sort());
   t("a nyilvántartás pontosan ezeket az épületeket nyitja meg (új épületnél az aranyérték is kell)",
     nyithato.join() === Object.keys(ARANY).sort().join(), nyithato.join());
