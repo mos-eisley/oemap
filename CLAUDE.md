@@ -344,7 +344,7 @@ Két dolog, amit itt el lehet rontani:
 
 A váltás mércéje a `tests/epuletek.js`-ben **valódi épületeken mért aranyérték**,
 épületenként négy szám a portától: hány kódolt helyiséghez nincs út (OA 3, FF
-3, FK 11, KH 14, KT 8, OC 6, OD 12), az elérhetők útvonalainak összhossza
+1, FK 11, KH 14, KT 8, OC 5, OD 6), az elérhetők útvonalainak összhossza
 méterre, és a lépcsős meg a liftes gráf élszáma. Pontos egyezést kér, mint a
 `tests/eler.js` kivétellistája — ha egy adatjavítás bekötött egy helyiséget,
 vagy új épület nyílik meg, ott kell átírni. Az élszám a `D.stairs`-ből
@@ -387,11 +387,12 @@ nem azt jelenti, hogy van tervlap**, hanem hogy az app adata kész.
 FF, FK, KH, KT és OC** (a tervlapokból gépi úton kinyerve, lásd `docs/ATADAS.md`).
 Az OD volt az első. Ami mind a hatra áll:
 
-- **Ajtóadat nincs** (IFC csak az OA-hoz van), ezért az útvonal nem az
-  ajtónál ér véget, hanem a helyiséghez legközelebbi cellánál — ha az egy
-  leszakadt foltban áll, a fő hálózat egy falnyira eső cellájánál (lásd „A
-  helyiség kötése ajtóadat nélkül”) —, ahogy az OA-nál is volt az
-  `ifc-ajtok.py` előtt.
+- **Ajtóadat az OD-ben, FF-ben, FK-ban és OC-ben van** (az épület IFC-jéből,
+  `tools/ifc-epulet.py`, lásd „Ajtók más épületben”), a KH-ban és a KT-ban
+  nincs (nincs IFC-jük). Ajtó nélkül az útvonal nem az ajtónál ér véget,
+  hanem a helyiséghez legközelebbi cellánál — ha az egy leszakadt foltban
+  áll, a fő hálózat egy falnyira eső cellájánál (lásd „A helyiség kötése
+  ajtóadat nélkül”) —, ahogy az OA-nál is volt az `ifc-ajtok.py` előtt.
 - **Lift sincs az adatban**: a tervlap helyiségnevei közt nem volt azonosítható
   liftfülke, így liftes alternatíva sincs. Ez ellenőrizendő a helyszínen; ha
   van, a `lifts` tömbbe kell felvenni.
@@ -448,7 +449,9 @@ kell:
   `RCELL`-je bájtra azonos) — ez mérés, nem szerkezeti garancia: egy
   OA-adatjavítás után az aranyérték mutatja meg.
 - Elérhető lett az OD-ben 2, az FK-ban 2, a KH-ban 4, a KT-ban 3 helyiség, az
-  OC-ben egy sem; a helyiségpárok közti utak közül (mind a hét épületben,
+  OC-ben egy sem (az OD-ben és az FK-ban azóta az IFC-ajtók kötik be őket, a
+  kötés ott nem fut; a `tests/epuletek.js` az OD szabályát ajtók nélkül,
+  a `doors`/`via` levételével méri); a helyiségpárok közti utak közül (mind a hét épületben,
   minden kódolt helyiségből mindegyikbe) egy sem veszett el, és a
   mosdóválasztó sorai a portától nem változtak.
 - A fő hálózatot épületenként egyszer számolja (2–8 ms); egy korábbi,
@@ -471,8 +474,10 @@ kell:
   pontos geometriával méri); épületenként mind a hétben rögzített a
   bekötések száma, és a három KH-szobához nincs útvonal.
 
-Ami csak az OD-re áll: **a 229 helyiségből 217-hez van út a portától.** Ami
-kimarad (a valódi appban mérve):
+Ami csak az OD-re áll: **a 229 helyiségből 223-hoz van út a portától** (az
+IFC-ajtók előtt 217-hez). Ami kimarad (a valódi appban mérve): a −2. szint
+három helyisége és a földszinti öltözőblokk (`OD00F24`–`F26`). Az ajtók előtt
+így állt:
 - a −2. szint három helyisége. A `D.stairs`-ben VAN lépcső a −2. és a −1.
   szint közt (`ODX2PK1` → `ODX1P09`), de a −1-es vége 8,9 m-re esik a
   legközelebbi járható cellától, és a `nodesOf()` 7 m-es korlátja kiejti; az
@@ -589,10 +594,10 @@ hagytak egy hibás kódot.
 | `tests/totem.js` | totem mód: egy perc tétlenség után alaphelyzet, húsz másodperccel előtte szól, gesztus közben soha, naponta újratölt — a Playwright órájával, percekig várás nélkül; a nyitott épületválasztót is bezárja, a figyelmeztetés a választó fölött is látszik, a totem választójában nincs alapértelmezett, csillag és GPS, és a forrás nem hivatkozás; egy alaprajz nélküli épület (BA) totemjén az alaphelyzet után a választó nyitva marad az üzenetével; a link végére, a # után írt `?totem` is bekapcsolja — **élesben bejelentett: „nem működik az alaphelyzet"** |
 | `tests/kuld.js` | telefonra küldés: a QR-kódot a képernyőképből olvassa vissza (jsQR), a csendzónát és a sérült kódot külön méri, sötét témában is; a beolvasott link telefonon ugyanazt az útvonalat nyitja meg, lifttel; a totemről `?totem` nélkül |
 | `tests/meres.js` | a telefonos mérőlap (`meres.html`) végigfut a valódi appon, az OA-n akkor is, ha a készüléken más az alapértelmezett épület |
-| `tests/epuletek.js` | épületválasztó és **épületváltás**: mind a 39 épület bent van (településenként végigjárva, mindegyik pontosan egyszer), de csak az nyitható meg, aminek kész az adata; a Tervtár adatai a soron, az adatlapon a nem megnyithatónál nincs megnyitó és alapértelmezett gomb; az Esc csak a választót zárja, a kijelölés marad; más épület kódjára mutató link megnevezi az épületet, nem tűnik el csendben; a váltás mércéje **valódi épületeken mért aranyérték** (épületenként az elérhetetlen helyiségek, az útvonalak összhossza és a gráf élszáma a portától), a váltás utáni **tisztaság** (egyetlen tárolóban, a szintdobozokban sem marad régi bejegyzés), OD → KT → OD (a KT betöltésével); a fő folyosó mellé, de leszakadt szilánkhoz kötött OD-helyiségek (OD00F02, OD35E04) elérhetők, a csak sarkával érintkező OD00F03 nem; minden többcellás kötés egy falnyira van, harmadik helyiség nélkül, és odáig a célszinten az épületen belül vezet az út (pontos geometriával mérve); a homlokzat előtti gyűrűn és ablakrésen át nincs útvonal (KH00F36, KH00F37, KH00F42); a bekötések száma mind a hét épületben rögzített, és a saját foltján belüli út (KHX1PK2 → KHX1P03) megmarad; offline vissza az OA-ra; az `epuletKesz()` egyenként mind a hét kötelező elemre és a portára, és hibás szerkezetre (sokszög nélküli helyiség, maszk nélküli szint, hibás lépcsőpont…); ha az építés mégis elbukik, a régi épület épül vissza (nem félig vált); az ablakos cellakeresés véletlen pontokon és minden helyiségen ugyanazt adja, mint a teljes bejárás (OA, OD) — az aranyértékek egy szűkebb ablakot nem vennének észre; a nem elérhető adat üzenete angolul is a kóddal; **nyilvántartás nélkül** (első indulás, letiltott kérés) a gomb el sem jelenik meg, és az app elindul |
+| `tests/epuletek.js` | épületválasztó és **épületváltás**: mind a 39 épület bent van (településenként végigjárva, mindegyik pontosan egyszer), de csak az nyitható meg, aminek kész az adata; a Tervtár adatai a soron, az adatlapon a nem megnyithatónál nincs megnyitó és alapértelmezett gomb; az Esc csak a választót zárja, a kijelölés marad; más épület kódjára mutató link megnevezi az épületet, nem tűnik el csendben; a váltás mércéje **valódi épületeken mért aranyérték** (épületenként az elérhetetlen helyiségek, az útvonalak összhossza és a gráf élszáma a portától), a váltás utáni **tisztaság** (egyetlen tárolóban, a szintdobozokban sem marad régi bejegyzés), OD → KT → OD (a KT betöltésével); az OD IFC-ajtókkal: a két terem ajtaja a hálózatra nyílik, az OD00F03 az OD00F02-n át érhető el; ajtók nélkül (a teszt leveszi őket) a fő folyosó mellé, de leszakadt szilánkhoz kötött OD-helyiségek (OD00F02, OD35E04) elérhetők, a csak sarkával érintkező OD00F03 nem; minden többcellás kötés egy falnyira van, harmadik helyiség nélkül, és odáig a célszinten az épületen belül vezet az út (pontos geometriával mérve); a homlokzat előtti gyűrűn és ablakrésen át nincs útvonal (KH00F36, KH00F37, KH00F42); a bekötések száma mind a hét épületben rögzített, és a saját foltján belüli út (KHX1PK2 → KHX1P03) megmarad; offline vissza az OA-ra; az `epuletKesz()` egyenként mind a hét kötelező elemre és a portára, és hibás szerkezetre (sokszög nélküli helyiség, maszk nélküli szint, hibás lépcsőpont…); ha az építés mégis elbukik, a régi épület épül vissza (nem félig vált); az ablakos cellakeresés véletlen pontokon és minden helyiségen ugyanazt adja, mint a teljes bejárás (OA, OD) — az aranyértékek egy szűkebb ablakot nem vennének észre; a nem elérhető adat üzenete angolul is a kóddal; **nyilvántartás nélkül** (első indulás, letiltott kérés) a gomb el sem jelenik meg, és az app elindul |
 | `tests/valaszto.js` | a választó: minden címmel bíró épület helye a saját települése és az ország határán belül; Budapesten a csoportok jele a Duna jó oldalán (a III. kerületé Budán), a Duna a képen fut a nagyításhoz mért szélességgel, a III. kerület csoportja a hét óbudai épület; a címkék hat képernyőméreten (telefon, keskeny, fekvő, asztal, alacsony és kis asztali ablak), négy nézetben nem fedik egymást és más jelét, és nem lógnak ki, átméretezés után sem; fekve a jelenet doboza elfér; a biztonsági sávokkal (CDP-vel emulálva) a forrás a kezdősáv fölött, fekve a jelenet a görgető tömbön belül; a házikó felirata telefonon is látszik; az OSM-forrás (ODbL, hivatkozással) a felületen; **alapértelmezett épület**: beállítás, a házikó, induláskor megnyílik, a link, a totem (cím nélkül is) és a párosító mód elsőbbsége, kikapcsolás, hálózat nélkül az OA marad, letiltott tárolóval is fut; **a csendes betöltés közben** választott terem marad, az ugyanarra az épületre mutató link érvényesül, a választott másik épület nyílik meg, a nyitott választó nem csukódik be (és nem mutat „Betöltés…”-t), egy görgetés megállítja, a házikó nem tölt újra; **GPS**: az OD körvonalán belül, a faltól 9 m-re „itt vagy”, előtte a körvonaltól mért távolság, a már nyitott épületnél nincs megnyitás, az YA-nál az YB is, messziről km, letiltott engedélynél üzenet, a bezárt választónál késve jött hely eldobódik; `helyek.json` nélkül csak a lista; a fókusz (zárt választóban nincs tab-állomás, nyitva bent marad, zárva visszatér, a sorról nem ugrik a jelenet címkéjére, a GPS-eredményre megy, a házikó, a töltés és egy azóta rejtetté vált nyitógomb után sem esik a `<body>`-ra); angolul „1 building”; a felirat a teljes képernyős választó fölött látszik, és újrarajzolás után is megvan; a választó saját szélére koppintva nem zárul be, asztalon a háttérre igen; fekvő telefonon (844×340 és a 900 px-nél szélesebb 932×380) a GPS-eredmény után is elérhető a lista; a dobozban kezdett, kint elengedett húzás nem zár; ugyanazon a nézeten újrarajzolva a görgetés marad; az alapértelmezett doboz gombja „Betöltés…”-t mutat; a linkről indult betöltés alatt választott terem marad; egy soha be nem fejeződő letöltés 20 s után üzenetet ad; az elakadt linkes váltás újrapróbálva a link termét nyitja, a hibalap bezárása után már nem; a két épületet vegyítő link egyszer vált, a history-ba nem tesz közbülső bejegyzést, és a címben sem marad a másik épület kódja |
 | `tests/jelenet.js` | a folytonosan nagyítható jelenet és a három lépcsője: országos léptéken a települések kis mása (Budapest, Székesfehérvár — Nagymarosnak nincs körvonalas épülete, tehát modellje sem), a város fölött a kerületek modellje a valódi helyükön (egyetlen valódi ház sem, az a következő lépcső), a campus fölött a valódi házak mind megnevezve; a modellek jól láthatók (≥30 px), nem fedik egymást, nem lógnak ki és nem takarnak másik jelet, és a többházas campusé szélesebb az egyházasénál; a magasság a szintszámból jön (OD > OA > OC); a hátrafelé néző falak kimaradnak (ARÁNYRA mérve); a húzás a kamerát mozdítja és nem nyit épületet, a koppintás megnyitja (alaprajz nélkülinél az adatlapját); a +/− gomb nagyít-kicsinyít és fokon marad, a kézi nagyítás után a kamera beakad a legközelebbi fokra, és az országnál kijjebb nem lehet menni; a címkék telefonon, keskeny telefonon és asztalon sem fednek és nem lógnak ki, a doboz a képernyőn belül van |
-| `tests/masepulet.js` | más épületben nincs OA-ra szabott dolog: a foglalható termek (az OA órarendje) nincs kint, a Büfé gomb csak ahol van büfé (OA, FK; az OD-ben nincs); a szintnév és az emeletszám az épület saját szintjeiből (KT I. és IV. emelet, KH tetőtér, OD V. emelet, egy félszint és egy „Pince”, angolul is), a név az elsődleges (a KD-alak félemelete a földszint fölött, a kötőjel nélküli „Pince 2”), de ahol a név és a kód ellentmond (KD, TA) vagy két földszint jönne ki (BA), az épület nem nyílik meg; a 3D-s szintfelirat és a felolvasói név angolul (OA, KT); a liftes megjegyzés a lift nélküli szöveg; a nemre nem jelölt WC nem „Női” és „Férfi” mosdó, hanem semleges sor; a mosdónevek írásmódjai, a kategória nélküli OC-mosdók, a személyzeti WC kizárása; a KH és a KT akadálymentes mosdója ott van; vissza az OA-ra minden OA-s dolog visszajön |
+| `tests/masepulet.js` | más épületben nincs OA-ra szabott dolog: a foglalható termek (az OA órarendje) nincs kint, a Büfé gomb csak ahol van büfé (OA, FK; az OD-ben nincs); a szintnév és az emeletszám az épület saját szintjeiből (KT I. és IV. emelet, KH tetőtér, OD V. emelet, egy félszint és egy „Pince”, angolul is), a név az elsődleges (a KD-alak félemelete a földszint fölött, a kötőjel nélküli „Pince 2”), de ahol a név és a kód ellentmond (KD, TA) vagy két földszint jönne ki (BA), az épület nem nyílik meg; a 3D-s szintfelirat és a felolvasói név angolul (OA, KT); a liftes megjegyzés a lift nélküli szöveg; a nemre nem jelölt WC nem „Női” és „Férfi” mosdó, hanem semleges sor; a mosdónevek írásmódjai, a kategória nélküli OC-mosdók, a személyzeti WC kizárása, a mosdó-előtér mögötti WC (OC I. emelet) számít; a KH és a KT akadálymentes mosdója ott van; vissza az OA-ra minden OA-s dolog visszajön |
 | `tests/csomag.js` | a Pages-re publikált csomag (`tools/pages-csomag.js`): csak engedélylistás fájl, belső anyag és fejlesztői fájl nincs benne, minden, amire a lapok és a manifest hivatkoznak, benne van; a célkönyvtár nem lehet a repó, a szülője, egy forráskönyvtár, sem egy csomagnevű, de idegen tartalmú könyvtár (a repó-szabály külön is mérve); és az app ebből a csomagból minden épületen végigváltva, a service workerrel együtt egyetlen sikertelen kérés nélkül fut |
 
 ## Amit érdemes tudni, mielőtt hozzányúlsz
@@ -1075,6 +1080,29 @@ kell:
   helyiségek ajtói is bekerüljenek. A `tests/ajtok.js` őrzi; ha az app nem
   veszi figyelembe a `doors`-t és a `via`-t, tízből hat állítása elbukik.
 
+**Ajtók más épületben: `tools/ifc-epulet.py`.** 2026-ban megjött tizennégy
+épület IFC-je (ugyanaz az Archicad-sablon, „Visible elements”, mm-ben). A
+négy megnyithatónál (OD, FF, FK, OC) ez írja a `doors`-t, a `via`-t és a
+`flights`-t a `data/epuletek/<kód>.json`-ba, az OA eszközeinek (`ifc-ajtok.py`,
+`ifc-lepcsok.py`) szabályával és kódjával — azokhoz nem nyúl, az OA IFC-je
+nélkül nem futtathatók újra. Ami eltér:
+- **A szint a nevéből jön** (`emelet()`: „FSZ”, „P1”, „Félemelet”, „1.emelet”,
+  „I. emelet”), és az épület adatának szintneveihez párosul. A tető, a
+  kazán, a „6. Szint” kimarad; az OC V. emelete az IFC-ben nincs meg.
+- **Az ajtót a geometria ismeri fel, nem a név**: az OD-ben az ajtó „AJ-…”,
+  az „M…” ablak, az OC-ben az „A…” ablak, az FF-ben a „D…” ajtó. Ajtó a
+  legalább 1,8 m magas nyílás, ha a gazdafala aljáról indul, vagy a neve
+  ajtóé.
+- **Az illesztés** a legtöbb közös falú szinten fut; a térkép falainak
+  91–96%-a 10 cm-en belül esik az IFC falaira (az OD −2. szintjén és
+  félemeletén 75%). Mind a négy épületben tükrözött, 22,9°-kal elforgatott,
+  mint az OA.
+- **Mit hozott** (a portától, a valódi appban): elérhetetlen helyiség FF 3 →
+  1, OC 6 → 5, OD 12 → 6 (a nyugati szárny és az `OD00F03` az ajtaik és a
+  `via` révén). Az FK-ban a szám nem változott, de az útvonalak összhossza
+  20%-kal csökkent: korábban az `FK00F13`-hoz az út a homlokzat előtti
+  gyűrűn kerülte meg az épületet (104 m), most az ajtaján át megy (28 m).
+
 **A lépcső és a lift az IFC-ben: benne van, csak nem ott, ahol keresnéd.**
 Ez a fájl korábban azt írta, hogy az IFC-ben nincs lift, és a lépcsőknek
 nincs geometriája, csak helye. Ez téves volt: a vizsgálat a lépcsőnek csak a
@@ -1181,7 +1209,10 @@ női, férfi, akadálymentes —, mindegyikből a menetidő szerint legközelebb
 indulástól (ha nincs, a portától). A nemre nem jelölt mosdó nem kerül a női
 vagy a férfi sorba: ha valamelyik jelölt sor hiányzik, egy külön, semleges sor
 mutatja (lásd „Más épületben az OA-ra szabott…”). Kimarad, amibe csak egy
-másik helyiségen át lehet bejutni (`via`: irodából nyíló mosdók), az alagsori
+másik helyiségen át lehet bejutni (`via`: irodából, raktárból nyíló mosdók) —
+kivéve, ha az a helyiség a mosdó előtere (`wcEloter()`: ELŐTÉR vagy MOSDÓ
+nevű, maga nem más mögött): így épül a legtöbb mosdóblokk, és az OC I.
+emeletén az IFC szerint a NŐI WC és az FFI WC is egy ELŐTÉR mögött van —, az alagsori
 dolgozói öltöző két mosdója (`DOLGOZOI_WC`), és a név szerint személyzeti
 mosdó (`SZEMELYZETI_WC`). A `tests/url.js` az első kettőt, a
 `tests/masepulet.js` a harmadikat kéri számon.
@@ -1227,6 +1258,7 @@ Tervtár tervtári alaprajz (PDF) + tábla     --tervlap-uj.py--> helyiség-soks
 Tervtár OA alaprajzok (PDF) + épületadatok --tervlap-szarny.py--> D: a hiányzó szárny
 OE-OA.ifc (Archicad-export, 2023)            --ifc-ajtok.py--> D: doors, via
 OE-OA.ifc                                  --ifc-lepcsok.py--> D: flights
+OE_OD.ifc, OE_FF.ifc, OE_FK.ifc, OE_OC.ifc (2026) --ifc-epulet.py--> data/epuletek/<kód>.json: doors, via, flights
 ```
 
 A térkép (`D`) kézzel nem szerkesztendő: a régi generátor adatára a fenti

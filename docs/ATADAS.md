@@ -101,8 +101,8 @@ visszarontva a teszt elbukik); az eszközök javítása nem, lásd a pont végé
 - **A váltás mércéje valódi épületeken mér** (`tests/epuletek.js`): az addigi
   „OA más kód alatt” mérce ugyanazt a rácsot adta, és akkor is átment, ha
   váltáskor semmi nem épült újra. Most épületenként négy szám a portától az
-  aranyérték: az elérhetetlen helyiségek (OA 3, FF 3, FK 11, KH 14, KT 8, OC
-  6, OD 12), az útvonalak összhossza és a lépcsős meg a liftes gráf élszáma —
+  aranyérték: az elérhetetlen helyiségek (ma, az IFC-ajtók után: OA 3, FF 1,
+  FK 11, KH 14, KT 8, OC 5, OD 6), az útvonalak összhossza és a lépcsős meg a liftes gráf élszáma —
   új épületnél vagy adatjavításnál itt kell átírni. Mellette a váltás után
   egyetlen tárolóban sem maradhat régi bejegyzés: bármelyik ürítő ciklus
   hiányán elbukik. Ez meg is fogott egyet: a szintdobozok tábláját (`FLOOR`)
@@ -212,8 +212,10 @@ KD 70%), de navigálhatónak még egyik sem jó.
 
 ### 4. A kimaradó helyiségek
 
-A megnyitott épületekben 57 kódolt helyiséghez nincs út a portától (a
-kötés javítása előtt 68 volt, lásd lejjebb), ebből 26 pinceszinti (`X1`,
+A megnyitott épületekben 48 kódolt helyiséghez nincs út a portától (a
+kötés javítása előtt 68, az IFC-ajtók előtt 57 volt; az alábbi felsorolás az
+ajtók előtti állapotot írja, azóta elérhető az OD nyugati szárnya és az
+`OD00F03`, az FF-ben kettő és az OC-ben egy helyiség). Az ajtók előtt ebből 26 pinceszinti (`X1`,
 `X2`): az OD −2. szintje teljesen elvágva, az FF, FK, KH pincéje részben, az
 OA-ban egy alagsori helyiség. A KH földszintjén hat helyiség (`KH00F36`–`F39`,
 `F41`, `F42`) a homlokzat felőli oldalon áll, és a maszk csak a homlokzat
@@ -290,9 +292,14 @@ kinyerés mellékterméke; a javítása az eszközben van (a maszkot a helyiség
   fülke, és használhatják-e a hallgatók, az helyszíni ellenőrzés kérdése —
   addig ezekben az épületekben nincs lépcső nélküli útvonal, és az app ezt
   meg is mondja.
-- **Ajtók**: IFC-modell csak az OA-hoz van, ezért máshol az útvonal nem az
-  ajtónál ér véget, hanem a legközelebbi cellánál, vagy ha az leszakadt
-  foltban áll, a fő hálózat egy falnyira eső cellájánál.
+- **Ajtók**: 2026-11-ben megjött 14 IFC (OD, FF, FK, OC, OB, FC, FS, YC,
+  TA-TC, TB, TG, TT-TN, CS3, CS6; a feltöltött fájlok, nem a repóban). A
+  négy megnyitható épületben (OD, FF, FK, OC) az ajtók, a `via` és a
+  lépcsőkarok már ezekből jönnek (`tools/ifc-epulet.py`, CLAUDE.md „Ajtók más
+  épületben”). A KH-nak és a KT-nak nincs IFC-je: ott az útvonal a
+  legközelebbi cellánál ér véget, vagy ha az leszakadt foltban áll, a fő
+  hálózat egy falnyira eső cellájánál. A CS3 és a CS6 nincs a 39 épület
+  nyilvántartásában.
 
 ### 6. Amit a mostani forrásokból sosem lehet megcsinálni
 

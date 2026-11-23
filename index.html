@@ -3423,12 +3423,19 @@ const DOLGOZOI_WC=new Set(["OAX1A09","OAX1A12"]);
 // a név szerint személyzetinek jelölt mosdó (a leltárban: TANÁRI, OKTATÓI, TAKARÍTÓI WC) sem a hallgatóé
 const SZEMELYZETI_WC=/TANÁRI|OKTATÓI|TAKARÍTÓI|SZEMÉLYZETI|DOLGOZÓI/;
 const WC_FAJTA=[["wcw","wcWomen"],["wcm","wcMen"],["acc","wcAcc"]];
+/* A mosdó előterén (ELŐTÉR, MOSDÓ) át nyíló WC a hallgatóé: így épül a
+   legtöbb mosdóblokk, és az IFC-ből jött `via` ezt pontosan mutatja (OC I.
+   emelet: az ELŐTÉR mögött a NŐI WC és az FFI WC). Az iroda vagy raktár mögötti
+   WC (OA20E26) továbbra sem az. Az előtér maga ne legyen más mögött. */
+const wcEloter=kod=>{ const v=ROOM[kod]; if(!v||v.via) return false;
+  const n=(v.name||"").toUpperCase();
+  return /ELŐTÉR|MOSDÓ|MOSD\./.test(n)&&!SZEMELYZETI_WC.test(n)&&!DOLGOZOI_WC.has(v.code); };
 function mosdok(src){
   const k=dijkstra(src,PORTAL,null); if(!k) return [];
   const best={}, jeloletlen={};
   for(const r of D.rooms){
     // az iconsOf() a lépcsőházakat is jelöli, azokat nem kell végigszámolni
-    const ic=r.code&&!r.via&&!DOLGOZOI_WC.has(r.code)&&!/LÉPCSŐ/.test((r.name||"").toUpperCase())
+    const ic=r.code&&(!r.via||wcEloter(r.via))&&!DOLGOZOI_WC.has(r.code)&&!/LÉPCSŐ/.test((r.name||"").toUpperCase())
       &&!SZEMELYZETI_WC.test((r.name||"").toUpperCase())&&iconsOf(r); if(!ic) continue;
     const rt=routeTo(k,src,r); if(!rt) continue;
     // menetidő a lépcsővel együtt, ahogy az útvonal is számolja
