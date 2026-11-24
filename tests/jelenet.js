@@ -268,4 +268,41 @@ run("jelenet", async ({ t, browser, base }) => {
     t(`${nev}: a jelenet doboza a képernyőn belül van`, bent);
     await p4.close(); await c4.close();
   }
+
+  /* ---- az átnézésben talált három hiba ---- */
+  const c5 = await browser.newContext({ ...DESKTOP, colorScheme: "dark" });
+  const p5 = await open(c5, base, { settle: 400 });
+  await p5.waitForFunction(() => EPULETEK && HELYEK, null, { timeout: 10000 });
+  await p5.click("#epvBtn"); await p5.waitForTimeout(500);
+  /* A lista és a jelenet csoportjai ugyanazok: korábban a lista egy kivágatra
+     vetített, 80 egységes csoportosítást használt, és Székesfehérváron a
+     jelenet FG-campusára koppintva a lista nem szűkült, a kamera sem mozdult. */
+  await p5.click('#epvScene .jTel[data-epv="tel:Székesfehérvár"]'); await nyugodt(p5);
+  await p5.evaluate(() => { jelRepul({ k: 1 / 12, cx: JEL.cx, cy: JEL.cy }, 50); }); await p5.waitForTimeout(600); await nyugodt(p5);
+  const fk0 = await p5.evaluate(() => [JEL.k, JEL.cx, JEL.cy]);
+  const fg = await p5.$('#epvScene .jTel[data-epv="csop:FG"]');
+  if (fg) { await fg.click(); await p5.waitForTimeout(400); await nyugodt(p5); }
+  const fgAll = await p5.evaluate(k0 => ({ csop: EPV.csop,
+    mozdult: Math.abs(JEL.k - k0[0]) > 1e-9 || Math.hypot(JEL.cx - k0[1], JEL.cy - k0[2]) > 1,
+    sorok: [...document.querySelectorAll("#epvlist .epvrow")].map(b => b.dataset.ep).sort() }), fk0);
+  t("a jelenet csoportjára koppintva (FG) a lista a csoportra szűkül, és a kamera odarepül",
+    !!fg && fgAll.csop === "FG" && fgAll.mozdult && fgAll.sorok.includes("FG") && !fgAll.sorok.includes("FF"),
+    JSON.stringify(fgAll));
+  /* Billentyűvel húzás után is: a húzás elmozdulása csak a következő
+     lenyomáskor nullázódott, és addig a címkén az Enter semmit nem tett. */
+  await p5.evaluate(() => { epvLep({ tel: null, csop: null, kod: null }); epvOda("orszag"); }); await nyugodt(p5);
+  const sb = await p5.evaluate(() => { const r = document.getElementById("epvScene").getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
+  await p5.mouse.move(sb.x, sb.y); await p5.mouse.down(); await p5.mouse.move(sb.x + 30, sb.y + 10, { steps: 5 }); await p5.mouse.up();
+  await p5.waitForTimeout(300);
+  await p5.locator('#epvScene .jTel[data-epv="tel:Budapest"]').focus(); await p5.keyboard.press("Enter"); await p5.waitForTimeout(500);
+  t("húzás után a jelenet címkéjén az Enter megnyitja a települést", await p5.evaluate(() => EPV.tel) === "Budapest");
+  /* A kiválasztott ház címkéje sötét témában: fehér betű a világos kiemelő
+     színen 2,75-ös kontrasztot adott. */
+  await p5.evaluate(() => epvOda("ep", "OA")); await p5.waitForTimeout(400); await nyugodt(p5);
+  const kontr = await p5.evaluate(() => { const b = document.querySelector("#epvScene .jNev.most"); if (!b) return 0;
+    const s = getComputedStyle(b), rgb = c => c.match(/[\d.]+/g).slice(0, 3).map(Number);
+    const L = c => { const v = rgb(c).map(x => { x /= 255; return x <= .03928 ? x / 12.92 : ((x + .055) / 1.055) ** 2.4; }); return .2126 * v[0] + .7152 * v[1] + .0722 * v[2]; };
+    const a = L(s.color), g = L(s.backgroundColor); return +((Math.max(a, g) + .05) / (Math.min(a, g) + .05)).toFixed(2); });
+  t("sötét témában a kiválasztott ház címkéjének kontrasztja legalább 4,5", kontr >= 4.5, String(kontr));
+  await p5.close(); await c5.close();
 });

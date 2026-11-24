@@ -615,7 +615,7 @@ button{cursor:pointer;background:none;border:0}
 .epvgpsok .meg button{padding:4px 9px;border-radius:8px;border:1px solid var(--line-2);background:var(--surface);font-size:12.5px;color:var(--ink)}
 /* Asztalon a jelenet doboza a hasáb magasságába is beférjen. */
 .epvterkep{--epvh:calc(min(760px,var(--vh100) - 48px) - 190px)}
-.epvforgat{margin-left:auto;display:flex;gap:6px}
+.epvzoom{margin-left:auto;display:flex;gap:6px}
 .epvjel{align-items:center}
 .epvfgomb{display:grid;place-items:center;width:36px;height:36px;border-radius:9px;
   background:var(--surface);border:1px solid var(--line);color:var(--ink-2);cursor:pointer;box-shadow:var(--shadow-1)}
@@ -638,6 +638,7 @@ button{cursor:pointer;background:none;border:0}
 .epvjel3d{position:relative;height:var(--epvh,420px);min-height:150px;max-height:620px;
   border-radius:18px;overflow:hidden;touch-action:none;cursor:grab;
   user-select:none;-webkit-user-select:none;border:1px solid var(--line);
+  background:linear-gradient(180deg,var(--accent-soft) 0%,var(--sunk) 100%);
   background:linear-gradient(180deg,
       color-mix(in srgb,var(--accent) 9%,var(--surface)) 0%,
       color-mix(in srgb,var(--accent) 4%,var(--surface)) 46%,
@@ -646,51 +647,49 @@ button{cursor:pointer;background:none;border:0}
 .epvjel3d>svg{position:absolute;inset:0;width:100%;height:100%;display:block;overflow:hidden}
 .jFold{fill:var(--surface);stroke:var(--line-2);stroke-width:1.5;
   stroke-linejoin:round;vector-effect:non-scaling-stroke}
-.jVaros{fill:color-mix(in srgb,var(--accent) 8%,var(--surface));
-  stroke:color-mix(in srgb,var(--accent) 30%,transparent);stroke-width:1.5;
+.jVaros{fill:var(--accent-soft);fill:color-mix(in srgb,var(--accent) 8%,var(--surface));
+  stroke:var(--line-2);stroke:color-mix(in srgb,var(--accent) 30%,transparent);stroke-width:1.5;
   stroke-linejoin:round;vector-effect:non-scaling-stroke}
-.jSziget{fill:color-mix(in srgb,var(--accent) 8%,var(--surface));
+.jSziget{fill:var(--accent-soft);fill:color-mix(in srgb,var(--accent) 8%,var(--surface));
   stroke:#8fb7e2;stroke-width:1;vector-effect:non-scaling-stroke}
 .jViz{fill:none;stroke:#a6cbea;stroke-linejoin:round;stroke-linecap:round}
-/* A ház tömegének oldallapjai a saját fényüket kapják (--f a normálisból),
-   ugyanúgy, ahogy a campus tömegrajzán. */
-/* A keverékek az --ink felől: sötét témában a 3–8%-os árnyalat alig vált el
+/* A ház tömegének oldallapjai a saját fényüket kapják (--f a normálisból).
+   A keverékek az --ink felől: sötét témában a 3–8%-os árnyalat alig vált el
    a háttértől, és az alaprajz nélküli házak szinte eltűntek a képről. */
 .jHaz{--fv:color-mix(in srgb,var(--ink) 22%,var(--surface));
   --fs:color-mix(in srgb,var(--ink) 55%,var(--surface));
   --tet:color-mix(in srgb,var(--ink) 13%,var(--surface));cursor:pointer}
 .jHaz .fal path{fill:color-mix(in srgb,var(--fv) var(--f),var(--fs));stroke:none}
-.jHaz .tet{fill:var(--tet);stroke:color-mix(in srgb,var(--ink) 26%,transparent);
+.jHaz .tet{fill:var(--tet);stroke:var(--line-2);stroke:color-mix(in srgb,var(--ink) 26%,transparent);
   stroke-width:1;vector-effect:non-scaling-stroke}
 .jHaz.van{--fv:color-mix(in srgb,var(--accent) 52%,white);
   --fs:color-mix(in srgb,var(--accent) 80%,black);
   --tet:color-mix(in srgb,var(--accent) 26%,white)}
-.jHaz.van .tet{stroke:color-mix(in srgb,var(--accent) 60%,transparent)}
+.jHaz.van .tet{stroke:var(--accent);stroke:color-mix(in srgb,var(--accent) 60%,transparent)}
 .jHaz.most .tet{stroke:var(--accent);stroke-width:2.5}
 .jHaz:hover .tet{stroke:var(--accent);stroke-width:2}
 /* Körvonal nélküli ház: GYŰRŰ, nem korong. Korongként nagy fehér foltot
    vágott a mellette álló tömegbe, mintha lyuk lenne a képen. */
-circle.jHaz.pont{fill:color-mix(in srgb,var(--surface) 62%,transparent);
+circle.jHaz.pont{fill:var(--surface);fill-opacity:.62;
   stroke:var(--line-2);stroke-width:2.5}
-circle.jHaz.pont.van{fill:color-mix(in srgb,var(--accent) 55%,transparent);stroke:var(--accent)}
+circle.jHaz.pont.van{fill:var(--accent);fill-opacity:.55;stroke:var(--accent)}
 circle.jHaz.pont.most{stroke:var(--accent);stroke-width:3.5}
 circle.jHaz.pont:hover{stroke:var(--accent)}
-path.jHaz.folt{fill:color-mix(in srgb,var(--ink) 34%,transparent);stroke:none}
-path.jHaz.folt.van{fill:var(--accent)}
-/* A ház neve a tető fölött, a település neve a pontja fölött lóg. */
+path.jHaz.folt{fill:var(--ink);fill-opacity:.34;stroke:none}
+path.jHaz.folt.van{fill:var(--accent);fill-opacity:1}
 /* A ház neve a tetője fölött, a település/csoport neve a pontja fölött; a
    --dx/--dy a mért elhelyezésé (jelCimkek). A PONT az SVG-ben marad, hogy a
    címke elmozdulásakor is a helyén álljon. */
 .jNev,.jTel{position:absolute;white-space:nowrap;cursor:pointer;
   transform:translate(calc(-50% + var(--dx,0px)),calc(-100% + var(--dy,0px)))}
 .jNev{margin-top:-7px;padding:2px 7px;border-radius:999px;border:1px solid var(--line);
-  background:color-mix(in srgb,var(--surface) 86%,transparent);
+  background:var(--surface);background:color-mix(in srgb,var(--surface) 86%,transparent);
   font:600 10.5px/1.3 inherit;color:var(--ink-2)}
-.jNev.van{border-color:color-mix(in srgb,var(--accent) 60%,transparent);color:var(--accent)}
-.jNev.most{background:var(--accent);border-color:var(--accent);color:#fff}
+.jNev.van{border-color:var(--accent);border-color:color-mix(in srgb,var(--accent) 60%,transparent);color:var(--accent)}
+.jNev.most{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .jNev:hover,.jNev:focus-visible{border-color:var(--accent);color:var(--accent)}
 .jTel{margin-top:-11px;padding:3px 9px;border-radius:999px;border:1px solid var(--line);
-  background:color-mix(in srgb,var(--surface) 92%,transparent);
+  background:var(--surface);background:color-mix(in srgb,var(--surface) 92%,transparent);
   font:700 12.5px/1.25 inherit;color:var(--ink)}
 .jTel.csop{font-weight:600;font-size:11.5px;color:var(--ink-2)}
 .epvcsop{display:flex;align-items:center;gap:8px;width:100%;min-height:40px;padding:6px 2px;
@@ -701,12 +700,22 @@ path.jHaz.folt.van{fill:var(--accent)}
    házikóinál: fölötte a modell, alatta a név — egy egység. */
 .jTel.alatt{margin-top:4px;transform:translate(calc(-50% + var(--dx,0px)),var(--dy,0px))}
 .jVar{cursor:pointer}
-.jArny{fill:color-mix(in srgb,var(--ink) 12%,transparent)}
+.jArny{fill:var(--ink);fill-opacity:.12}
 /* A szár a jel fölött is átfuthat (a VIII. kerületben a TA lapos jele fölött):
    ne kapja el a koppintást a jel elől. */
-.jSzar{stroke:color-mix(in srgb,var(--accent) 45%,transparent);stroke-width:1.5;pointer-events:none}
-.jPont{fill:var(--accent);stroke:color-mix(in srgb,var(--accent) 22%,var(--surface));stroke-width:3.5}
-.jPont.csop{fill:color-mix(in srgb,var(--accent) 72%,var(--surface))}
+.jSzar{stroke:var(--accent);stroke-opacity:.45;stroke-width:1.5;pointer-events:none}
+.jPont{fill:var(--accent);stroke:var(--accent-soft);stroke:color-mix(in srgb,var(--accent) 22%,var(--surface));stroke-width:3.5}
+.jPont.csop{fill:var(--accent);fill:color-mix(in srgb,var(--accent) 72%,var(--surface))}
+/* A tömegek színe egyedi tulajdonságokban (--fv, --fs, --tet) keveredik, és
+   azoknál a tartalék nem működik egy korábbi deklarációval: color-mix() nélkül
+   a var() a számításkor érvénytelen, a kitöltés fekete lett volna. Ezért itt
+   egy külön ág (Safari 16.2 és Chrome 111 előtt). */
+@supports not (color:color-mix(in srgb,red,blue)){
+  .jHaz{--fv:var(--line);--fs:var(--line-2);--tet:var(--sunk)}
+  .jHaz .fal path{fill:var(--line-2)}
+  .jHaz.van .fal path{fill:var(--accent)}
+  .jHaz.van .tet{fill:var(--accent-soft)}
+}
 .jTel:hover,.jTel:focus-visible{border-color:var(--accent);color:var(--accent)}
 .epvlista h3{outline:none;margin:14px 16px 4px;font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
 .epvlista h4{margin:10px 16px 2px;font-size:12px;font-weight:600;color:var(--ink-2)}
@@ -3965,7 +3974,7 @@ let EPULETEK=null, HELYEK=null, epvMsg="", epvVar="", epvVarHash="", epvVissza=n
 const epItt=()=>(Object.keys(ROOM)[0]||"").slice(0,2);
 /* Hol tart a hallgató a választóban: ország → település (→ csoport) → épület
    adatlapja, és a „Hol vagyok?” eredménye. */
-const EPV={tel:null, csop:null, kod:null, gps:null, irany:0};
+const EPV={tel:null, csop:null, kod:null, gps:null};
 const romaiSzam=n=>[["XX",20],["X",10],["IX",9],["V",5],["IV",4],["I",1]]
   .reduce((s,[r,v])=>{ while(n>=v){ s+=r; n-=v; } return s; },"");
 const epvTel=e=>(e.telephely||"").replace(/\s*\d{4}$/,"");          // „Budapest 1034” → „Budapest”
@@ -4032,24 +4041,7 @@ function epvCsoportok(list,v,sugar){
   const most=c=>c.tag.some(e=>e.kod===epItt())?1:0, nyit=c=>c.tag.filter(e=>e.navigalhato).length;
   return cs.sort((a,b)=>most(b)-most(a)||nyit(b)-nyit(a)||b.tag.length-a.tag.length);
 }
-/* ------------------------------------------------- a telephely 3D-ben */
-/* A campus NEM CSS-3D, hanem egyetlen SVG-be vetített tömegrajz. Az Épület
-   nézet megtanította, hogy minden raszterezett 3D-s sík külön renderpass
-   (lásd „A falak kiemelése…”): húsz épület egyenként megdöntött rétegként
-   telefonon akadozna. Vetítve az egész campus egyetlen raszterezett réteg,
-   és a mélységsorrend meg a fényelés is a kezünkben marad.
-
-   Az alaprajz az OSM körvonala, a magasság a nyilvántartás szintszáma —
-   egyik sem becslés. Amelyik épületnek nincs körvonala, az NEM kap kitalált
-   tömeget: lapos jelként áll a helyén. Egy kitalált alaprajzú ház pont azt a
-   bizalmat ásná alá, amit a többi valódi körvonala megad. */
-/* A campus egy kilométer széles, a házak ötven méteresek: valódi arányban
-   telefonon lapos tányérok lennének, amiken a 3D nem is látszik. A magasságot
-   ezért túlozzuk, ahogy a makettek és a városmaketter-térképek is. Az ARÁNYOK
-   így is igazak maradnak: a hétszintes OA másfélszer akkora, mint a hatszintes
-   OC — csak az egész köteg magasabb. */
-
-
+/* ------------------------------------------------- tömegek */
 /* A gyűrűt az óramutatóval ellentétes körüljárásúra fordítjuk, hogy az
    élek kifelé mutató normálisa egységesen (dy,-dx) legyen. Az OSM körüljárása
    nem garantált. */
@@ -4707,7 +4699,7 @@ function epvJelenetHtml(){
   const t=T();
   return `<div class="epvjel3d" id="epvScene" role="application" tabindex="-1" aria-label="${esc(t.epvScene)}"></div>`
     +`<div class="epvjel"><span><i class="van"></i>${t.epvHasPlan}</span><span><i></i>${t.epvNoPlan}</span>`
-    +`<span class="epvforgat">`
+    +`<span class="epvzoom">`
     +`<button class="epvfgomb" data-epv="zoom:ki" aria-label="${esc(t.epvZoomOut)}">`
     +`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button>`
     +`<button class="epvfgomb" data-epv="zoom:be" aria-label="${esc(t.epvZoomIn)}">`
@@ -4751,7 +4743,7 @@ function epvOda(mit, arg){
   else if(mit==="csop"){
     const l=Object.values(EPULETEK.epuletek).filter(e=>epvTel(e)===EPV.tel);
     const tk=epvTerkepKulcs(EPV.tel);
-    if(tk){ const c=epvCsoportok(l,epvVetulet(HELYEK.terkep[tk].hatar)).find(c=>c.kulcs===arg);
+    if(tk){ const c=epvCsoportok(l,JELVET,CSOP_M).find(c=>c.kulcs===arg);
       if(c){ const hs=c.tag.map(epvHely).filter(Boolean);
         if(hs.length){ let a=Infinity,b=-Infinity,cc=Infinity,d=-Infinity;
           for(const h of hs){ const w=JELVET.p(h.lon,h.lat);
@@ -4908,8 +4900,12 @@ function epvRender(){
          ott inkább az egész település látszik, a határával — különben üres lap
          lenne, néhány jellel. */
       if(ab&&!(M.duna||[]).some(g=>g.some(([x,y])=>x>=ab[0]&&x<=ab[2]&&y>=ab[1]&&y<=ab[3]))) ab=null;
-      const v=epvVetulet(M.hatar,ab);
-      cs=epvCsoportok(l,v);
+      /* A csoport ugyanaz, mint a jelenetben (méterben, CSOP_M-en belül):
+         a régi, kivágatra vetített 80 egységes csoportosítás Székesfehérváron
+         mást adott, és a jelenet FG-campusára koppintva a lista nem szűkült,
+         a kamera sem mozdult (a kulcsot a lista nem ismerte). A régi vetület
+         csak a jelenet nélküli (helyek.json híján csupa lista) úton marad. */
+      cs=JELVET?epvCsoportok(l,JELVET,CSOP_M):epvCsoportok(l,epvVetulet(M.hatar,ab));
     }
     // adatlapnál telefonon a jelenet csak tolná lefelé a lényeget
     if(!(k&&MOB())) terkep=epvJelenetHtml();
@@ -5119,7 +5115,10 @@ $("epvlist").addEventListener("click",ev=>{
   /* A jelenetben a koppintás a házé, a HÚZÁS a kameráé — ugyanaz a szabály,
      mint a térképen (lásd „A kattintás a teremé”): egy elhúzott ujj vége ne
      nyisson meg véletlenül egy épületet. */
-  const jh=jelHost(); if(jh&&jh.contains(b)&&jh.__moz&&jh.__moz()>4) return;
+  /* A billentyűvel adott kattintás (Enter, szóköz: detail 0) nem húzás vége:
+     a legutóbbi húzás elmozdulása (moz) csak a következő lenyomáskor nullázódik,
+     és enélkül egy húzás után a jelenet címkéin az Enter semmit nem tett. */
+  const jh=jelHost(); if(ev.detail!==0&&jh&&jh.contains(b)&&jh.__moz&&jh.__moz()>4) return;
   const [m,arg]=(b.dataset.epv+":").split(":");
   if(m==="zar") epvZar();
   else if(m==="vissza"){ const k=EPV.kod;
