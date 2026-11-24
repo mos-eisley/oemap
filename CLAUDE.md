@@ -1127,6 +1127,9 @@ három dolgot pótol, mindhármat mérve:
   egyértelmű (egy pecsét egy üregben) és a táblához közelebb van — ennek a
   hatása kicsi (a ±3%-os arány 0–2 ponttal nő), a tervlap-kivágó hibáit nem
   ez javítja. A falak közti centis réseket 8 cm-es zárással tömi (`ZARAS`).
+  **A maszkhoz csak hozzáad**, a régit nem építi újra: az épület adata más
+  tágítással is készülhetett, és az FK-n az alapértelmezettel újraépítve a
+  folyosók az ajtónyílásoknál elszakadtak (88% helyett 2% elérhető).
 - **Az ajtókat**, ahogy fent. Egy szabály itt jött elő: **mosdón át csak
   raktár vagy vizes helyiség közelíthető meg** (`mosdon_at()`). A TB portája
   az IFC-ben csak a szomszédos NŐI WC felé kapott ajtót, és az útvonal
@@ -1138,7 +1141,14 @@ Az elérhetetlen helyiség az OB-ben egy pincei kamra, a TB-ben a földszinti
 pihenő, tároló és közlekedő (`TB00F24`, `F25`, `FK4`), az YC-ben egy.
 A TB-ben a mosdós porta-via idején a portától az I. emeletre az út a II.
 emeleten át ment (0→1→2→1, az útvonalak összhossza 5080 m); a via nélkül
-egyenesen megy (3854 m).
+egyenesen megy (3865 m).
+
+**A régi négyre (OD, FF, FK, OC) nem futtattuk le**, mert mérve nem jobb:
+az OD, az FF és az FK elérhetősége ugyanannyi (97, 99, 88%), az OC-é 97-ről
+95%-ra esik — az OC IFC-jében nincs V. emelet, így az IFC-ből jött lépcsők
+oda nem érnek fel. Az OD −2. szintjét sem hozza be: az IFC karjai sem kötik
+össze a −1.-gyel. A `--lepcso` tehát a tervlapi lépcsőket CSERÉLI, nem
+egészíti ki: ahol az IFC-ből szint hiányzik, ott ne használd.
 
 A többi IFC-s épület, és hogy miért nem nyílt meg, a `docs/ATADAS.md`-ben.
 A sorrend: `tervlap-batch.py` → `ifc-helyisegek.py` → `ifc-epulet.py --lepcso`.

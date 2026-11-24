@@ -20,9 +20,9 @@ gyűrűk belseje maga a helyiség**. Ezért:
    egyetlen pecsét áll, a területe a táblától legfeljebb `TUR`-ra tér el,
    és közelebb van hozzá, mint a kivágott sokszög. Ahol több pecsét áll egy
    üregben (WC-fülkék válaszfal nélkül, nyitott tér), ott a kivágás marad.
-4. A közlekedők maszkja újraépül, az `epulet-json.py` szabályával (a
-   közlekedők uniója `KOZL_TAG`-gal tágítva, mínusz a térkép falai), és
-   hozzájön a **gazdátlan padló**: az IFC-üregeknek az a része, amelyet
+4. A maszkhoz hozzájön (a régit nem veszi el) a javított közlekedők
+   maszkja, az `epulet-json.py` szabályával (a közlekedők uniója
+   `KOZL_TAG`-gal tágítva, mínusz a térkép falai), és a **gazdátlan padló**: az IFC-üregeknek az a része, amelyet
    egyetlen helyiség sokszöge sem fed, és közlekedőhöz ér. Ez a kivágó
    kihagyott darabja, többnyire előcsarnok vagy lépcsőház-előtér: az YC
    földszintjén a lépcsőház és a fő folyosó közti sáv ilyen volt, és nélküle
@@ -124,6 +124,13 @@ def main(ifc, js):
                 kozl = unary_union([kozl] + pot)
                 stat["gazdátlan padló a maszkba (m²)"] += round(sum(q.area for q in pot))
         m = J.maszk(kozl, fal, GW, GH)
+        # a régi maszkhoz csak HOZZÁAD: az épület adata más tágítással is
+        # készülhetett (a KH és a KT `--tag 0.6`-tal), és az alapértelmezettel
+        # újraépítve az FK folyosói az ajtónyílásoknál elszakadtak — a
+        # helyiségek 2%-a maradt elérhető a 88% helyett
+        regi = np.unpackbits(np.frombuffer(base64.b64decode(D["masks"][str(lv)]), np.uint8),
+                             bitorder="little")[:GW * GH].reshape(GH, GW)
+        m = m | regi
         D["masks"][str(lv)] = base64.b64encode(np.packbits(m.reshape(-1), bitorder="little").tobytes()).decode()
 
     with open(js, "w", encoding="utf-8") as ki:

@@ -191,7 +191,7 @@ run("épületválasztó", async ({ t, ctx, browser, base }) => {
     FK: { ki: 11, hossz: 2922, el: 8, lel: 0 }, KH: { ki: 14, hossz: 7270, el: 22, lel: 0 },
     KT: { ki: 8, hossz: 15059, el: 86, lel: 0 }, OC: { ki: 5, hossz: 2428, el: 28, lel: 0 },
     OD: { ki: 6, hossz: 4293, el: 14, lel: 0 },
-    OB: { ki: 1, hossz: 745, el: 4, lel: 0 }, TB: { ki: 3, hossz: 3854, el: 14, lel: 0 },
+    OB: { ki: 1, hossz: 745, el: 4, lel: 0 }, TB: { ki: 3, hossz: 3865, el: 14, lel: 0 },
     YC: { ki: 1, hossz: 686, el: 6, lel: 0 }
   };
   const aranyOf = m => ({ ki: m.ki, hossz: m.hossz, el: m.el, lel: m.lel });

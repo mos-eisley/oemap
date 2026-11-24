@@ -28,10 +28,14 @@ szakaszában. Ami nem nyílt meg, és miért (a `tervlap-batch.py` →
 | TA, TC | — | A szintsor ellentmondó (a TA-ban az I. emelet után a III. és az V. jön, a TC-ben két „V. emelet” van): az `epulet-json.py` szintkiosztását kell javítani (lásd lent, 1. és a CLAUDE.md szintneves pontja). Az IFC szintjei („C 2. EMELET”, „C 4. EMELET”) a C szárnyét külön adják, ez segíthet. |
 | CS3, CS6 | — | Nincsenek a 39 épület nyilvántartásában. |
 
-A négy már megnyitott IFC-s épületre (OD, FF, FK, OC) a `--lepcso` és az
-`ifc-helyisegek.py` még nem futott: náluk a tervlapi lépcsők maradtak. Az OD
-−2. szintje épp egy rossz helyre eső lépcsőpont miatt elérhetetlen, ott ez
-segíthet — mérni kell, és utána az aranyértékeket átírni.
+A négy már megnyitott IFC-s épületre (OD, FF, FK, OC) a teljes lánc
+(`ifc-helyisegek.py` + `--lepcso`) 2026-11-24-én lefutott, de nem került be:
+az OD, FF, FK elérhetősége nem változott, az OC-é romlott (az IFC-ben nincs V.
+emelet, a lépcsők oda nem érnek fel), az OD −2. szintjét az IFC karjai sem
+kötik a −1.-hez. Közben derült ki, hogy a helyiség-pontosító a maszkot az
+alapbeállítással újraépítve az FK-t 2%-ra vitte: azóta a régi maszkhoz csak
+hozzáad. Ha egyszer a tervlapi és az IFC-lépcsőket együtt kellene használni
+(ahol az IFC-ből szint hiányzik), az `ifc_lepcsok()` kiegészítése a dolog.
 
 ## Egy mondatban
 
