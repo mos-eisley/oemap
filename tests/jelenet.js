@@ -239,9 +239,20 @@ run("jelenet", async ({ t, browser, base }) => {
   const c3 = await browser.newContext(PHONE);
   const p3 = await open(c3, base, { settle: 600 });
   await p3.waitForFunction(() => EPULETEK && HELYEK, null, { timeout: 10000 });
-  await csoportra(p3);
-  await p3.click('circle.jHaz.pont[data-epv="ep:OB"]'); await p3.waitForTimeout(600);
-  t("alaprajz nélküli épület lapos jelére koppintva az adatlapja jön", await p3.evaluate(() => EPV.kod) === "OB");
+  /* Az OB-nek 2026-11 óta van alaprajza (a III. kerület csoportjában az
+     volt az egyetlen körvonal nélküli, alaprajz nélküli ház), ezért a mérce a
+     VIII. kerület TA-ja: körvonal nélküli, lapos jel, és nem megnyitható. */
+  await p3.click("#epvBtn"); await p3.waitForTimeout(250);
+  await p3.click('#epvlist .jTel[data-epv="tel:Budapest"]'); await nyugodt(p3);
+  await p3.click('#epvlist .epvcsop[data-epv="csop:BA"]'); await nyugodt(p3); await p3.waitForTimeout(1200);
+  // a jel fölött a saját címkéje vagy egy szomszédé állhat: a képernyő pontjára koppintunk, ahogy egy ujj
+  const ta = await p3.locator('circle.jHaz.pont[data-epv="ep:TA"]').boundingBox();
+  const fent = await p3.evaluate(([x, y]) => { const e = document.elementFromPoint(x, y); return e && e.dataset.epv; },
+    [ta.x + ta.width / 2, ta.y + ta.height / 2]);
+  await p3.mouse.click(ta.x + ta.width / 2, ta.y + ta.height / 2); await p3.waitForTimeout(600);
+  t("alaprajz nélküli épület lapos jelére koppintva az adatlapja jön",
+    fent === "ep:TA" && await p3.evaluate(() => EPV.kod === "TA" && epItt() === "OA" && !EPULETEK.epuletek.TA.navigalhato),
+    fent + " " + await p3.evaluate(() => JSON.stringify({ kod: EPV.kod, itt: epItt() })));
   await p3.close(); await c3.close();
 
   /* ---- asztalon is: a címkék és a keret ---- */

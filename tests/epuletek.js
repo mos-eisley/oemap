@@ -187,10 +187,12 @@ run("épületválasztó", async ({ t, ctx, browser, base }) => {
      ha egy adatjavítás bekötött egy helyiséget, vagy egy új épület nyílik meg,
      itt kell átírni. */
   const ARANY = {
-    OA: { ki: 3, hossz: 13223, el: 26, lel: 30 }, FF: { ki: 3, hossz: 1003, el: 18, lel: 0 },
-    FK: { ki: 11, hossz: 3686, el: 8, lel: 0 }, KH: { ki: 14, hossz: 7270, el: 22, lel: 0 },
-    KT: { ki: 8, hossz: 15059, el: 86, lel: 0 }, OC: { ki: 6, hossz: 2466, el: 28, lel: 0 },
-    OD: { ki: 12, hossz: 4103, el: 14, lel: 0 }
+    OA: { ki: 3, hossz: 13223, el: 26, lel: 30 }, FF: { ki: 1, hossz: 979, el: 18, lel: 0 },
+    FK: { ki: 11, hossz: 2922, el: 8, lel: 0 }, KH: { ki: 14, hossz: 7270, el: 22, lel: 0 },
+    KT: { ki: 8, hossz: 15059, el: 86, lel: 0 }, OC: { ki: 5, hossz: 2428, el: 28, lel: 0 },
+    OD: { ki: 6, hossz: 4293, el: 14, lel: 0 },
+    OB: { ki: 1, hossz: 745, el: 4, lel: 0 }, TB: { ki: 3, hossz: 3865, el: 14, lel: 0 },
+    YC: { ki: 1, hossz: 686, el: 6, lel: 0 }
   };
   const aranyOf = m => ({ ki: m.ki, hossz: m.hossz, el: m.el, lel: m.lel });
   const p4 = await open(ctx, base + "#from=OA00FK1&to=OA10E18", { settle: 1500 });
@@ -274,7 +276,11 @@ run("épületválasztó", async ({ t, ctx, browser, base }) => {
   t("OD: a porta a sajátja, és mind a 229 kódolt helyiség bent van", od1.porta === "OD00F01" && od1.kodolt === 229,
     JSON.stringify({ porta: od1.porta, kodolt: od1.kodolt }));
   t.eq("OD: a portától mért aranyértékek, az OA után", aranyOf(od1), ARANY.OD);
-  /* Ajtóadat nélkül a helyiség a legközelebbi cellához kötődik, és az egy
+  /* Az OD-nek azóta van ajtóadata (az IFC-ből, tools/ifc-epulet.py): a két
+     terem ajtaja a folyosóra nyílik, az OD00F03 pedig az OD00F02-n át
+     közelíthető meg (via). A kötés szabályát ezért ajtók nélkül mérjük:
+     a teszt leveszi a doors/via mezőt, és újraépíti a helyiség-cellákat.
+     Ajtóadat nélkül a helyiség a legközelebbi cellához kötődik, és az egy
      leszakadt szilánkba is eshet: az OD00F02 rajzterem és az OD35E04 iroda
      így nem volt elérhető, pedig a fő folyosó ott van mellettük (3 cm-re,
      illetve az iroda sokszögébe nyúlva). Most a fő hálózat egy cellája is
@@ -282,12 +288,24 @@ run("épületválasztó", async ({ t, ctx, browser, base }) => {
      OD00F03 rajzterem fő hálózati cellája viszont csak a sarkánál áll, oda
      nem köt (itt ez a szabály a szigorúbb oldalon téved: a sarki cella abban
      az előcsarnokban van, amelyikkel 7 m-en közös a körvonala). */
-  const kotes = await p4.evaluate(() => {
+  const kotesOf = () => {
     const r1 = ROOM[START], k = dijkstra(r1, PORTAL, null);
     return ["OD00F02", "OD35E04", "OD00F03"].map(c => { const r = ROOM[c], cs = RCELL[r.id] || [];
-      return { kod: c, ut: !!routeTo(k, r1, r), cellak: cs.length }; });
-  });
-  t("OD: a fő folyosó mellett álló rajzterem és iroda (OD00F02, OD35E04) elérhető; a csak sarkával érintkező OD00F03 nem",
+      return { kod: c, ut: !!routeTo(k, r1, r), cellak: cs.length, ajto: !!(r.doors || []).length, via: r.via || null }; });
+  };
+  const ajtos = await p4.evaluate(`(${kotesOf})()`);
+  t("OD, IFC-ajtókkal: a két terem ajtaja a hálózatra nyílik, az OD00F03 az OD00F02-n át érhető el",
+    ajtos[0].ut && ajtos[0].ajto && ajtos[1].ut && ajtos[1].ajto && ajtos[2].ut && ajtos[2].via === "OD00F02",
+    JSON.stringify(ajtos));
+  const kotes = await p4.evaluate(`(() => {
+    const ment = D.rooms.map(r => [r.doors, r.via]);
+    for (const r of D.rooms) { delete r.doors; delete r.via; }
+    epuletRcell(D); epuletPortal(D);
+    const ki = (${kotesOf})();
+    D.rooms.forEach((r, i) => { if (ment[i][0]) r.doors = ment[i][0]; if (ment[i][1]) r.via = ment[i][1]; });
+    epuletRcell(D); epuletPortal(D);
+    return ki; })()`);
+  t("OD ajtók nélkül: a fő folyosó mellett álló rajzterem és iroda (OD00F02, OD35E04) elérhető; a csak sarkával érintkező OD00F03 nem",
     kotes[0].ut && kotes[1].ut && !kotes[2].ut && kotes[2].cellak === 1, JSON.stringify(kotes));
   t("a szintválasztó az OD kilenc szintjét mutatja, a lista az OD-t jelöli", od1.rail === 9 && od1.itt === "OD",
     `${od1.rail} szint, itt: ${od1.itt}`);
@@ -357,11 +375,13 @@ run("épületválasztó", async ({ t, ctx, browser, base }) => {
     }
     return { db, hiba };
   });
-  const kapott = {}, kotesek = {};
+  const kapott = {}, kotesek = {}, portaMosdo = {};
   for (const kod of Object.keys(ARANY)) {
     await p4.evaluate(k => epuletValt(k), kod); await kesz(p4, kod);
     const m = await meres(p4); kapott[kod] = m.ep === kod ? aranyOf(m) : "nem nyílt meg";
     kotesek[kod] = await kotesHiba(p4);
+    portaMosdo[kod] = await p4.evaluate(() => entryOf(ROOM[START]).chain.map(r => r.code + " " + r.name)
+      .filter(x => /WC|MOSDÓ|ZUHANY|PISZOÁR/.test(x)));
     if (kod === "KH") kotesek.KHpince = await p4.evaluate(() => {
       const r1 = ROOM[START], k = dijkstra(r1, PORTAL, null);
       return { pince: !!findRoute(ROOM.KHX1PK2, ROOM.KHX1P03, PORTAL),
@@ -371,12 +391,21 @@ run("épületválasztó", async ({ t, ctx, browser, base }) => {
   const db = {}; for (const kod of Object.keys(ARANY)) db[kod] = kotesek[kod].db;
   t("a kötés minden épületben csak egy élen át, egy falnyira köt, harmadik helyiség nélkül, és a célszinten az épületen belül",
     Object.keys(ARANY).every(k => !kotesek[k].hiba.length), JSON.stringify(kotesek));
-  t.eq("új kötés épületenként (OD 2, FK 2, KH 4, KT 3)", db, { OA: 0, FF: 0, FK: 2, KH: 4, KT: 3, OC: 0, OD: 2 });
+  /* Az ajtós helyiséghez a kötés nem nyúl: az OD-ben és az FK-ban az IFC-ajtók
+     óta egy sincs (korábban 2-2). */
+  t.eq("új kötés épületenként (KH 4, KT 3; az ajtós OD, FK, FF, OC, OB, TB, YC 0)", db,
+    { OA: 0, FF: 0, FK: 0, KH: 4, KT: 3, OC: 0, OD: 0, OB: 0, TB: 0, YC: 0 });
   t("a régi kötés megmarad: a KH pincéjében az előtérből a műhelyhez továbbra is van út (KHX1PK2 → KHX1P03)",
     kotesek.KHpince.pince === true);
   t("a homlokzat előtti gyűrűn vagy ablakrésen át nincs útvonal (KH00F36, KH00F37, KH00F42)",
     !kotesek.KHpince.kint.length, kotesek.KHpince.kint.join());
   t.eq("minden megnyitható épületben a portától mért aranyértékek (elérhetetlen, összhossz, élek)", kapott, ARANY);
+  /* Az IFC-ből jött `via` a portát egyszer egy mosdón át vezette ki (TB: csak
+     a NŐI WC felé volt ajtaja): az útvonal „Kijárat ezen át: NŐI WC” lépéssel
+     indult. Mosdón át csak raktár vagy vizes helyiség közelíthető meg
+     (tools/ifc-epulet.py, mosdon_at()). */
+  t("egyik épületben sem a mosdón át indul az út a portáról",
+    Object.values(portaMosdo).every(l => !l.length), JSON.stringify(portaMosdo));
   const nyithato = await p4.evaluate(() => Object.keys(EPULETEK.epuletek).filter(k => EPULETEK.epuletek[k].navigalhato).sort());
   t("a nyilvántartás pontosan ezeket az épületeket nyitja meg (új épületnél az aranyérték is kell)",
     nyithato.join() === Object.keys(ARANY).sort().join(), nyithato.join());
