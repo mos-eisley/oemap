@@ -50,8 +50,12 @@ run("teremszámok Épület nézetben", async ({ t, ctx, base }) => {
                    szoveg:lathato().map(L => L.e.textContent).slice(0, 6) };
 
     // kicsinyítve ritkulnak: kisebb teremképbe kevesebb szám fér (asztalon
-    // a nagyobb kép miatt illesztve szinte mind kifér, ezért négyszer)
-    for (let i = 0; i < 4; i++) { document.getElementById("zout").click(); await w(1400); }
+    // a nagyobb kép miatt illesztve szinte mind kifér, ezért négy gombnyi).
+    // A − gomb a harmadik lépésnél már a térképnek adná át a képet (az
+    // illesztett méret 0,6-ánál), ezért a nézetet közvetlenül kicsinyítjük,
+    // ugyanúgy, ahogy a gomb tenné (a kép közepe körül).
+    const f4 = 1 / 1.22 ** 4;
+    S.view = { k: S.view.k * f4, x: S.view.x * f4, y: S.view.y * f4 }; S.dirty = true; updateView(); await w(1400);
     out.kicsinyitve = { db:lathato().length, atfed:atfed() };
     document.getElementById("zfit").click(); await w(1500);
 

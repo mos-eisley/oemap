@@ -19,14 +19,21 @@
    - a HÚZÁS a kameráé, a koppintás a házé (ugyanaz a szabály, mint a
      teremnél: egy elhúzott ujj vége ne nyisson meg véletlenül egy épületet);
    - a címkék a kirajzolt képen mérve nem fedik egymást, más jelét, és nem
-     lógnak ki a keretből. */
+     lógnak ki a keretből (a térkép SZABAD részéből: a panel és az alsó lap
+     takarását levonva — a térkép az egész térképdobozt kitölti). */
 const { run, open, PHONE, DESKTOP, ROOT } = require("./lib");
 const fs = require("fs"), path = require("path");
 
 const reg = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "epuletek.json"), "utf8")).epuletek;
 const hely = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "helyek.json"), "utf8"));
 
-const nyugodt = pg => pg.waitForFunction(() => !JEL.anim, null, { timeout: 6000 }).catch(() => {});
+const nyugodt = pg => pg.waitForFunction(() => !JEL.fly && !JEL.lazit, null, { timeout: 6000 }).catch(() => {});
+// telefonon a lista az alsó lapon: a sorokhoz fölhúzzuk, a térképhez félig vissza
+const lap = (pg, n) => pg.evaluate(n => { if (MOB()) setSnap(n); }, n).then(() => pg.waitForTimeout(80));
+async function nyit(pg) { await pg.click("#epvBtn"); await pg.waitForTimeout(150); await nyugodt(pg); }
+/* A térkép szabad része (a doboz koordinátáiban mérve, képernyő-képpontban). */
+const SZABAD = `(() => { const H = document.getElementById("epvScene").getBoundingClientRect();
+  return { left: H.left + JEL.sz.l, right: H.right - JEL.sz.r, top: H.top + JEL.sz.t, bottom: H.bottom - JEL.sz.b, H }; })()`;
 const allapot = pg => pg.evaluate(() => ({
   mpp: +document.querySelector(".epvjel3d").dataset.mpp,
   dol: +jelDol().toFixed(1),
@@ -44,11 +51,12 @@ const allapot = pg => pg.evaluate(() => ({
    csoport, és mindkét fajta épület van benne (körvonalas és körvonal
    nélküli, megnyitható és adatlap). */
 async function csoportra(pg) {
-  await pg.click("#epvBtn"); await pg.waitForTimeout(250);
-  await pg.click('#epvlist .jTel[data-epv="tel:Budapest"]'); await nyugodt(pg);
+  await nyit(pg);
+  await pg.click('#epvScene .jTel[data-epv="tel:Budapest"]'); await nyugodt(pg);
   // a csoport (telephely) bejárata a lista fejléce; a jelenetben a házak már
   // a nevükkel állnak, ott a ház maga a célpont
-  await pg.click('#epvlist .epvcsop[data-epv="csop:KB"]'); await nyugodt(pg);
+  await lap(pg, "full");
+  await pg.click('#epvlist .epvcsop[data-epv="csop:KB"]'); await lap(pg, "mid"); await nyugodt(pg);
   await pg.waitForTimeout(150);
 }
 
@@ -56,7 +64,7 @@ run("jelenet", async ({ t, browser, base }) => {
   const ctx = await browser.newContext(PHONE);
   const p = await open(ctx, base, { settle: 600 });
   await p.waitForFunction(() => typeof HELYEK !== "undefined" && HELYEK && EPULETEK, null, { timeout: 10000 });
-  await p.click("#epvBtn"); await p.waitForTimeout(400);
+  await nyit(p);
 
   /* ---- a részletesség a nagyítással lép ---- */
   const o = await allapot(p);
@@ -69,8 +77,8 @@ run("jelenet", async ({ t, browser, base }) => {
   t.eq("a körvonalas épülettel bíró településnek 3D-s modellje van", o.modell, ["Budapest", "Székesfehérvár"]);
   t("a modellben legfeljebb 5-5 ház áll (ennél több ekkora jelben pacni)",
     o.modellHaz > 3 && o.modellHaz <= 10, String(o.modellHaz));
-  const modellek = await p.evaluate(() => {
-    const H = document.querySelector(".epvjel3d").getBoundingClientRect();
+  const modellek = await p.evaluate(SZ => {
+    const Z = eval(SZ), H = Z.H;
     const r = [...document.querySelectorAll("g.jVar")].map(g => {
       const b = g.getBoundingClientRect();
       return { n: g.dataset.epv.replace(/^[a-z]+:/, ""), l: b.left - H.left, t: b.top - H.top, w: b.width, h: b.height };
@@ -80,7 +88,7 @@ run("jelenet", async ({ t, browser, base }) => {
     const baj = [];
     for (const a of r) {
       if (a.w < 30) baj.push(a.n + " modellje apró: " + Math.round(a.w));
-      if (a.l < 0 || a.t < 0 || a.l + a.w > H.width || a.t + a.h > H.height) baj.push(a.n + " modellje kilóg");
+      if (a.l < Z.left - H.left || a.t < Z.top - H.top || a.l + a.w > Z.right - H.left || a.t + a.h > Z.bottom - H.top) baj.push(a.n + " modellje kilóg");
       for (const b of r) if (a !== b && a.n < b.n && a.l < b.l + b.w && b.l < a.l + a.w && a.t < b.t + b.h && b.t < a.t + a.h)
         baj.push(a.n + " × " + b.n + " modellje fedi egymást");
     }
@@ -93,12 +101,12 @@ run("jelenet", async ({ t, browser, base }) => {
       }
     });
     return baj;
-  });
+  }, SZABAD);
   t("a modellek jól láthatók: nem fedik egymást, nem lógnak ki, és nem takarnak másik jelet",
     !modellek.length, modellek.join("; "));
   t("az ország fölött a kép felülnézet (a ferde országtérkép értelmetlen)", o.dol === 0, String(o.dol));
 
-  await p.click('#epvlist .jTel[data-epv="tel:Budapest"]'); await nyugodt(p); await p.waitForTimeout(150);
+  await p.click('#epvScene .jTel[data-epv="tel:Budapest"]'); await nyugodt(p); await p.waitForTimeout(150);
   const b = await allapot(p);
   t("Budapest fölé érve a kamera megdől", b.dol > 10 && b.dol <= 52, String(b.dol));
   t("a nagyítás nőtt (kevesebb méter esik egy képpontra)", b.mpp < o.mpp / 10, `${o.mpp} → ${b.mpp}`);
@@ -127,7 +135,7 @@ run("jelenet", async ({ t, browser, base }) => {
     hatom && egy && hatom.w > egy.w * 1.4, JSON.stringify([hatom, egy]));
 
   /* ---- a csoport: valódi tömegek, valódi arányokkal ---- */
-  await p.click('#epvlist .epvcsop[data-epv="csop:KB"]'); await nyugodt(p); await p.waitForTimeout(150);
+  await lap(p, "full"); await p.click('#epvlist .epvcsop[data-epv="csop:KB"]'); await lap(p, "mid"); await nyugodt(p); await p.waitForTimeout(150);
   const c = await allapot(p);
   const obudai = Object.values(reg).filter(e => (e.telephely || "").startsWith("Budapest 103")).map(e => e.kod);
   const konturos = obudai.filter(k => hely.epuletek[k] && hely.epuletek[k].kontur);
@@ -155,11 +163,11 @@ run("jelenet", async ({ t, browser, base }) => {
     vagas.length && vagas.every(v => v.arany > 0.15 && v.arany <= 0.75), JSON.stringify(vagas));
 
   /* ---- a címkék: mért elhelyezés ---- */
-  const cimkeHiba = pg => pg.evaluate(() => {
-    const m = document.querySelector(".epvjel3d"), R = m.getBoundingClientRect(), h = [];
+  const cimkeHiba = pg => pg.evaluate(SZ => {
+    const m = document.getElementById("epvScene"), Z = eval(SZ), R = Z, H = Z.H, h = [];
     const fed = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
     const ps = [...m.querySelectorAll(".jTel,.jNev")].map(e => ({ n: e.textContent.trim(),
-      s: e.getBoundingClientRect(), p: { x: R.left + parseFloat(e.style.left), y: R.top + parseFloat(e.style.top) } }));
+      s: e.getBoundingClientRect(), p: { x: H.left + parseFloat(e.style.left), y: H.top + parseFloat(e.style.top) } }));
     for (const a of ps) {
       if (a.s.left < R.left - 1 || a.s.right > R.right + 1 || a.s.top < R.top - 1 || a.s.bottom > R.bottom + 1) h.push(a.n + " kilóg");
       for (const b of ps) {
@@ -168,27 +176,29 @@ run("jelenet", async ({ t, browser, base }) => {
       }
     }
     return h;
-  });
+  }, SZABAD);
   const h1 = await cimkeHiba(p);
   t("a csoport fölött a címkék nem fedik egymást és nem lógnak ki", !h1.length, h1.join("; "));
 
   /* ---- a húzás a kameráé, a koppintás a házé ---- */
   const elotte = await p.evaluate(() => [JEL.cx, JEL.cy, JEL.k]);
-  const box = await p.evaluate(() => { const r = document.querySelector(".epvjel3d").getBoundingClientRect();
-    return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+  const box = await p.evaluate(() => ({ x: JEL.W / 2 + JEL.ox + document.getElementById("epvScene").getBoundingClientRect().left,
+    y: JEL.H / 2 + JEL.oy + document.getElementById("epvScene").getBoundingClientRect().top }));
   await p.mouse.move(box.x, box.y); await p.mouse.down();
   for (let i = 1; i <= 6; i++) { await p.mouse.move(box.x - i * 9, box.y + i * 5); await p.waitForTimeout(16); }
   await p.mouse.up(); await p.waitForTimeout(120);
   const utana = await p.evaluate(() => [JEL.cx, JEL.cy, JEL.k]);
   t("húzásra a kamera elmozdul, a nagyítás marad",
     Math.abs(utana[0] - elotte[0]) > 10 && utana[2] === elotte[2], JSON.stringify([elotte, utana]));
-  t("és a húzás vége nem nyit meg épületet", await p.evaluate(() => $("epvlist").open));
+  t("és a húzás vége nem nyit meg épületet", await p.evaluate(() => epvNyitva() && epItt() === "OA" && !epvTolt));
 
   /* ---- a nagyítás gombja, és a koppintás a házra ---- */
   const k0 = await p.evaluate(() => JEL.k);
-  await p.click('[data-epv="zoom:be"]'); await p.waitForTimeout(200);
+  /* Ugyanazok a gombok, mint az alaprajzon (telefonon a térképen kint vannak:
+     a csippentés mellé egyujjas út is kell). */
+  await p.click("#zin"); await p.waitForTimeout(200);
   t("a + gomb nagyít", (await p.evaluate(() => JEL.k)) > k0 * 1.5);
-  await p.click('[data-epv="zoom:ki"]'); await p.waitForTimeout(200);
+  await p.click("#zout"); await p.waitForTimeout(200);
   t("a − gomb vissza", Math.abs((await p.evaluate(() => JEL.k)) - k0) < k0 * 0.02);
   /* A kamera RÖGZÍTETT FOKOKRA áll be: minden campus és minden város
      ugyanúgy, ugyanakkora házakkal nyílik meg, és a hallgató onnan nagyít
@@ -233,7 +243,7 @@ run("jelenet", async ({ t, browser, base }) => {
   const nyilt = await p2.waitForFunction(() => epItt() === "OD" && !epvTolt, null, { timeout: 15000 })
     .then(() => true, () => false);
   t("a tömegre koppintva megnyílik az épület alaprajza", nyilt,
-    JSON.stringify(await p2.evaluate(() => ({ itt: epItt(), kod: EPV.kod, nyitva: $("epvlist").open }))));
+    JSON.stringify(await p2.evaluate(() => ({ itt: epItt(), kod: EPV.kod, nyitva: epvNyitva() }))));
   await p2.close(); await c2.close();
 
   const c3 = await browser.newContext(PHONE);
@@ -242,9 +252,9 @@ run("jelenet", async ({ t, browser, base }) => {
   /* Az OB-nek 2026-11 óta van alaprajza (a III. kerület csoportjában az
      volt az egyetlen körvonal nélküli, alaprajz nélküli ház), ezért a mérce a
      VIII. kerület TA-ja: körvonal nélküli, lapos jel, és nem megnyitható. */
-  await p3.click("#epvBtn"); await p3.waitForTimeout(250);
-  await p3.click('#epvlist .jTel[data-epv="tel:Budapest"]'); await nyugodt(p3);
-  await p3.click('#epvlist .epvcsop[data-epv="csop:BA"]'); await nyugodt(p3); await p3.waitForTimeout(1200);
+  await nyit(p3);
+  await p3.click('#epvScene .jTel[data-epv="tel:Budapest"]'); await nyugodt(p3);
+  await lap(p3, "full"); await p3.click('#epvlist .epvcsop[data-epv="csop:BA"]'); await lap(p3, "mid"); await nyugodt(p3); await p3.waitForTimeout(300);
   // a jel fölött a saját címkéje vagy egy szomszédé állhat: a képernyő pontjára koppintunk, ahogy egy ujj
   const ta = await p3.locator('circle.jHaz.pont[data-epv="ep:TA"]').boundingBox();
   const fent = await p3.evaluate(([x, y]) => { const e = document.elementFromPoint(x, y); return e && e.dataset.epv; },
@@ -273,7 +283,7 @@ run("jelenet", async ({ t, browser, base }) => {
   const c5 = await browser.newContext({ ...DESKTOP, colorScheme: "dark" });
   const p5 = await open(c5, base, { settle: 400 });
   await p5.waitForFunction(() => EPULETEK && HELYEK, null, { timeout: 10000 });
-  await p5.click("#epvBtn"); await p5.waitForTimeout(500);
+  await nyit(p5);
   /* A lista és a jelenet csoportjai ugyanazok: korábban a lista egy kivágatra
      vetített, 80 egységes csoportosítást használt, és Székesfehérváron a
      jelenet FG-campusára koppintva a lista nem szűkült, a kamera sem mozdult. */

@@ -28,14 +28,23 @@ fájl — nincs build lépés, nincs függőség, nincs csomagkezelő.
 `index.html`-en belül van, a betűtípusok a `fonts/`, a teremadat, a többi
 épület alaprajza és az épületválasztó térképe a `data/` mappából jön — mind
 ugyanarról a címről. Az egyetlen kifelé mutató hivatkozás az OpenStreetMap
-forrásmegjelölése az épületválasztó alján (a totemen az sem). Így az
+forrásmegjelölése a térkép sarkában (a totemen az sem). Így az
 oldal külső szolgáltató nélkül működik, és offline is: az OA mindig, a többi
 épület akkor, ha egyszer már megnyitottad.
 
 ## Az egyetem épületei
 
-A fejlécben az épület neve egyben választógomb: egy nagyítható térkép nyílik
-meg az egyetem **mind a 39 épületével**. Magyarország fölött indul: minden
+**Az épület és az egyetem térképe egy ablak.** Az alaprajzból kifelé
+nagyítva (görgővel, csippentéssel vagy a − gombbal) az épület a helyén
+átadja a képet a térképnek: ugyanott, ugyanakkorán, ugyanúgy elfordulva
+jelenik meg a valódi körvonala, aztán a kamera északra fordul, kiemelkedik,
+és megmutatja a telephely többi házát. A térképen egy megnyitható házra
+nagyítva (vagy rákoppintva) a kamera fölé repül, és a ház átúszik az
+alaprajzába. Nincs felugró ablak: a térkép az alaprajz helyén áll, a lista a
+panelben (telefonon az alsó lapon), az Esc vagy a × visszavisz az épületbe.
+
+A fejlécben az épület neve egyben választógomb: ugyanez a térkép nyílik
+meg az egyetem **mind a 39 épületével**, Magyarország fölött. Minden
 egyetemi városnál (Budapest, Székesfehérvár, Nagymaros) ott áll a saját
 épületeiből összerakott kis 3D-s mása — valódi alakkal és valódi
 szintarányokkal, csak nem méretarányosan, mert valódi méretben egy ház itt
@@ -47,7 +56,7 @@ körvonalukkal és szintszámukkal, a nevükkel. A házra koppintva megnyílik a
 alaprajza. A rajz szemléltető, nem méretarányos: valódi méretben egy épület a
 város egészét mutató képen alig néhány képpont lenne, azért nő meg — a helye
 viszont végig igaz.
-Közben húzni lehet a képet, és a +/− gomb is nagyít. A térkép mellett mindig
+Közben húzni lehet a képet, és a +/− gomb is nagyít (telefonon is). A térkép mellett mindig
 ott a lista is, mindegyik épületnél a címe, a szintek és a helyiségek száma, az
 alapterülete — az Egyetemi Tervtár adataiból; a listából választva a kamera
 odarepül. Az épületek helye az
@@ -203,6 +212,10 @@ A térkép **egy** tab-állomás — nem 222 —, és onnan a nyilak viszik tov�
 | Page Up / Page Down | szintet vált |
 | Esc | vissza a térképre, majd törli a kiválasztást |
 | `/` | a keresőmezőbe ugrik |
+
+Az épületválasztó térképén az Esc a térképet zárja (vissza az épületbe, a
+kiválasztott terem marad); a lista és a térkép címkéi Tabbal bejárhatók, a
+térkép alatt álló alaprajz addig nem tab-állomás.
 
 A helyiségek gombok, a nevük a teremkód és a funkció, a kiválasztott terem
 `aria-pressed`-et kap. A kiválasztás, az útvonal eredménye és a szintváltás

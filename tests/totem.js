@@ -61,15 +61,15 @@ run("totem-mód", async ({ t, ctx, base }) => {
   t("a felület is magyarul áll, a gyorsgombokkal", /helyiség/.test(panel.cim) && panel.gyors && panel.angol === "false",
     JSON.stringify(panel));
 
-  /* Az épületválasztó modális, és telefonnyi szélességen az egész képernyő:
-     nyitva hagyva a következő látogató az előző választóját látta volna a
-     térkép helyett. A totem közös készülék, ezért alapértelmezett épületet és
-     GPS-t nem kínál, és a forrásmegjelölés nem visz el a kioszkról. */
+  /* Az épületválasztó térképe az alaprajz helyén áll: nyitva hagyva a
+     következő látogató az előző térképét látta volna az alaprajz helyett. A
+     totem közös készülék, ezért alapértelmezett épületet és GPS-t nem kínál,
+     és a forrásmegjelölés nem visz el a kioszkról. */
   await p.waitForFunction(() => EPULETEK && HELYEK, null, { timeout: 10000 });
   await p.click("#epvBtn"); await p.waitForTimeout(300);
   const valaszto = await p.evaluate(() => ({ doboz: !!document.querySelector("#epvlist .epvdoboz"),
-    gps: !!document.querySelector('#epvlist [data-epv="gps"]'), link: !!document.querySelector("#epvlist .epvforras a"),
-    forras: (document.querySelector("#epvlist .epvforras") || {}).textContent || "" }));
+    gps: !!document.querySelector('#epvlist [data-epv="gps"]'), link: !!document.querySelector("#terkepInfo .epvforras a"),
+    forras: (document.querySelector("#terkepInfo .epvforras") || {}).textContent || "" }));
   t("a totem választójában nincs alapértelmezett és GPS, a forrás (OSM, ODbL) szöveg, nem hivatkozás",
     !valaszto.doboz && !valaszto.gps && !valaszto.link && /OpenStreetMap/.test(valaszto.forras) && /ODbL/.test(valaszto.forras),
     JSON.stringify(valaszto));
@@ -88,7 +88,8 @@ run("totem-mód", async ({ t, ctx, base }) => {
     return x && (x === el || el.contains(x)) ? "látszik" : "takarja: " + (x && x.className); });
   t("a nyitott választó fölött is látszik, hogy 20 másodperc múlva visszaáll", figyel === "látszik", figyel);
   await p.clock.fastForward(10000); await p.waitForTimeout(1500);
-  t("egy perc tétlenség után a választó is bezárul", await p.evaluate(() => !document.getElementById("epvlist").open));
+  t("egy perc tétlenség után a választó is bezárul, és az alaprajz rögtön látszik (áttűnés nélkül)", await p.evaluate(() => !epvNyitva()
+    && !document.getElementById("app").classList.contains("terkeplat") && getComputedStyle(document.getElementById("stage")).visibility === "visible"));
 
   // gesztus közben soha: a lenyomott, mozgó egér alatt nem áll vissza
   await hasznal(p);
@@ -134,14 +135,15 @@ run("totem-mód", async ({ t, ctx, base }) => {
   }
 
   /* Egy alaprajz nélküli épület totemje (#from=BA…): az alaphelyzet bezárja a
-     választót, a címe pedig ugyanabban a lépésben újranyitja. A close esemény
-     később fut: korábban az új, nyitott választó üzenetét és állapotát vitte el. */
+     választót, a címe pedig ugyanabban a lépésben újranyitja. (A régi,
+     <dialog>-os választónál a close esemény később futott, és az új, nyitott
+     választó üzenetét és állapotát vitte el.) */
   const b = await nyit(base + "?totem#from=BA00F01");
-  await b.waitForFunction(() => document.getElementById("epvlist").open, null, { timeout: 10000 }).catch(() => {});
+  await b.waitForFunction(() => epvNyitva(), null, { timeout: 10000 }).catch(() => {});
   await b.click("#epvCim"); await b.mouse.move(700, 400);
   await b.clock.fastForward(61000); await b.waitForTimeout(1500);
   await b.evaluate(() => epvRender());
-  const ba = await b.evaluate(() => ({ nyitva: document.getElementById("epvlist").open, osztaly: document.getElementById("epvlist").className,
+  const ba = await b.evaluate(() => ({ nyitva: epvNyitva(), osztaly: document.getElementById("epvlist").hidden ? "" : "open",
     kibontva: document.getElementById("epvBtn").getAttribute("aria-expanded"), uzenet: (document.getElementById("epvMsg") || {}).textContent || "" }));
   t("alaprajz nélküli épület totemjén az alaphelyzet után a választó nyitva, az üzenetével (BA)",
     ba.nyitva && /open/.test(ba.osztaly) && ba.kibontva === "true" && /BA/.test(ba.uzenet), JSON.stringify(ba));

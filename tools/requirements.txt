@@ -10,7 +10,7 @@
 
 # tervlap-szarny.py, tervlap-uj.py, epulet-json.py — a tervlapok PDF-je
 pymupdf
-# ugyanezek — geometria: sokszögek metszése, illesztés, vázpontok
+# ugyanezek — geometria: sokszögek metszése, illesztés, vázpontok; terv-illesztes.py
 shapely
 scipy
 numpy
