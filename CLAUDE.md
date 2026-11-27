@@ -60,19 +60,28 @@ az appban, az adatlapként látszik, megnyitás nélkül (`navigalhato` — ezt 
 írnánk, a hallgató azt hihetné, nincs is ilyen épület; ha megnyithatónak
 látszana, hiába kattintana.
 
-**A választóban EGY, folytonosan nagyítható jelenet van** (`epvRender()`, egy
-natív `<dialog>`): Magyarország határától a házak tömegéig ugyanaz a tér,
-ugyanaz a vetület, ugyanaz a kamera — nincs külön „ország-térkép” és
-„város-térkép”, és nincsenek a térképre tett kártyák. A hallgató húzza,
-csippenti, görgeti, és a részletesség a NAGYÍTÁSSAL lép. Mellette mindig ott a
-lista is, ugyanazokkal a célokkal; a listából választva a kamera ODAREPÜL, a
-jelenetből választva a lista szűkül — a kettő ugyanazt az állapotot mutatja,
-csak más úton. Fekvő telefonon is egymás mellett (lásd lejjebb). A helyek a `data/helyek.json`-ból
+**A választó NEM felugró ablak, hanem ugyanannak az ablaknak a kifelé
+nagyított képe**: a térkép (`#terkep`, benne az `#epvScene`) az alaprajz
+helyén áll, ugyanakkorán, a lista a panelben (`#epvlist`, a kereső helyén;
+telefonon az alsó lapon). Élesben a háttérre tett, középre úszó `<dialog>`-ot
+„borzalmasnak” találták, a kérés szó szerint „egy homogén ablak a térképtől
+egészen az épület vázáig” volt. Az épületből kifelé nagyítva a térkép veszi
+át, a térképen egy házra nagyítva (vagy koppintva) az épület — lásd „Az
+épület és a térkép egy kép”. A térképen EGY, folytonosan nagyítható jelenet
+van: Magyarország határától a házak tömegéig ugyanaz a tér, ugyanaz a
+vetület, ugyanaz a kamera — nincs külön „ország-térkép” és „város-térkép”, és
+nincsenek a térképre tett kártyák. A hallgató húzza, csippenti, görgeti (a
++/− ugyanaz a két gomb, mint az alaprajzon), és a részletesség a NAGYÍTÁSSAL
+lép. Mellette mindig ott a lista is, ugyanazokkal a célokkal; a listából
+választva a kamera ODAREPÜL, a jelenetből választva a lista szűkül — a kettő
+ugyanazt az állapotot mutatja, csak más úton. A helyek a `data/helyek.json`-ból
 jönnek (28 KB, `tools/helyek.py`): az OSM épületkörvonalai és címpontjai
 (Nominatim), a közös telken álló épületeknél a helyszínrajzokból számolt
 eltolással, a határ, a Duna és a Margit-sziget egyszerűsítve. Amit tudni kell:
 - **A térkép OSM-adat, tehát kötelező a forrásmegjelölés**, a licenccel:
-  „© OpenStreetMap-közreműködők (ODbL)”, a választó alján (`.epvforras`),
+  „© OpenStreetMap-közreműködők (ODbL)”, a térkép sarkában (`#terkepInfo
+  .epvforras`, asztalon a nagyítógombok mellett, telefonon fönt — lent az alsó
+  lap takarná),
   az openstreetmap.org/copyright oldalra mutatva. **A totemen nem
   hivatkozás** (`epvOsm()`): egy koppintás elvinné a kioszkot az appról, és
   onnan a tétlenségi alaphelyzet már nem hozná vissza.
@@ -150,12 +159,23 @@ eltolással, a határ, a Duna és a Margit-sziget egyszerűsítve. Amit tudni ke
   széttolt chip 200 képpontra szállt el a saját pontjától. A címke a saját
   jelét sem takarhatja (azon ülve nem látszik, hová mutat), és ha egyetlen
   hely sem tiszta, a keretbe szorítva marad — egy kilógó címke rosszabb, mint
-  egy takaró. Zárt `<dialog>` nem mérhető, ezért a megnyitás, minden
-  újrarajzolás és átméretezés után fut. A `tests/valaszto.js` hat
-  képernyőméreten, négy nézetben nézi, és átméretezés után is.
+  egy takaró. A keret a térkép SZABAD része (`JEL.sz`: asztalon a lebegő
+  panel, telefonon az alsó lap takarása levonva): a térkép az egész
+  térképdobozt kitölti, de a panel alá szorított címke nem látszana, és nem
+  lehetne megkoppintani. A kamera közepe is a szabad rész közepe (`JEL.ox`,
+  `JEL.oy`). A megnyitás, minden újrarajzolás és átméretezés után fut; a
+  `tests/valaszto.js` hat képernyőméreten, négy nézetben nézi, és
+  átméretezés után is.
 - **A húzás a kameráé, a koppintás a házé** — ugyanaz a szabály, mint a
   teremnél (lásd „A kattintás a teremé”): 4 képpontnyi elmozdulás fölött a
-  felengedés már nem választ, különben egy elhúzott ujj vége épületet nyitott.
+  felengedés már nem választ, különben egy elhúzott ujj vége épületet nyitott. A billentyűs
+  kattintás (`detail` 0) erre nem néz: a húzás elmozdulása csak a következő
+  lenyomáskor nullázódik, és addig a címkén az Enter semmit nem tett.
+- **A színkeverés (`color-mix()`) mellett mindig van tartalék**: a jelenet
+  egyszerű tulajdonságainál egy előtte álló sima szín, az egyedi
+  tulajdonságokban kevert tömegszíneknél egy `@supports not` ág — azoknál a
+  korábbi deklaráció nem segít, és régebbi böngészőn (Safari 16.2, Chrome
+  111 előtt) a ház fekete lett volna.
 - **A doboz magassága a képernyőhöz igazodik**, nem a tartalom arányához: a
   régi, arányt tartó térkép `--epvh`-ja telefonon 662 képpontot adott egy
   844-esen, és a jelenet fele a lap alján lógott. Fekve a sticky oszlop maga
@@ -234,38 +254,90 @@ eltolással, a határ, a Duna és a Margit-sziget egyszerűsítve. Amit tudni ke
   nem tesz közbülső bejegyzést a history-ba, és utána a cím a tényleges
   állapotot mondja (`urlOf()`): a bejegyzésben maradt idegen kód miatt a
   Vissza gomb újra átváltott.
-- **A választó modális** (`showModal()`): a háttér inert, az Esc csak a
-  választót zárja (a globális billentyűkezelő ilyenkor kiszáll), a kijelölés
-  marad, a fókusz a nyitógombra tér vissza (ha az a gomb, ahonnan nyílt,
-  azóta rejtve van, a választó gombjára). A zárt választó nem tab-állomás.
-  Ami ebből következik:
-  - **A felirat (`toast()`) nyitott modális ablakban az ablakba kerül**:
-    a body-ban a felső réteg alatt állna (telefonon a választó az egész
-    képernyő), és a felolvasó sem mondaná be. Az `epvRender()` az
-    újrarajzoláskor visszateszi (ugyanaz az élő régió marad). Méréskor
-    vigyázz: a felirat `pointer-events:none`, az `elementFromPoint` sosem
-    találja meg — a mérés idejére kapcsold vissza.
-  - **A háttérre kattintás a hely szerint zár**, nem a cél szerint: telefonon
-    a teljes képernyős választó biztonsági sávja (a doboz saját margója) is a
-    `<dialog>` maga, és oda egy koppintás a semmiből bezárta. És csak ha a
-    lenyomás is kint volt (`epvLentKint`): a dobozban kezdett, kint
-    elengedett húzás (szövegjelölés) a böngészőnek a `<dialog>`-ra eső
-    kattintás.
+- **A választó nem modális**: a panel másik nézete, nem ablak. A nyitott
+  térkép logikai állapota az `.app.terkep` osztály (`epvNyitva()`), a
+  látványé a `.terkeplat` — a kettő a kilépéskor válik el: a panel azonnal
+  az épületé, a térkép még berepül és áttűnik (lásd lent). Ami ebből
+  következik:
+  - **Az Esc a térképet zárja** (a globális billentyűkezelő nyitott
+    térképnél csak ezt teszi, a „/” sem keres), a kijelölés marad, a fókusz
+    a nyitógombra tér vissza, ha a panelben vagy a térképen állt (ha a gomb,
+    ahonnan nyílt, azóta rejtve van, a választó gombjára). A panel × gombja
+    ugyanez: „Vissza az épületbe”. A zárt lista rejtett, nem tab-állomás.
+  - **Nyitva a Tab nem jut a rejtett alaprajzra**: az alaprajz, a szintsín,
+    a teremszámok és a fejléc-táblák a térkép alatt `visibility:hidden`-nel
+    állnak — ettől a böngésző a rejtett 3D-s jelenetet nem is kompozitálja.
+  - **A térkép nem háttér**: az üres részére kattintva vagy rajta húzva
+    nyitva marad (a régi `<dialog>` háttérre kattintós zárása megszűnt).
+  - **A felirat (`toast()`) a body-ban marad**, és a térkép meg az alsó lap
+    fölött látszik (z-index). Méréskor vigyázz: a felirat
+    `pointer-events:none`, az `elementFromPoint` sosem találja meg — a
+    mérés idejére kapcsold vissza.
   - **Ugyanazon a nézeten újrarajzolva a görgetés marad** (töltés,
-    GPS-eredmény): az innerHTML a görgető dobozokat újraépíti, és a Safari a
-    megnyomott gombot nem fókuszálja, így a fókusz sem hozza vissza.
-  - **Fekvő telefonon** a térkép és a lista egymás mellett, egyetlen görgető
-    tömbben, a térkép ragad (`position:sticky`): két külön görgető oszlopnál
-    egy GPS-eredmény a listát nullára nyomta. A fekvő telefon nem csak a
-    900 px alatti: a nagy iPhone-ok és Pixelek fekve 915–956 px szélesek, ezért
-    a szabály a magasságra is figyel (`(orientation:landscape) and
-    (max-height:500px)`); a térkép magasságából a biztonsági sávok is levonódnak.
-  - **A totem alaphelyzete a választót is bezárja** (`totemAlap()`): nyitva
-    a következő látogató az előző választóját látta volna a térkép helyett.
-  - A térkép jele és a lista sora ugyanazt a `data-epv`-t viseli; a
-    `fokuszElotte()` a kettőt megkülönbözteti, különben újrarajzoláskor a
-    fókusz a sorról a jelre ugrott. Töltés közben a gomb `aria-disabled`,
-    nem `disabled`: a letiltott gombról a fókusz a `<body>`-ra esne.
+    GPS-eredmény): az innerHTML a görgető dobozt (`.epvlista`) újraépíti, és
+    a Safari a megnyomott gombot nem fókuszálja, így a fókusz sem hozza
+    vissza. A „Hol vagyok?” eredménye és az alapértelmezett doboza a lista
+    görgető tömbjében van, nem fölötte: egy régi változatban egy külön
+    oszlop teteje volt, és fekvő telefonon a listát nullára nyomta.
+  - **Telefonon** a kifejezett nyitás (fejléc, link) a lapot félig nyitja
+    (`mid`), hogy a lista látsszon, és záráskor visszaállítja; kifelé
+    nagyítva a térkép a fontos, ott a lap marad. A lap a panel fejlécéről
+    és a lista tetejéről is húzható, mint a keresőé. A térképen a +/−
+    telefonon is kint van: a csippentés mellé egyujjas út is kell (WCAG
+    2.5.1).
+  - **A totem alaphelyzete a térképet is bezárja, áttűnés nélkül**
+    (`totemAlap()` → `epvZar({azonnal:true})`): nyitva a következő látogató
+    az előző térképét látta volna az alaprajz helyett.
+  - A térkép jele és a lista sora ugyanazt a `data-epv`-t viseli, és egy
+    kezelő szolgálja ki mindkettőt (`epvKattint`). Töltés közben a gomb
+    `aria-disabled`, nem `disabled`: a letiltott gombról a fókusz a
+    `<body>`-ra esne.
+
+**Az épület és a térkép egy kép** (`terkepBe()`, `terkepKi()`,
+`epuletbe()`): a térkép és az alaprajz ugyanannak a helynek két
+felbontása, és a kettő egymásba úszik.
+- **Kifelé**: az alaprajz kicsinyítése (görgő, csippentés, −) az illesztett
+  méret `TERKEP_KUSZOB` (0,6) részéig megy; az ezen túllépő lépést már a
+  térkép kapja (`epvKifele()`). A térkép az ELSŐ képkockán pontosan ott áll,
+  ahol az alaprajz: ugyanakkora (`k = S.view.k·PXM/s`), ugyanúgy elfordulva
+  (`rot` = az alaprajz iránya + az illesztés szöge), ugyanabban a dőlésben
+  (alaprajzon 0°), és áttűnik (0,32 s). Onnan repül a ház telephelyére,
+  közben északra fordul, és a dőlést visszaadja a nagyításnak — a tömegek
+  ettől „kelnek fel”. A lista a telephely házait mutatja. Mérve (OA, telefon):
+  a közép az átló 1%-án belül, a méret ±2%-on belül egyezik.
+- **Befelé**: a térképen egy megnyitható házra nagyítva (a nagyítás
+  középpontja alatt a ház a szabad kép `JEL_BELEP` (0,55) részét kitölti, vagy
+  a nagyítás a végére ért), a jelére koppintva vagy a sorát választva a
+  kamera a ház fölé repül, a tervlap állására fordul és fölé áll (dőlés 0),
+  közben töltődik az adat; a betöltés után a `terkepKi()` a pontos
+  illesztésre repül, és ott tűnik át az alaprajzba. A térképről belépve az
+  új épület a tervlap rajzolt állásában nyílik (`S.rot = ROT0`): a régi ház
+  elforgatása az újban értelmetlen. A küszöbök egymáshoz illenek: a
+  térkép 0,6-nál veszi át, és onnan egy lépés befelé visz vissza.
+- **Az illesztés a `helyek.json` `terv` mezője** (`tools/terv-illesztes.py`):
+  az alaprajz földszintjének (a helyiségek és falak uniója) merev illesztése
+  az OSM-körvonalra, az átfedés (IoU) maximalizálásával, tükrözés nélkül
+  (egy téglalapnál a tükrözött is ugyanúgy fed, és a döntetlenben az nyert
+  volna). Mérve: OA 0,91, FF 0,94, OC 0,89, FK 0,88, OD 0,67. A KH (0,32) és a
+  KT (0,46) körvonala nem az épületé, az OB, a TB és az YC az OSM-ben csak pont:
+  ezeknél nincs `terv`, az alaprajz közepe a ház pontjára kerül, a tervlap
+  állásában (az áttűnés takarja a különbséget). A `helyek.py` újrafuttatása
+  után ezt is futtatni kell (az a fájlt újraírja).
+- **A kamera két átmeneti állása**: irány (`JEL.rot`, a CSS `rotate()`
+  értelmében) és a dőlés felülírása (`JEL.dolX`). Egy repülés (`jelRepul`)
+  mindkettőt viheti; ha a hallgató közben átveszi a kamerát (húzás, görgő,
+  gomb), a repülés megáll, és a kettő 0,42 s alatt visszalazul északra és a
+  nagyításból jövő dőlésre (`jelMegszakit`). Egyetlen képkocka-hurok viszi
+  mindkettőt (`jelTick`): képkockánként egy rajz. A repülés közepe a KÉPEN
+  halad egyenletesen, nem a világban: befelé a cél egyenletesen csúszik
+  középre, kifelé az indulási pont egyenletesen el — világban egyenletesen,
+  mértani nagyítás mellett a cél sokáig a kép szélén maradt, és a végén
+  rántódott be.
+- **Épület nézetben** a dőlést követjük, a perspektívát nem: ott az
+  áttűnés takarja a különbséget. Alaprajzon az egyezés pontos.
+- **helyek.json nélkül** (első offline indulás) nincs térkép: a panel a
+  listát mutatja, az alaprajz látszik, és a kicsinyítés a régi alsó határig
+  megy.
 **A települések és a campusok kis 3D-s mása** (`jelVarosAdat()`,
 `jelVarosSvg()`): ahol az egyes ház pöttynyi lenne, ott NEM méretarányos rajz
 kell, hanem MODELL — az adott hely jellemző házai egymás mellé állítva.
@@ -592,12 +664,12 @@ hagytak egy hibás kódot.
 | `tests/lepcsok.js` | a lépcsőkarok rajza: minden lépcsőház minden szintváltásánál ott a kar, karonként egy kis path a falak alatt, és a vonalára kattintva a lépcsőház jön elő, nem törlődik a kijelölés |
 | `tests/ikonok.js` | mosdó-, lépcső- és liftjel: minden mosdón és lépcsőházon a jó jel, a teremszám helyett, a feliratpontján; Épület nézetben magonként egy jelvény, alapnagyításon mind kint, teremszámra nem lógva |
 | `tests/sharp.js` | Épület nézet asztalon, nagyítva: éles-e a kép, nem mozdul-e a sűrűségtől, nem vált-e mozgás közben, csak az aktív szintnél, telefonon és más motorban nem, Firefoxban a saját kódútján (3D-ben minden szint saját transzformmal, a lapos alaprajzon egyik sem) — **élesben bejelentett „irgalmatlan életlen" asztali 3D, Chrome-ban és Firefoxban, és a Firefoxos „éles, homályos, megint éles" váltás** |
-| `tests/totem.js` | totem mód: egy perc tétlenség után alaphelyzet, húsz másodperccel előtte szól, gesztus közben soha, naponta újratölt — a Playwright órájával, percekig várás nélkül; a nyitott épületválasztót is bezárja, a figyelmeztetés a választó fölött is látszik, a totem választójában nincs alapértelmezett, csillag és GPS, és a forrás nem hivatkozás; egy alaprajz nélküli épület (BA) totemjén az alaphelyzet után a választó nyitva marad az üzenetével; a link végére, a # után írt `?totem` is bekapcsolja — **élesben bejelentett: „nem működik az alaphelyzet"** |
+| `tests/totem.js` | totem mód: egy perc tétlenség után alaphelyzet, húsz másodperccel előtte szól, gesztus közben soha, naponta újratölt — a Playwright órájával, percekig várás nélkül; a nyitott épületválasztó térképét is bezárja (áttűnés nélkül: az alaprajz rögtön látszik), a figyelmeztetés a térkép fölött is látszik, a totem választójában nincs alapértelmezett, csillag és GPS, és a forrás nem hivatkozás; egy alaprajz nélküli épület (BA) totemjén az alaphelyzet után a választó nyitva marad az üzenetével; a link végére, a # után írt `?totem` is bekapcsolja — **élesben bejelentett: „nem működik az alaphelyzet"** |
 | `tests/kuld.js` | telefonra küldés: a QR-kódot a képernyőképből olvassa vissza (jsQR), a csendzónát és a sérült kódot külön méri, sötét témában is; a beolvasott link telefonon ugyanazt az útvonalat nyitja meg, lifttel; a totemről `?totem` nélkül |
 | `tests/meres.js` | a telefonos mérőlap (`meres.html`) végigfut a valódi appon, az OA-n akkor is, ha a készüléken más az alapértelmezett épület |
 | `tests/epuletek.js` | épületválasztó és **épületváltás**: mind a 39 épület bent van (településenként végigjárva, mindegyik pontosan egyszer), de csak az nyitható meg, aminek kész az adata; a Tervtár adatai a soron, az adatlapon a nem megnyithatónál nincs megnyitó és alapértelmezett gomb; az Esc csak a választót zárja, a kijelölés marad; más épület kódjára mutató link megnevezi az épületet, nem tűnik el csendben; a váltás mércéje **valódi épületeken mért aranyérték** (épületenként az elérhetetlen helyiségek, az útvonalak összhossza és a gráf élszáma a portától), a váltás utáni **tisztaság** (egyetlen tárolóban, a szintdobozokban sem marad régi bejegyzés), OD → KT → OD (a KT betöltésével); az OD IFC-ajtókkal: a két terem ajtaja a hálózatra nyílik, az OD00F03 az OD00F02-n át érhető el; ajtók nélkül (a teszt leveszi őket) a fő folyosó mellé, de leszakadt szilánkhoz kötött OD-helyiségek (OD00F02, OD35E04) elérhetők, a csak sarkával érintkező OD00F03 nem; minden többcellás kötés egy falnyira van, harmadik helyiség nélkül, és odáig a célszinten az épületen belül vezet az út (pontos geometriával mérve); a homlokzat előtti gyűrűn és ablakrésen át nincs útvonal (KH00F36, KH00F37, KH00F42); a bekötések száma mind a tíz épületben rögzített; a portáról egyik épületben sem mosdón át indul az út (TB), és a saját foltján belüli út (KHX1PK2 → KHX1P03) megmarad; offline vissza az OA-ra; az `epuletKesz()` egyenként mind a hét kötelező elemre és a portára, és hibás szerkezetre (sokszög nélküli helyiség, maszk nélküli szint, hibás lépcsőpont…); ha az építés mégis elbukik, a régi épület épül vissza (nem félig vált); az ablakos cellakeresés véletlen pontokon és minden helyiségen ugyanazt adja, mint a teljes bejárás (OA, OD) — az aranyértékek egy szűkebb ablakot nem vennének észre; a nem elérhető adat üzenete angolul is a kóddal; **nyilvántartás nélkül** (első indulás, letiltott kérés) a gomb el sem jelenik meg, és az app elindul |
-| `tests/valaszto.js` | a választó: minden címmel bíró épület helye a saját települése és az ország határán belül; Budapesten a csoportok jele a Duna jó oldalán (a III. kerületé Budán), a Duna a képen fut a nagyításhoz mért szélességgel, a III. kerület csoportja a hét óbudai épület; a címkék hat képernyőméreten (telefon, keskeny, fekvő, asztal, alacsony és kis asztali ablak), négy nézetben nem fedik egymást és más jelét, és nem lógnak ki, átméretezés után sem; fekve a jelenet doboza elfér; a biztonsági sávokkal (CDP-vel emulálva) a forrás a kezdősáv fölött, fekve a jelenet a görgető tömbön belül; a házikó felirata telefonon is látszik; az OSM-forrás (ODbL, hivatkozással) a felületen; **alapértelmezett épület**: beállítás, a házikó, induláskor megnyílik, a link, a totem (cím nélkül is) és a párosító mód elsőbbsége, kikapcsolás, hálózat nélkül az OA marad, letiltott tárolóval is fut; **a csendes betöltés közben** választott terem marad, az ugyanarra az épületre mutató link érvényesül, a választott másik épület nyílik meg, a nyitott választó nem csukódik be (és nem mutat „Betöltés…”-t), egy görgetés megállítja, a házikó nem tölt újra; **GPS**: az OD körvonalán belül, a faltól 9 m-re „itt vagy”, előtte a körvonaltól mért távolság, a már nyitott épületnél nincs megnyitás, az YA-nál az YB is, messziről km, letiltott engedélynél üzenet, a bezárt választónál késve jött hely eldobódik; `helyek.json` nélkül csak a lista; a fókusz (zárt választóban nincs tab-állomás, nyitva bent marad, zárva visszatér, a sorról nem ugrik a jelenet címkéjére, a GPS-eredményre megy, a házikó, a töltés és egy azóta rejtetté vált nyitógomb után sem esik a `<body>`-ra); angolul „1 building”; a felirat a teljes képernyős választó fölött látszik, és újrarajzolás után is megvan; a választó saját szélére koppintva nem zárul be, asztalon a háttérre igen; fekvő telefonon (844×340 és a 900 px-nél szélesebb 932×380) a GPS-eredmény után is elérhető a lista; a dobozban kezdett, kint elengedett húzás nem zár; ugyanazon a nézeten újrarajzolva a görgetés marad; az alapértelmezett doboz gombja „Betöltés…”-t mutat; a linkről indult betöltés alatt választott terem marad; egy soha be nem fejeződő letöltés 20 s után üzenetet ad; az elakadt linkes váltás újrapróbálva a link termét nyitja, a hibalap bezárása után már nem; a két épületet vegyítő link egyszer vált, a history-ba nem tesz közbülső bejegyzést, és a címben sem marad a másik épület kódja |
-| `tests/jelenet.js` | a folytonosan nagyítható jelenet és a három lépcsője: országos léptéken a települések kis mása (Budapest, Székesfehérvár — Nagymarosnak nincs körvonalas épülete, tehát modellje sem), a város fölött a kerületek modellje a valódi helyükön (egyetlen valódi ház sem, az a következő lépcső), a campus fölött a valódi házak mind megnevezve; a modellek jól láthatók (≥30 px), nem fedik egymást, nem lógnak ki és nem takarnak másik jelet, és a többházas campusé szélesebb az egyházasénál; a magasság a szintszámból jön (OD > OA > OC); a hátrafelé néző falak kimaradnak (ARÁNYRA mérve); a húzás a kamerát mozdítja és nem nyit épületet, a koppintás megnyitja (alaprajz nélkülinél az adatlapját: a VIII. kerület TA-ja, mert a címke szára nem kaphatja el a koppintást a jel elől); a +/− gomb nagyít-kicsinyít és fokon marad, a kézi nagyítás után a kamera beakad a legközelebbi fokra, és az országnál kijjebb nem lehet menni; a címkék telefonon, keskeny telefonon és asztalon sem fednek és nem lógnak ki, a doboz a képernyőn belül van |
+| `tests/valaszto.js` | a választó: **egy ablak** — a térkép az alaprajz helyén áll, ugyanakkorán, nyitott `<dialog>` nélkül (hat képernyőméreten); kifelé görgetve az alaprajz az illesztett méret 0,6-áig megy, ott a térkép veszi át, az átadás pillanatában a ház az alaprajz helyén (a közép az átló 4%-án, a méret ±10%-on belül), ugyanúgy elfordulva, felülnézetben; utána északra fordul, a lista a telephely házait mutatja, az alaprajz és a szintsín rejtve; egy megnyitható házra görgetve belép, a sorára kattintva a ház fölé repülve (az alaprajz állására fordulva) tűnik át; az Esc visszavisz (a panel azonnal, a kép áttűnve); minden címmel bíró épület helye a saját települése és az ország határán belül; Budapesten a csoportok jele a Duna jó oldalán (a III. kerületé Budán), a Duna a képen fut a nagyításhoz mért szélességgel, a III. kerület csoportja a hét óbudai épület; a címkék hat képernyőméreten (telefon, keskeny, fekvő, asztal, alacsony és kis asztali ablak), négy nézetben nem fedik egymást és más jelét, és a térkép szabad részén (a panel és az alsó lap nélkül) maradnak, átméretezés után sem; a biztonsági sávokkal (CDP-vel emulálva) a forrás a képen, a fejléc alatt, a lap és a kezdősáv fölött; a házikó felirata telefonon is látszik; az OSM-forrás (ODbL, hivatkozással) a felületen; **alapértelmezett épület**: beállítás, a házikó, induláskor megnyílik, a link, a totem (cím nélkül is) és a párosító mód elsőbbsége, kikapcsolás, hálózat nélkül az OA marad, letiltott tárolóval is fut; **a csendes betöltés közben** választott terem marad, az ugyanarra az épületre mutató link érvényesül, a választott másik épület nyílik meg, a nyitott választó nem csukódik be (és nem mutat „Betöltés…”-t), egy görgetés megállítja, a házikó nem tölt újra; **GPS**: az OD körvonalán belül, a faltól 9 m-re „itt vagy”, előtte a körvonaltól mért távolság, a már nyitott épületnél nincs megnyitás, az YA-nál az YB is, messziről km, letiltott engedélynél üzenet, a bezárt választónál késve jött hely eldobódik; `helyek.json` nélkül csak a lista; a fókusz (zárt választóban nincs tab-állomás, nyitva a Tab nem jut a rejtett alaprajzra, a szintsínre és a kereső panelére, zárva visszatér, a sorról nem ugrik a jelenet címkéjére, a GPS-eredményre megy, a házikó, a töltés és egy azóta rejtetté vált nyitógomb után sem esik a `<body>`-ra); angolul „1 building”; a felirat a térkép és az alsó lap fölött látszik, és újrarajzolás után is megvan; a térkép üres részére kattintva és rajta húzva nyitva marad, a fejléc gombja zárja; fekvő telefonon (844×340 és a 900 px-nél szélesebb 932×380) a GPS-eredmény után is elérhető a lista; ugyanazon a nézeten újrarajzolva a görgetés marad; az alapértelmezett doboz gombja „Betöltés…”-t mutat; a linkről indult betöltés alatt választott terem marad; egy soha be nem fejeződő letöltés 20 s után üzenetet ad; az elakadt linkes váltás újrapróbálva a link termét nyitja, a hibalap bezárása után már nem; a két épületet vegyítő link egyszer vált, a history-ba nem tesz közbülső bejegyzést, és a címben sem marad a másik épület kódja |
+| `tests/jelenet.js` | a folytonosan nagyítható jelenet és a három lépcsője: országos léptéken a települések kis mása (Budapest, Székesfehérvár — Nagymarosnak nincs körvonalas épülete, tehát modellje sem), a város fölött a kerületek modellje a valódi helyükön (egyetlen valódi ház sem, az a következő lépcső), a campus fölött a valódi házak mind megnevezve; a modellek jól láthatók (≥30 px), nem fedik egymást, nem lógnak ki és nem takarnak másik jelet, és a többházas campusé szélesebb az egyházasénál; a magasság a szintszámból jön (OD > OA > OC); a hátrafelé néző falak kimaradnak (ARÁNYRA mérve); a húzás a kamerát mozdítja és nem nyit épületet, a koppintás megnyitja (alaprajz nélkülinél az adatlapját: a VIII. kerület TA-ja, mert a címke szára nem kaphatja el a koppintást a jel elől); a +/− gomb (ugyanaz, mint az alaprajzon, telefonon is kint) nagyít-kicsinyít és fokon marad, a kézi nagyítás után a kamera beakad a legközelebbi fokra, és az országnál kijjebb nem lehet menni; a címkék és a modellek telefonon, keskeny telefonon és asztalon sem fednek és nem lógnak ki a szabad részből, a doboz a képernyőn belül van; a jelenet csoportjára koppintva (FG) a lista szűkül és a kamera odarepül (a lista és a jelenet ugyanazzal a csoportosítással: `epvCsoportok(l,JELVET,CSOP_M)`), húzás után is működik a billentyűs Enter a címkén, sötét témában a kiválasztott címke kontrasztja ≥ 4,5 (`--accent-ink`) |
 | `tests/masepulet.js` | más épületben nincs OA-ra szabott dolog: a foglalható termek (az OA órarendje) nincs kint, a Büfé gomb csak ahol van büfé (OA, FK; az OD-ben nincs); a szintnév és az emeletszám az épület saját szintjeiből (KT I. és IV. emelet, KH tetőtér, OD V. emelet, egy félszint és egy „Pince”, angolul is), a név az elsődleges (a KD-alak félemelete a földszint fölött, a kötőjel nélküli „Pince 2”), de ahol a név és a kód ellentmond (KD, TA) vagy két földszint jönne ki (BA), az épület nem nyílik meg; a 3D-s szintfelirat és a felolvasói név angolul (OA, KT); a liftes megjegyzés a lift nélküli szöveg; a nemre nem jelölt WC nem „Női” és „Férfi” mosdó, hanem semleges sor; a mosdónevek írásmódjai, a kategória nélküli OC-mosdók, a személyzeti WC kizárása, a mosdó-előtér mögötti WC (OC I. emelet) számít; a KH és a KT akadálymentes mosdója ott van; vissza az OA-ra minden OA-s dolog visszajön |
 | `tests/csomag.js` | a Pages-re publikált csomag (`tools/pages-csomag.js`): csak engedélylistás fájl, belső anyag és fejlesztői fájl nincs benne, minden, amire a lapok és a manifest hivatkoznak, benne van; a célkönyvtár nem lehet a repó, a szülője, egy forráskönyvtár, sem egy csomagnevű, de idegen tartalmú könyvtár (a repó-szabály külön is mérve); és az app ebből a csomagból minden épületen végigváltva, a service workerrel együtt egyetlen sikertelen kérés nélkül fut |
 
@@ -609,6 +681,17 @@ kiindulóértékeit — NaN lett a szögből, a térkép befagyott, a feliratok
 elmásztak. A `tests/gestures.js` pont ezt az esetet játssza le (az egyik ujj
 előbb emelkedik fel, mint a másik). Ha a pointer-kezeléshez nyúlsz, ez a teszt
 a hálód.
+
+**Asztalon a panel lebegő kártya, nem oszlop.** Élesben „túlságosan
+kijön”-nek találták a teljes magasságú, tömör oldalsávot: most a térkép a
+teljes szélességen fut, a panel (kereső, gyorsgombok, adatlap) bal felül
+lebeg, a tartalmához igazodó magassággal, áttetsző háttérrel; a
+gyorsgombok keret nélküli sorok. Ami ebből következik: a térkép egy részét
+a panel takarja, ezért az illesztés (`fit()`) és a teremre igazítás
+(`lathatova()`) a SZABAD területre számol (`szabad()`: asztalon a panel a
+bal, a szintsín a jobb szélét takarja, telefonon az alsó lap az alját) — a
+panel mögé illesztett épület fele nem látszana. A térkép (választó) ugyanezt
+használja a kamera közepéhez.
 
 **A halványított helyiségeket nem szabad eltüntetni.** A szint sziluettje az
 ÖSSZES helyiség poligonjából áll össze; ha kivennéd őket, lyukas lenne az
@@ -1302,6 +1385,7 @@ Tervtár OA épületadatok (xls)          --tervtar-ajtoszam.py--> az index.html
 Tervtár épületadatok, mind (xls/xlsx)     --tervtar-leltar.py--> leltár: 29 épület, 4643 helyiség (belső)
     a leltár + a tervlapok fejbélyegzője --tervlap-epuletek.py--> data/epuletek.json (39 épület)
     epuletek.json + OSM (Nominatim) + helyszínrajzok --helyek.py--> data/helyek.json (32 épület helye)
+    helyek.json + a megnyitható épületek alaprajza --terv-illesztes.py--> helyek.json: terv (az alaprajz a térképen)
 Tervtár helyszínrajzok (PDF)              --helyszinrajz.py--> melyik épület hol áll (belső)
 Tervtár tervtári alaprajz (PDF) + tábla     --tervlap-uj.py--> helyiség-sokszögek
     a sokszögek + a tábla                 --epulet-json.py--> data/epuletek/<kód>.json

@@ -21,7 +21,7 @@ const { run, open, DESKTOP } = require("./lib");
    településen összeszedjük az épületsorokat. Így az is kiderül, ha egy épület
    egyik településhez sem kerülne (és sehonnan nem lehetne elérni). */
 const allapot = page => page.evaluate(() => ({
-  nyitva: document.getElementById("epvlist").open,
+  nyitva: epvNyitva(),
   gomb: !document.getElementById("epvBtn").hidden,
   statikus: !document.getElementById("epvStat").hidden,
   nev: document.getElementById("epvNev").textContent.trim(),
@@ -33,6 +33,9 @@ const allapot = page => page.evaluate(() => ({
 const sorok = page => page.evaluate(() => [...document.querySelectorAll("#epvlist .epvrow")].map(b => ({
   kod: b.dataset.ep, off: b.classList.contains("off"), most: b.getAttribute("aria-current") === "true",
   szoveg: b.textContent.replace(/\s+/g, " ").trim() })));
+/* Telefonon a lista az alsó lapon van: a sorokhoz a hallgató fölhúzza. */
+const lap = (pg, n) => pg.evaluate(n => { if (MOB()) setSnap(n); }, n).then(() => pg.waitForTimeout(80));
+const nyit = async pg => { await pg.click("#epvBtn"); await pg.waitForTimeout(200); await lap(pg, "full"); };
 async function bejar(page) {
   const { telepulesek } = await allapot(page), ki = {};
   for (const tl of telepulesek) {
@@ -53,8 +56,7 @@ run("épületválasztó", async ({ t, ctx, browser, base }) => {
   t("a gomb a mostani épületet mutatja", L.nev === "OA épület", L.nev);
   t("zárva indul", !L.nyitva);
 
-  await p.click("#epvBtn");
-  await p.waitForTimeout(250);
+  await nyit(p);
   L = await allapot(p);
   t("kattintásra kinyílik, Magyarországgal", L.nyitva && L.cim === "Épület választása", L.cim);
   t("a települések: Budapest, Székesfehérvár, Nagymaros és a hely nélküliek",
@@ -108,21 +110,21 @@ run("épületválasztó", async ({ t, ctx, browser, base }) => {
   /* Az Esc csak az ablakot zárja: a kiválasztott terem marad. Korábban a lista
      Esc-je a globális kezelőig jutott, és a termet is törölte. */
   await p.evaluate(() => select("OA10E18")); await p.waitForTimeout(150);
-  await p.click("#epvBtn"); await p.waitForTimeout(200);
+  await nyit(p);
   await p.keyboard.press("Escape"); await p.waitForTimeout(200);
-  const esc = await p.evaluate(() => ({ nyitva: document.getElementById("epvlist").open, sel: S.sel,
+  const esc = await p.evaluate(() => ({ nyitva: epvNyitva(), sel: S.sel,
     fokusz: document.activeElement && document.activeElement.id }));
   t("Escape zárja, a kiválasztott terem marad, a fókusz a gombra kerül vissza",
     !esc.nyitva && esc.sel === "OA10E18" && esc.fokusz === "epvBtn", JSON.stringify(esc));
-  // a háttérre kattintva is zár (asztalon a doboz körül; telefonon a doboz az egész kép, ott a ×)
-  await p.click("#epvBtn"); await p.waitForTimeout(200);
+  // a panel × gombja is zár (vissza az épületbe)
+  await nyit(p);
   await p.click('#epvlist [data-epv="zar"]'); await p.waitForTimeout(200);
   t("a × zárja", !(await allapot(p)).nyitva);
 
   // nyelvvel együtt újraépül
   await p.click("#langEn").catch(() => p.evaluate(() => { S.lang = "en"; applyLang(); }));
   await p.evaluate(() => { if (S.lang !== "en") { S.lang = "en"; applyLang(); } });
-  await p.click("#epvBtn"); await p.waitForTimeout(150);
+  await nyit(p);
   await p.click('#epvlist [data-epv="tel:"]'); await p.waitForTimeout(150);
   const en = await p.evaluate(() => ({ cim: document.getElementById("epvCim").textContent,
     sa: (document.querySelector('#epvlist .epvrow[data-ep="SA"]') || {}).textContent || "" }));
@@ -137,7 +139,7 @@ run("épületválasztó", async ({ t, ctx, browser, base }) => {
      alaprajzot látta, minden jelzés nélkül. Amelyik épület nem nyitható meg,
      ott legalább megnevezzük, és az adatlapját mutatjuk. */
   const p2 = await open(ctx, base + "#SA00F01");
-  await p2.waitForFunction(() => document.getElementById("epvlist").open, null, { timeout: 8000 }).catch(() => {});
+  await p2.waitForFunction(() => epvNyitva(), null, { timeout: 8000 }).catch(() => {});
   const L2 = await allapot(p2);
   t("nem megnyitható épület kódjára mutató link megnyitja a választót", L2.nyitva);
   t("és megmondja, melyik épületé a kód", /SA épület/.test(L2.uzenet), L2.uzenet || "(nincs üzenet)");
@@ -205,7 +207,7 @@ run("épületválasztó", async ({ t, ctx, browser, base }) => {
     kod, { timeout: 15000 }).then(() => pg.waitForTimeout(300).then(() => true), () => false);
   // a felületen át: a település sora, aztán az épületé (ami megnyitható, rögtön nyílik)
   const valtUI = async (pg, kod) => {
-    await pg.click("#epvBtn"); await pg.waitForTimeout(200);
+    await nyit(pg);
     const tel = await pg.evaluate(k => epvTel(EPULETEK.epuletek[k]), kod);
     await pg.click(`#epvlist [data-epv="tel:${tel}"]`); await pg.waitForTimeout(100);
     await pg.click(`#epvlist .epvrow[data-ep="${kod}"]`);
@@ -266,7 +268,7 @@ run("épületválasztó", async ({ t, ctx, browser, base }) => {
   await valtUI(p4, "OD");
   const u = await p4.evaluate(() => ({
     nev: document.getElementById("epvNev").textContent.trim(),
-    from: S.from, to: S.to, hash: location.hash, lista: document.getElementById("epvlist").open
+    from: S.from, to: S.to, hash: location.hash, lista: epvNyitva()
   }));
   t("a váltás után az OD van betöltve", (await epOf(p4)) === "OD", await epOf(p4));
   t("a fejléc az új épületet mondja", /OD/.test(u.nev), u.nev);
@@ -517,7 +519,7 @@ run("épületválasztó", async ({ t, ctx, browser, base }) => {
     epuletPortal = d => { if (d !== D_OA) throw new Error("szabotált építés"); return eredeti(d); };
     try {
       epuletValt("OD");
-      for (let i = 0; i < 100 && !(document.getElementById("epvlist").open && document.getElementById("epvMsg").textContent.trim()); i++)
+      for (let i = 0; i < 100 && !(epvNyitva() && document.getElementById("epvMsg").textContent.trim()); i++)
         await new Promise(r => setTimeout(r, 100));
     } finally { epuletPortal = eredeti; }
     const uz = document.getElementById("epvMsg").textContent.trim();
@@ -540,7 +542,7 @@ run("épületválasztó", async ({ t, ctx, browser, base }) => {
                            rooms: [{ id: 0, code: "OC00F01", poly: [[0,0]] }] }) }));
   await p4.evaluate(() => { PORTA.OC = "OCX1A02";
     EPULETEK.epuletek.OC.navigalhato = true; epvRender(); });
-  await p4.click("#epvBtn"); await p4.waitForTimeout(250);
+  await nyit(p4);
   await p4.click('#epvlist [data-epv="tel:Budapest"]'); await p4.waitForTimeout(100);
   await p4.click('#epvlist .epvrow[data-ep="OC"]');
   // a hibaüzenetet várjuk meg, nem egy rögzített időt: a lassú gépen a letöltés tovább tart
