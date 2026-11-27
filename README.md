@@ -52,7 +52,8 @@ szintarányokkal, csak nem méretarányosan, mert valódi méretben egy ház itt
 **egyetlen, folytonos mozdulattal** le lehet menni az épületek közé: csippents
 vagy görgess, és a kamera magától leszáll. Előbb a városrészek — campusok —
 kis mása jön elő, szintén a valódi helyükön, aztán a valódi épületek, a saját
-körvonalukkal és szintszámukkal, a nevükkel. A házra koppintva megnyílik az
+körvonalukkal és szintszámukkal, a nevükkel — a campus kis mása nagyítás
+közben szétnyílik a valódi házakba, és a nevek is csúsznak, nem ugrálnak. A házra koppintva megnyílik az
 alaprajza. A rajz szemléltető, nem méretarányos: valódi méretben egy épület a
 város egészét mutató képen alig néhány képpont lenne, azért nő meg — a helye
 viszont végig igaz.

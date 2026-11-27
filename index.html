@@ -4147,7 +4147,13 @@ const JEL_MPP_NEV = 15;
 /* Ezalatt a VALÓDI házak állnak a valódi helyükön; fölötte a campusok kis
    mása. 6 m/képponton egy 800 m-es campus 133 képpont — ott már a házak a
    téma, nem az, hogy hol van a campus. */
-const JEL_MPP_CSOP = 6;         // ezalatt a csoportok jele már nem kell: a házak neve kint van
+/* A lépcsők határa nem éles (lásd jelRajz, „Átmenetek”): */
+const JEL_VT0 = 230;            // a települések modellje eddig tűnik át a csoportokéba (JEL_MPP_VAROS-tól)
+const JEL_MORPH0 = 10;          // innen nyílik szét a csoport kis mása a valódi házakba…
+const JEL_MORPH1 = 5;           // …és eddigre áll minden ház a helyén
+const JEL_SIKLAS = 110;         // ms: egy címke vagy modell ennyi idő alatt csúszik (63%-ig) az új helyére
+const JEL_SIKLAS_V = 0.8;       // px/ms: és ennél gyorsabban nem (egy 60 Hz-es képkockán ~13 képpont)
+const JEL_GORGO_TAU = 70;       // ms: a görgős és a gombos nagyítás simítása
 /* A csoport sugara méterben: egy campus együtt maradjon, két telephely ne. */
 const CSOP_M = 600;
 
@@ -4169,7 +4175,8 @@ const jelFokRa = k => Math.pow(JEL_FOK, Math.round(Math.log(k)/Math.log(JEL_FOK)
    vissza — így a két kép az átadás pillanatában fedi egymást. A „közép” a
    SZABAD terület közepe (sz: a panel és az alsó lap takarása). */
 const JEL = { k: 0, cx: 0, cy: 0, W: 0, H: 0, ox: 0, oy: 0, sz: {l:0,r:0,t:0,b:0},
-              rot: 0, dolX: null, fly: null, lazit: null, raf: 0, fok: null };
+              rot: 0, dolX: null, fly: null, lazit: null, gorgo: null, raf: 0, fok: null,
+              hely: new Map(), kepkocka: 0, siklik: false };
 let JELVET = null;              // a vetület (a HELYEK betöltésekor áll elő)
 
 /* A vetület az ország befoglalójának közepére áll; minden világkoordináta
@@ -4292,70 +4299,30 @@ function jelRajz(){
     for(const g of m.sziget||[]) svg+=`<path class="jSziget" d="${vilagUt(g,1)}"/>`;
   }
 
-  /* 3. réteg: a VALÓDI házak, a valódi helyükön — csak campus-közelben.
-     Följebb a campusok kis mása áll helyettük (lásd a 4. réteget). */
-  if(mpp<=JEL_MPP_CSOP && EPULETEK){
-    const hazak=Object.values(EPULETEK.epuletek).map(e=>jelHaz(e)||jelPont(e))
-      .filter(Boolean);
-    /* A nagyítás a SAJÁT KÖZÉP körül: a ház helye igaz marad, a mérete nem.
-       Campus-közelben 1, tehát ott méretarányos; messzebbről annyi, hogy a
-       ház látható és megkoppintható maradjon (mérve: nélküle a település
-       egészét mutató képen 1–3 képpont, ami használhatatlan). */
-    const gEgy=Math.max(1,Math.min(JEL_EGY_MAX,JEL_CEL_PX/(JEL_TIPIKUS*kam.k)));
-    const nagy=h=>Math.max(gEgy,Math.min(JEL_NAGY_MAX*2,JEL_MIN_PX/Math.max(1,(h.sz||25)*kam.k)));
-    const lathatoN=h=>{ const g=nagy(h), r=(h.sz||25)*g/2;
-      return lathato([h.kp[0]-r,h.kp[1]-r,h.kp[0]+r,h.kp[1]+r]); };
-    const latszo=hazak.filter(lathatoN);
-    latszo.sort((a,b)=>kam.melyseg(b.kp[0],b.kp[1])-kam.melyseg(a.kp[0],a.kp[1]));
-    for(const h of latszo){
-      const o="jHaz"+(h.van?" van":"")+(h.most?" most":"");
-      const g=nagy(h), px=(h.sz||25)*g*kam.k;
-      // a nagyított gyűrű és magasság: az arányok így is igazak maradnak
-      const G=h.gyuru&&h.gyuru.map(([x,y])=>[h.kp[0]+(x-h.kp[0])*g, h.kp[1]+(y-h.kp[1])*g]);
-      const M=h.magas*gEgy;   // a magasság mindig az egységes szorzóval: az emeletek aránya igaz marad
-      if(h.pont){
-        const [cx,cy]=kam.p(h.kp[0],h.kp[1],0);
-        svg+=`<circle class="${o} pont" data-epv="ep:${esc(h.kod)}" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${Math.max(6.5,Math.min(10,px*0.4)).toFixed(1)}"/>`;
-      } else if(px<8){
-        svg+=`<path class="${o} folt" data-epv="ep:${esc(h.kod)}" d="${
-          ut(G.map(([x,y])=>P(x,y,0)),1)}"/>`;
-      } else {
-        let falak="";
-        for(let i=0;i<G.length;i++){
-          const p=G[i], q=G[(i+1)%G.length];
-          const dx=q[0]-p[0], dy=q[1]-p[1], L=Math.hypot(dx,dy); if(!L) continue;
-          const nx=dy/L, ny=-dx/L; if(!kam.felenk(nx,ny)) continue;
-          falak+=`<path style="--f:${(kam.feny(nx,ny)*100).toFixed(0)}%" d="${
-            ut([P(p[0],p[1],0),P(q[0],q[1],0),P(q[0],q[1],M),P(p[0],p[1],M)],1)}"/>`;
-        }
-        svg+=`<g class="${o}" data-epv="ep:${esc(h.kod)}"><g class="fal">${falak}</g>`
-          +`<path class="tet" d="${ut(G.map(([x,y])=>P(x,y,M)),1)}"/></g>`;
-      }
-      // a név a KIRAJZOLT mérethez igazodik, nem a nagyításhoz: ami elég nagy, az megnevezhető
-      /* A megnyitható épület neve MINDIG kint van: azt tudja a hallgató
-         használni, és a nevén keresi. A többié akkor, ha elég nagyra nőtt,
-         vagy ha kevesen vannak a képen — a campus hét házát mind meg kell
-         nevezni, ott épp az a kérdés, melyik ház melyik; Budapest huszonhárom
-         chipje egymás hegyén-hátán viszont olvashatatlan. */
-      if(px>=JEL_NEV_PX||h.van||latszo.length<=JEL_NEV_DB){
-        nevDb++;
-        const [lx,ly]=kam.p(h.kp[0],h.kp[1],h.pont?0:M);
-        if(jelBent(lx,ly))
-          cimke+=`<button class="jNev${h.van?" van":""}${h.most?" most":""}" data-epv="ep:${esc(h.kod)}"`
-            +` style="left:${lx.toFixed(1)}px;top:${ly.toFixed(1)}px"`
-            +` aria-label="${esc(h.nev+" · "+(h.van?t.epvHasPlan:t.epvNoPlan))}">${esc(h.kod)}</button>`;
-      }
-    }
-  }
+  /* Átmenetek. A lépcsők közt a kép nem cserélődik egy csapásra (élesben:
+     „ahogy nagyítok, az épületek ide-oda ugrálnak”): a település → csoport
+     határon a kettő ÁTTŰNIK (JEL_VT0 és JEL_MPP_VAROS közt), a csoport → ház
+     határon pedig a csoport kis mása SZÉTNYÍLIK a valódi házakba (JEL_MORPH0
+     és JEL_MORPH1 közt): a modell minden háza a saját modellbeli helyéről a
+     valódi helyére csúszik, ugyanazzal a körvonallal. Ami a modellben nem
+     szerepelt (a hatodik ház, a körvonal nélküliek), az áttűnik. */
+  const lg=Math.log, sima=u=>{ u=Math.max(0,Math.min(1,u)); return u*u*(3-2*u); };
+  const tTel=sima((lg(mpp)-lg(JEL_VT0))/(lg(JEL_MPP_VAROS)-lg(JEL_VT0)));      // 1: csak a települések
+  const tHaz=sima((lg(JEL_MORPH0)-lg(mpp))/(lg(JEL_MORPH0)-lg(JEL_MORPH1)));   // 1: csak a házak
+  const halv=op=>op<0.5?` tabindex="-1" aria-hidden="true" data-halv="1"`:"";
+  const forras=new Map();          // a szétnyíló modellek házai: kód → a modellbeli képernyő-csúcsok
+  let svgHaz="", svgCsop="", svgTel="";
 
-  /* 4. réteg: a CSOPORTOK (kerület, telephely) kis mása. Ez a „telephely”
-     szint: a város egészén egy ház pöttynyi, a település jele viszont már
-     semmit nem mond. Itt egy campus = egy modell, a campus saját házaiból, a
-     campus valódi helyén — ugyanaz az elv, mint az ország térképén a
-     városoké, egy lépcsőfokkal lejjebb. Élesben a 23 szétszórt budapesti
-     házat jelentették „használhatatlan”-ként: 10 km-en szórnak szét, és
-     bármekkorára nagyítva is pöttyök maradtak egy üres lapon. */
-  if(mpp<=JEL_MPP_VAROS && mpp>JEL_MPP_CSOP && EPULETEK){
+  /* 4. réteg (előbb számolva, mert a szétnyíló házak innen indulnak): a
+     CSOPORTOK (kerület, telephely) kis mása. Ez a „telephely” szint: a város
+     egészén egy ház pöttynyi, a település jele viszont már semmit nem mond.
+     Itt egy campus = egy modell, a campus saját házaiból, a campus valódi
+     helyén — ugyanaz az elv, mint az ország térképén a városoké, egy
+     lépcsőfokkal lejjebb. Élesben a 23 szétszórt budapesti házat jelentették
+     „használhatatlan”-ként: 10 km-en szórnak szét, és bármekkorára nagyítva
+     is pöttyök maradtak egy üres lapon. */
+  if(mpp<=JEL_MPP_VAROS && tHaz<1 && EPULETEK){
+    const op=1-tTel;
     const tl=new Map();
     for(const e of Object.values(EPULETEK.epuletek)){
       const n=epvTel(e); if(!n||!epvHely(e)) continue;
@@ -4367,22 +4334,104 @@ function jelRajz(){
       const [lx,ly]=kam.p(c.x,c.y,0);
       if(!jelBent(lx,ly)) continue;     // a képen (és a panelen) kívüli jel címkéje kilógna
       const van=c.tag.filter(e=>e.navigalhato).length;
-      const adat=jelVarosAdat(c.tag);
-      let cy=ly;
-      svg+=`<circle class="jPont csop" cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="${adat?"3.5":"4.5"}"/>`;
+      const adat=jelVarosAdat(c.tag), cel="csop:"+c.kulcs, a=op*(1-tHaz);
+      let cy=ly, alatt=!!adat;
+      svgCsop+=`<circle class="jPont csop" cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="${adat?"3.5":"4.5"}" opacity="${a.toFixed(3)}"/>`;
       if(adat){
-        const r=jelVarosSvg(adat,lx,ly,jelModellSzel(adat.length),"csop:"+c.kulcs); svg+=r.svg; cy=ly+r.teto;
+        // szétnyílás közben a modell a legutóbbi (kirajzolt) eltolásával indul, és nem mozdul tovább
+        const hely=tHaz>0?JEL.hely.get("M:"+cel):null;
+        const r=jelVarosSvg(adat,lx,ly,jelModellSzel(adat.length),cel,hely);
+        if(tHaz>0){
+          for(const hz of r.hazak) forras.set(hz.kod,hz);
+          svgCsop+=`<g opacity="${a.toFixed(3)}">${r.arnyek}</g>`;
+          if(hely) hely.n=JEL.kepkocka;
+          cy=r.talp+(hely?hely.y:0);
+        } else { svgCsop+=op<1?`<g opacity="${op.toFixed(3)}">${r.svg}</g>`:r.svg; cy=ly+r.teto; }
       }
-      cimke+=`<button class="jTel csop${adat?" alatt":""}" data-epv="csop:${esc(c.kulcs)}"`
-        +` style="left:${lx.toFixed(1)}px;top:${Math.max(0,cy).toFixed(1)}px"`
+      cimke+=`<button class="jTel csop${alatt?" alatt":""}" data-epv="${esc(cel)}"${halv(a)}`
+        +` style="left:${lx.toFixed(1)}px;top:${Math.max(0,cy).toFixed(1)}px${a<1?`;opacity:${a.toFixed(3)}`:""}"`
         +` aria-label="${esc(t.epvPin.replace("%s",c.nev).replace("%s",epvDb(c.tag.length)).replace("%s",van))}">`
         +`${esc(c.nev)}</button>`;
     }
   }
 
-  /* 5. réteg: a települések jele. Közelebbről elhalványul, mert ott már a
-     házak mondják meg, hol vagyunk. */
-  if(mpp>JEL_MPP_VAROS && EPULETEK){
+  /* 3. réteg: a VALÓDI házak, a valódi helyükön — csak campus-közelben.
+     Följebb a campusok kis mása áll helyettük (a 4. réteg). */
+  if(tHaz>0 && EPULETEK){
+    const hazak=Object.values(EPULETEK.epuletek).map(e=>jelHaz(e)||jelPont(e))
+      .filter(Boolean);
+    /* A nagyítás a SAJÁT KÖZÉP körül: a ház helye igaz marad, a mérete nem.
+       Campus-közelben 1, tehát ott méretarányos; messzebbről annyi, hogy a
+       ház látható és megkoppintható maradjon (mérve: nélküle a település
+       egészét mutató képen 1–3 képpont, ami használhatatlan). */
+    const gEgy=Math.max(1,Math.min(JEL_EGY_MAX,JEL_CEL_PX/(JEL_TIPIKUS*kam.k)));
+    const nagy=h=>Math.max(gEgy,Math.min(JEL_NAGY_MAX*2,JEL_MIN_PX/Math.max(1,(h.sz||25)*kam.k)));
+    const lathatoN=h=>{ const g=nagy(h), r=(h.sz||25)*g/2;
+      return forras.has(h.kod)||lathato([h.kp[0]-r,h.kp[1]-r,h.kp[0]+r,h.kp[1]+r]); };
+    const latszo=hazak.filter(lathatoN);
+    latszo.sort((a,b)=>kam.melyseg(b.kp[0],b.kp[1])-kam.melyseg(a.kp[0],a.kp[1]));
+    const sp=q=>q[0].toFixed(1)+" "+q[1].toFixed(1);
+    const ut2=(pts,zart)=>"M"+pts.map(sp).join("L")+(zart?"Z":"");
+    for(const h of latszo){
+      const f=forras.get(h.kod);
+      // ami a modellben nem szerepelt, az áttűnik; ami igen, az odacsúszik
+      const op=f||tHaz>=1?1:tHaz;
+      if(op<0.02) continue;
+      const o="jHaz"+(h.van?" van":"")+(h.most?" most":"");
+      const g=nagy(h), px=(h.sz||25)*g*kam.k;
+      // a nagyított gyűrű és magasság: az arányok így is igazak maradnak
+      const G=h.gyuru&&h.gyuru.map(([x,y])=>[h.kp[0]+(x-h.kp[0])*g, h.kp[1]+(y-h.kp[1])*g]);
+      const M=h.magas*gEgy;   // a magasság mindig az egységes szorzóval: az emeletek aránya igaz marad
+      // a még halvány ház nem kap koppintást: a modell (vagy a csoport neve) a célpont
+      const opA=op<1?` opacity="${op.toFixed(3)}"${op<0.5?` style="pointer-events:none"`:""}`:"";
+      let felso=null;         // a név helye (a tető közepe)
+      if(h.pont){
+        const [cx,cy]=kam.p(h.kp[0],h.kp[1],0);
+        svgHaz+=`<circle class="${o} pont" data-epv="ep:${esc(h.kod)}" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${Math.max(6.5,Math.min(10,px*0.4)).toFixed(1)}"${opA}/>`;
+        felso=[cx,cy];
+      } else if(px<8&&!f){
+        svgHaz+=`<path class="${o} folt" data-epv="ep:${esc(h.kod)}" d="${ut(G.map(([x,y])=>P(x,y,0)),1)}"${opA}/>`;
+      } else {
+        let A=G.map(([x,y])=>kam.p(x,y,0)), B=G.map(([x,y])=>kam.p(x,y,M));
+        felso=kam.p(h.kp[0],h.kp[1],M);
+        if(f&&tHaz<1&&f.alap.length===G.length){
+          const u=tHaz, mix=(m,w)=>[m[0]+(w[0]-m[0])*u, m[1]+(w[1]-m[1])*u];
+          A=A.map((q,i)=>mix(f.alap[i],q)); B=B.map((q,i)=>mix(f.teto[i],q));
+          felso=mix(f.kozep,felso);
+        }
+        let falak="";
+        for(let i=0;i<G.length;i++){
+          const j=(i+1)%G.length, p=G[i], q=G[j];
+          const dx=q[0]-p[0], dy=q[1]-p[1], L=Math.hypot(dx,dy); if(!L) continue;
+          const nx=dy/L, ny=-dx/L; if(!kam.felenk(nx,ny)) continue;
+          falak+=`<path style="--f:${(kam.feny(nx,ny)*100).toFixed(0)}%" d="${ut2([A[i],A[j],B[j],B[i]],1)}"/>`;
+        }
+        svgHaz+=`<g class="${o}" data-epv="ep:${esc(h.kod)}"${opA}><g class="fal">${falak}</g>`
+          +`<path class="tet" d="${ut2(B,1)}"/></g>`;
+      }
+      // a név a KIRAJZOLT mérethez igazodik, nem a nagyításhoz: ami elég nagy, az megnevezhető
+      /* A megnyitható épület neve MINDIG kint van: azt tudja a hallgató
+         használni, és a nevén keresi. A többié akkor, ha elég nagyra nőtt,
+         vagy ha kevesen vannak a képen — a campus hét házát mind meg kell
+         nevezni, ott épp az a kérdés, melyik ház melyik; Budapest huszonhárom
+         chipje egymás hegyén-hátán viszont olvashatatlan. Szétnyílás közben
+         a nevek a második felében úsznak be (addig a csoport neve áll). */
+      if(px>=JEL_NEV_PX||h.van||latszo.length<=JEL_NEV_DB){
+        nevDb++;
+        const [lx,ly]=felso||kam.p(h.kp[0],h.kp[1],0);
+        const na=tHaz>=1?1:sima((tHaz-0.35)/0.5);
+        if(na>0.02&&jelBent(lx,ly))
+          cimke+=`<button class="jNev${h.van?" van":""}${h.most?" most":""}" data-epv="ep:${esc(h.kod)}"${halv(na)}`
+            +` style="left:${lx.toFixed(1)}px;top:${ly.toFixed(1)}px${na<1?`;opacity:${na.toFixed(3)}`:""}"`
+            +` aria-label="${esc(h.nev+" · "+(h.van?t.epvHasPlan:t.epvNoPlan))}">${esc(h.kod)}</button>`;
+      }
+    }
+  }
+
+  /* 5. réteg: a települések jele. Közelebbről áttűnik a csoportokéba, mert
+     ott már azok mondják meg, hol vagyunk. */
+  if(mpp>JEL_VT0 && EPULETEK){
+    const op=tTel;
     const tl=new Map();
     for(const e of Object.values(EPULETEK.epuletek)){
       const n=epvTel(e); if(!n||!epvHely(e)) continue;
@@ -4407,15 +4456,17 @@ function jelRajz(){
       // a modell csak országos léptéken: alatta már a valódi házak állnak a helyükön
       const adat=jelVarosAdat(l);
       let cy=ly;
-      svg+=`<circle class="jPont" data-tel="${esc(n)}" cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="${adat?"4":"5.5"}"/>`;
+      svgTel+=`<circle class="jPont" data-tel="${esc(n)}" cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="${adat?"4":"5.5"}" opacity="${op.toFixed(3)}"/>`;
       if(adat){
-        const r=jelVarosSvg(adat,lx,ly,jelModellSzel(adat.length),"tel:"+n); svg+=r.svg; cy=ly+r.teto;
+        const r=jelVarosSvg(adat,lx,ly,jelModellSzel(adat.length),"tel:"+n);
+        svgTel+=op<1?`<g opacity="${op.toFixed(3)}">${r.svg}</g>`:r.svg; cy=ly+r.teto;
       }
-      cimke+=`<button class="jTel${adat?" alatt":""}" data-epv="tel:${esc(n)}" style="left:${lx.toFixed(1)}px;top:${Math.max(0,cy).toFixed(1)}px"`
+      cimke+=`<button class="jTel${adat?" alatt":""}" data-epv="tel:${esc(n)}"${halv(op)} style="left:${lx.toFixed(1)}px;top:${Math.max(0,cy).toFixed(1)}px${op<1?`;opacity:${op.toFixed(3)}`:""}"`
         +` aria-label="${esc(t.epvPin.replace("%s",n).replace("%s",epvDb(l.length)).replace("%s",van))}">`
         +`${esc(n)}</button>`;
     }
   }
+  svg+=svgHaz+svgCsop+svgTel;
   return `<svg viewBox="0 0 ${JEL.W} ${JEL.H}" aria-hidden="true" focusable="false">${svg}</svg>${cimke}`;
 }
 
@@ -4481,7 +4532,11 @@ function jelVarosAdat(tag){
 /* A modell a saját, rögzített ferde kamerájával rajzolódik (a térkép dőlése
    országos léptéken 0), és a TALPA kerül a település pontjára. Így a lapos
    térképen is állónak látszik, mint a régi, képes térképek házikói. */
-function jelVarosSvg(adat, lx, ly, szel, cel){
+/* ofs: a modell kirajzolt eltolása (jelCimkek) — a szétnyíláshoz kell, hogy a
+   házak onnan induljanak, ahol a modell épp áll. A `hazak` a házak
+   képernyő-csúcsai (talp és tető), ugyanabban a sorrendben, mint a valódi
+   ház gyűrűje (mindkettő ugyanaz az OSM-körvonal, ugyanúgy fordítva). */
+function jelVarosSvg(adat, lx, ly, szel, cel, ofs){
   const t=VAROS_DOL*Math.PI/180, ct=Math.cos(t), st=Math.sin(t);
   const px=[], py=[];
   for(const b of adat) for(const [gx,gy] of b.gyuru) for(const z of [0,b.magas]){
@@ -4512,9 +4567,17 @@ function jelVarosSvg(adat, lx, ly, szel, cel){
       +`<path class="tet" d="${ut(b.gyuru.map(([gx,gy])=>P(b.kx+gx,b.ky+gy,b.magas)))}"/></g>`;
   }
   const teto=Math.min(...py)*s - talp;       // a modell teteje a talphoz képest
+  const ox=lx+(ofs?ofs.x:0), oy=ly+talp+(ofs?ofs.y:0);
+  const Q=(e,n,z)=>[ox+e*s, oy+(-(n*ct)-(z||0)*st)*s];
+  const hazak=adat.map(b=>{ const teto=b.gyuru.map(([gx,gy])=>Q(b.kx+gx,b.ky+gy,b.magas));
+    return { kod:b.kod, alap:b.gyuru.map(([gx,gy])=>Q(b.kx+gx,b.ky+gy,0)), teto,
+             kozep:[teto.reduce((a,q)=>a+q[0],0)/teto.length, teto.reduce((a,q)=>a+q[1],0)/teto.length] }; });
+  const arnyek=`<g transform="translate(${ox.toFixed(1)},${oy.toFixed(1)})">`
+    +adat.map(b=>{ const [ax,ay]=P(b.kx,b.ky,0);
+      return `<ellipse class="jArny" cx="${ax}" cy="${ay}" rx="${(b.sz*s*.62).toFixed(1)}" ry="${(b.sz*s*.2).toFixed(1)}"/>`; }).join("")+`</g>`;
   return { svg:`<g class="jVar" data-epv="${esc(cel)}" data-x="${lx.toFixed(1)}" data-y="${(ly+talp).toFixed(1)}"`
              +` transform="translate(${lx.toFixed(1)},${(ly+talp).toFixed(1)})">${svg}</g>`,
-           teto };
+           teto, hazak, arnyek, talp:Math.max(...hazak.flatMap(h=>h.alap.map(q=>q[1]))) };
 }
 
 /* ---------------------------------------------------- a kamera vezérlése */
@@ -4535,11 +4598,17 @@ function jelMeret(){
 }
 const jelSzel = () => Math.max(60,JEL.W-JEL.sz.l-JEL.sz.r);
 const jelMag = () => Math.max(60,JEL.H-JEL.sz.t-JEL.sz.b);
+/* A gesztusok nem rajzolnak azonnal, csak kérnek egy képkockát: így egy
+   képkockán legfeljebb egyszer épül újra a jelenet (a mozgás utáni,
+   hazacsúszó képkockával együtt sem kétszer). */
+function jelKer(){ jelIndit(); }
 function jelFrissit(){
   const h=jelHost(); if(!h||!jelMeret()) return;
+  JEL.kepkocka++;
   h.innerHTML=jelRajz();
   h.dataset.mpp=jelMpp().toFixed(2);
   jelCimkek(h);
+  if(JEL.siklik) jelIndit();          // a még csúszó címkéknek a kamera megállta után is jár képkocka
 }
 /* A rátétek (a települések modellje és minden címke) helyét a KIRAJZOLT
    képen mérjük ki: négy oldal, növekvő távolságon, az első teljesen tiszta
@@ -4547,11 +4616,30 @@ function jelFrissit(){
    helyén marad (az SVG-ben van), a rátét mozdul, és ha messzire került,
    szár köti vissza. Egyszerű széttolás nem elég: Nagymaros és Budapest az
    ország térképén 22 képpontra van egymástól, és a széttolt chip 200
-   képpontra szállt el a saját pontjától. */
+   képpontra szállt el a saját pontjától.
+   A hely STABIL és CSÚSZIK: előbb az otthon (ha tiszta), aztán az előző
+   képkocka helye (ha még tiszta), csak utána keres; az új helyére pedig
+   JEL_SIKLAS idővel csúszik, nem ugrik. Korábban minden képkocka elölről
+   választott, és nagyítás közben a címkék és a modellek két egyformán jó
+   hely közt 60–200 képpontot ugráltak ide-oda (élesben: „az épületek
+   ide-oda ugrálnak”). A kulcs a data-epv: a rátét a következő képkockán
+   ugyanaz, akkor is, ha a DOM-ja új. */
 function jelCimkek(h){
   const el=[...h.querySelectorAll(".jTel,.jNev")];
   const mod=[...h.querySelectorAll("g.jVar")];
-  if((!el.length&&!mod.length)||el.length>40) return;
+  const N=JEL.kepkocka, most=performance.now();
+  /* Nyugvó kamera: a hiszterézis (lent) csak mozgás közben kell, hogy a
+     címke ne ingázzon; megálláskor ami csak a tartalék miatt maradt kint, az
+     hazacsúszik. Ehhez a mozgás utáni első képkocka is lefut (siklik). */
+  const sig=[JEL.k,JEL.cx,JEL.cy,JEL.rot,JEL.dolX,JEL.W,JEL.H,JEL.sz.l,JEL.sz.b].join();
+  if(sig!==JEL.cimkeSig){ JEL.cimkeSig=sig; JEL.mozgott=most; }
+  // 150 ms mozdulatlanság után nyugvó: egy képkockányi szünet egy folytonos mozdulatban még nem az
+  const nyugvo=most-(JEL.mozgott||0)>150;
+  const vege=()=>{ let sik=most-(JEL.mozgott||0)<=200;
+    for(const [k,e] of JEL.hely){ if(e.n!==N){ JEL.hely.delete(k); continue; }
+      if(Math.abs(e.x-e.tx)+Math.abs(e.y-e.ty)>0.6) sik=true; }
+    JEL.siklik=sik; };
+  if((!el.length&&!mod.length)||el.length>40){ vege(); return; }
   const hr=h.getBoundingClientRect(), sv=h.querySelector("svg");
   const fed=(a,b)=>a.l<b.l+b.w&&b.l<a.l+a.w&&a.t<b.t+b.h&&b.t<a.t+a.h;
   /* A keret a SZABAD terület: a panel (asztalon) és az alsó lap (telefonon)
@@ -4573,16 +4661,47 @@ function jelCimkek(h){
     ln.setAttribute("x1",(+x1).toFixed(1)); ln.setAttribute("y1",(+y1).toFixed(1));
     ln.setAttribute("x2",x2.toFixed(1)); ln.setAttribute("y2",y2.toFixed(1));
     sv.appendChild(ln); };
-  /* Az első tiszta hely: `tilt` a már elfoglalt téglalapok, `jelek` a pontok,
+  /* Tiszta-e egy hely: `tilt` a már elfoglalt téglalapok, `jelek` a pontok,
      amikre nem szabad ráülni (a sajátjára igen: a modell azon ÁLL). */
-  const hova=(a,tilt,jelek,sajat,tav)=>{
+  const tiszta=(r,tilt,jelek,sajat)=>!tilt.some(q=>fed(r,q))
+    &&!jelek.some(([x,y],j)=>j!==sajat&&x>r.l-5&&x<r.l+r.w+5&&y>r.t-5&&y<r.t+r.h+5);
+  /* Az első tiszta hely (négy oldal, növekvő távolságon) — vagy ha a rátétnek
+     volt már helye (pref), a tiszták közül az ahhoz legközelebbi: különben
+     egy kiszorított címke a jele egyik oldaláról a másikra lendült át. */
+  const hova=(a,tilt,jelek,sajat,tav,pref)=>{
+    let jo=null, jd=Infinity;
     for(const ki of tav) for(const [dx,dy] of (ki?[[0,-ki],[ki,0],[-ki,0],[0,ki]]:[[0,0]])){
       const r=keretbe({l:a.l+dx, t:a.t+dy, w:a.w, h:a.h});
-      if(tilt.some(q=>fed(r,q))) continue;
-      if(jelek.some(([x,y],j)=>j!==sajat&&x>r.l-5&&x<r.l+r.w+5&&y>r.t-5&&y<r.t+r.h+5)) continue;
-      return r;
+      if(!tiszta(r,tilt,jelek,sajat)) continue;
+      if(!pref) return r;
+      const d=Math.hypot(r.l-a.l-pref.tx,r.t-a.t-pref.ty)+ki*0.5;
+      if(d<jd){ jd=d; jo=r; }
     }
-    return null;
+    return jo;
+  };
+  /* Hiszterézis: ami már ki van tolva, mozgás közben csak akkor megy haza,
+     ha az otthona tágabban (8 képponttal) is szabad — a határon különben
+     képkockánként hol szabad volt, hol nem, és a címke ide-oda járt. */
+  const valaszt=(kulcs,a,tilt,jelek,sajat,tav)=>{
+    const otthon=keretbe(a), e=JEL.hely.get(kulcs);
+    const kint=!nyugvo&&!!e&&Math.abs(e.tx)+Math.abs(e.ty)>0.5;
+    if(tiszta(kint?{l:otthon.l-8,t:otthon.t-8,w:otthon.w+16,h:otthon.h+16}:otthon,tilt,jelek,sajat)) return otthon;
+    if(e){ const r=keretbe({l:a.l+e.tx, t:a.t+e.ty, w:a.w, h:a.h}); if(tiszta(r,tilt,jelek,sajat)) return r; }
+    return hova(a,tilt,jelek,sajat,tav,e);
+  };
+  /* A kirajzolt eltolás a célja után csúszik; ami most jelent meg (vagy
+     rég nem látszott), az rögtön a helyén áll. */
+  const kovet=(kulcs,tx,ty)=>{
+    let e=JEL.hely.get(kulcs);
+    if(!e||most-e.t>400){ e={x:tx,y:ty,tx,ty,t:most,n:N}; JEL.hely.set(kulcs,e); return e; }
+    const dt=Math.min(100,Math.max(0,most-e.t)), a=1-Math.exp(-dt/JEL_SIKLAS);
+    // a csúszás sebessége is korlátos: egy nagy áthelyezés se rántson egy képkockán
+    let mx=(tx-e.x)*a, my=(ty-e.y)*a; const v=Math.hypot(mx,my), lim=JEL_SIKLAS_V*Math.max(dt,8);
+    if(v>lim){ mx*=lim/v; my*=lim/v; }
+    e.tx=tx; e.ty=ty; e.x+=mx; e.y+=my; e.t=most; e.n=N;
+    if(Math.abs(e.x-tx)<0.5) e.x=tx;
+    if(Math.abs(e.y-ty)<0.5) e.y=ty;
+    return e;
   };
   /* 1. a települések modellje. Országos léptéken Budapest és Székesfehérvár
      jele 38 képpontra van egymástól, a modellek viszont 60–90 szélesek:
@@ -4596,20 +4715,21 @@ function jelCimkek(h){
   // 9 képpont köz: összeérve a két modell egyetlen házkupacnak látszott
   const koz=r=>({l:r.l-9, t:r.t-9, w:r.w+18, h:r.h+18});
   mod.forEach((g,i)=>{
-    const a=rect(g);
-    const r=hova(a,foglalt.map(koz),jelek,mPont[i],[0,18,34,52,74,98])||keretbe(a);
-    const dx=r.l-a.l, dy=r.t-a.t;
-    g.setAttribute("transform",`translate(${(+g.dataset.x+dx).toFixed(1)},${(+g.dataset.y+dy).toFixed(1)})`);
+    const a=rect(g), kulcs="M:"+g.dataset.epv;
+    const r=valaszt(kulcs,a,foglalt.map(koz),jelek,mPont[i],[0,18,34,52,74,98])||keretbe(a);
+    const e=kovet(kulcs,r.l-a.l,r.t-a.t);
+    g.setAttribute("transform",`translate(${(+g.dataset.x+e.x).toFixed(1)},${(+g.dataset.y+e.y).toFixed(1)})`);
     foglalt.push(r);
-    if(Math.abs(dx)+Math.abs(dy)>16){
-      const v=szarhoz(+g.dataset.x,+g.dataset.y,r);
+    g.__r={l:a.l+e.x, t:a.t+e.y, w:a.w, h:a.h};
+    if(Math.abs(e.x)+Math.abs(e.y)>16){
+      const v=szarhoz(+g.dataset.x,+g.dataset.y,g.__r);
       if(v) szar(g.dataset.x,g.dataset.y,v[0],v[1]);
     }
   });
   /* 2. a címke a MODELLJE fölé kerül (ha van), különben a jele fölé marad. */
   for(const e of el){
     const g=mod.find(g=>g.dataset.epv===e.dataset.epv); if(!g) continue;
-    const r=rect(g);
+    const r=g.__r;
     e.style.left=(r.l+r.w/2).toFixed(1)+"px";
     e.style.top=(e.classList.contains("alatt")?r.t+r.h:r.t).toFixed(1)+"px";
   }
@@ -4621,18 +4741,26 @@ function jelCimkek(h){
   const sorrend=el.map((e,i)=>i).sort((a,b)=>rang(el[b])-rang(el[a]));
   const kesz=foglalt.slice();
   for(const i of sorrend){
+    const e=el[i], kulcs="L:"+e.dataset.epv+(e.classList.contains("jNev")?":n":":t");
+    let r;
+    /* Az áttűnőben lévő (halvány) címke nem akadály és nem keres helyet: ott
+       marad, ahol volt — különben a két lépcső címkéi egymást tologatták. */
+    if(e.dataset.halv){ const p=JEL.hely.get(kulcs);
+      r=keretbe({l:alap[i].l+(p?p.tx:0), t:alap[i].t+(p?p.ty:0), w:alap[i].w, h:alap[i].h}); }
     /* Ha egyetlen hely sem tiszta, a keretbe szorítva marad: egy kilógó
        címke rosszabb, mint egy takaró. */
-    const r=hova(alap[i],kesz,pont,-1,[0,14,28,44,62,84,110])
+    else r=valaszt(kulcs,alap[i],kesz,pont,-1,[0,14,28,44,62,84,110])
           ||keretbe({l:alap[i].l, t:alap[i].t-84, w:alap[i].w, h:alap[i].h});
-    el[i].style.setProperty("--dx",(r.l-alap[i].l)+"px");
-    el[i].style.setProperty("--dy",(r.t-alap[i].t)+"px");
-    kesz.push(r);
-    if(Math.abs(r.l-alap[i].l)+Math.abs(r.t-alap[i].t)>16){
-      const v=szarhoz(pont[i][0],pont[i][1],r);
+    const p=kovet(kulcs,r.l-alap[i].l,r.t-alap[i].t);
+    e.style.setProperty("--dx",p.x.toFixed(1)+"px");
+    e.style.setProperty("--dy",p.y.toFixed(1)+"px");
+    if(!e.dataset.halv) kesz.push(r);
+    if(Math.abs(p.x)+Math.abs(p.y)>16){
+      const v=szarhoz(pont[i][0],pont[i][1],{l:alap[i].l+p.x, t:alap[i].t+p.y, w:alap[i].w, h:alap[i].h});
       if(v) szar(pont[i][0],pont[i][1],v[0],v[1]);
     }
   }
+  vege();
 }
 /* Egy világbeli befoglalóra illesztés. A dőlés miatt a kép függőlegesen
    összenyomódik, ezért a magasságot a dőléssel osztjuk — különben a cél
@@ -4682,7 +4810,7 @@ const jelEase = u => u<.5?4*u*u*u:1-Math.pow(-2*u+2,3)/2;
 function jelRepul(cel, ms){
   const k1=cel.korlatlan?cel.k:Math.max(JEL.kMin||0,Math.min(JEL.kMax||Infinity,cel.k));
   const r0=JEL.rot, r1=cel.rot==null?0:cel.rot;
-  JEL.lazit=null;
+  JEL.lazit=null; JEL.gorgo=null;
   JEL.fly={ k0:JEL.k||k1, k1, x0:JEL.cx, y0:JEL.cy, x1:cel.cx, y1:cel.cy,
             r0, r1:r0+((((r1-r0)%360)+540)%360-180),          // a rövidebb úton fordul
             d0:JEL.dolX, d1:cel.dol==null?null:cel.dol,
@@ -4710,6 +4838,16 @@ function jelTick(){
     if(u>=1){ JEL.fly=null; JEL.rot=((f.r1%360)+360)%360; if(JEL.rot>180) JEL.rot-=360;
       if(f.d1==null) JEL.dolX=null; }
   }
+  const g=JEL.gorgo;
+  let nott=false;
+  if(g){
+    const dt=Math.min(64,Math.max(0,most-g.t)); g.t=most;
+    const a=1-Math.exp(-dt/JEL_GORGO_TAU), w=jelVilag(g.sx,g.sy), k0=JEL.k;
+    JEL.k=k0*Math.pow(g.cel/k0,a);
+    if(Math.abs(Math.log(g.cel/JEL.k))<0.002){ JEL.k=g.cel; JEL.gorgo=null; }
+    jelHorgony(w,g.sx,g.sy);
+    nott=JEL.k>k0;
+  }
   const l=JEL.lazit;
   if(l){
     const u=Math.min(1,(most-l.t0)/l.T), e=jelEase(u);
@@ -4718,8 +4856,9 @@ function jelTick(){
     if(u>=1){ JEL.lazit=null; JEL.rot=0; JEL.dolX=null; }
   }
   jelFrissit();
+  if(nott&&g) jelBelepoFigyel(g.sx,g.sy);
   if(f&&!JEL.fly&&f.kesz) f.kesz();
-  if(JEL.fly||JEL.lazit) jelIndit();
+  if(JEL.fly||JEL.lazit||JEL.gorgo) jelIndit();
 }
 /* A hallgató átvette a kamerát (húzás, csippentés, görgő, gomb): a repülés
    megáll, és ha a kép még az átmenet irányában vagy dőlésében áll, az
@@ -4741,25 +4880,19 @@ function jelNagyit(tenyezo, sx, sy){
   jelFrissit();
   if(tenyezo>1) jelBelepoFigyel(sx,sy);
 }
-/* A mozdulat végén a nagyítás a legközelebbi fokra akad be, az ujj (vagy az
-   egér) alatti pontot a helyén tartva. A gomb eleve fokot lép, ott nincs
-   mit igazítani. */
-function jelBeakad(sx,sy){
-  clearTimeout(jelBeakad.id);
-  jelBeakad.id=setTimeout(()=>{
-    if(!JEL.k||JEL.fly||!epvNyitva()) return;
-    const cel=Math.max(JEL.kMin,Math.min(Math.max(JEL.kMax,JEL.k),jelFokRa(JEL.k)));
-    if(Math.abs(cel-JEL.k)<JEL.k*0.004) return;
-    const e=jelVilag(sx,sy), k0=JEL.k, x0=JEL.cx, y0=JEL.cy;
-    JEL.k=cel; jelHorgony(e,sx,sy);
-    const c={k:cel, cx:JEL.cx, cy:JEL.cy, rot:JEL.rot, dol:JEL.dolX};
-    JEL.k=k0; JEL.cx=x0; JEL.cy=y0;
-    // a fokra akadás nem lazítja el az irányt: azt a futó lazítás viszi tovább
-    if(JEL.lazit){ c.rot=0; c.dol=null; }
-    jelRepul(c, 220);
-  },180);
+/* Simított nagyítás (görgő, +/−): a mozdulat egy CÉL-nagyítást ad, a
+   kamera képkockánként arra közelít (JEL_GORGO_TAU), a mutató alatti pontot
+   a helyén tartva. Korábban egy görgőkattanás 25%-ot ugrott egy képkockán,
+   és a mozdulat végén a kép még a legközelebbi fokra „akadt be” — egy
+   kéretlen, utólagos rántás. A fokok azóta csak az odarepülés céljai. */
+function jelSimaNagyit(tenyezo, sx, sy){
+  if(!JEL.k) return;
+  jelMegszakit();
+  const alap=JEL.gorgo?JEL.gorgo.cel:JEL.k;
+  const cel=Math.max(JEL.kMin,Math.min(Math.max(JEL.kMax,JEL.k),alap*tenyezo));
+  JEL.gorgo={cel, sx, sy, t:performance.now()};
+  jelIndit();
 }
-
 /* A jelenet gesztusai. Külön az alaprajzéitól: saját kamerája van. A húzás
    a megfogott világpontot tartja az ujj alatt (forgatva és döntve is). */
 function jelKotes(host){
@@ -4772,7 +4905,7 @@ function jelKotes(host){
 
   host.addEventListener("pointerdown",ev=>{
     if(ev.button) return;
-    ujj.set(ev.pointerId,hely(ev)); moz=0;
+    ujj.set(ev.pointerId,hely(ev)); moz=0; JEL.gorgo=null;
     if(ujj.size===1) huz={...hely(ev), w:null};
     else if(ujj.size===2){ jelMegszakit(); huz={tav:tav(), k:JEL.k}; }
   });
@@ -4785,7 +4918,7 @@ function jelKotes(host){
       if(moz<4) return;                       // a koppintás még a házé
       if(!huz.w){ jelMegszakit(); huz.w=jelVilag(huz.x,huz.y); try{ host.setPointerCapture(ev.pointerId); }catch(_){} }
       jelHorgony(huz.w,h.x,h.y);
-      jelFrissit();
+      jelKer();
     } else if(ujj.size===2&&huz&&huz.tav){
       const t=tav(); if(!t||!huz.tav) return;
       moz=99;
@@ -4793,7 +4926,7 @@ function jelKotes(host){
       const kz=kozep(), elotte=jelVilag(kz[0],kz[1]);
       const nott=k>JEL.k;
       JEL.k=k; jelHorgony(elotte,kz[0],kz[1]);
-      jelFrissit();
+      jelKer();
       if(nott) jelBelepoFigyel(kz[0],kz[1]);
     }
   });
@@ -4801,15 +4934,13 @@ function jelKotes(host){
     const volt=ujj.size;
     ujj.delete(ev.pointerId);
     if(ujj.size<2) huz=ujj.size?{...[...ujj.values()][0],w:null}:null;
-    if(volt>=2) jelBeakad(JEL.W/2+JEL.ox,JEL.H/2+JEL.oy);      // csippentés után beakad a fokra
   };
   host.addEventListener("pointerup",fel);
   host.addEventListener("pointercancel",fel);
   host.addEventListener("wheel",ev=>{
     ev.preventDefault();
     const h=hely(ev);
-    jelNagyit(Math.pow(1.0022,-ev.deltaY), h.x, h.y);
-    jelBeakad(h.x,h.y);
+    jelSimaNagyit(Math.pow(1.0022,-ev.deltaY), h.x, h.y);
   },{passive:false});
   host.__moz=()=>moz;
 }
@@ -4860,7 +4991,14 @@ function epvCel(mit, arg){
   }
   if(!bb) return null;
   const q=jelIlleszt(bb, mit==="ep"?2.4:(mit==="csop"?1.05:1.08));
-  return {k:Math.max(JEL.kMin||0,Math.min(JEL.kMax||Infinity,jelFokLe(q.k))), cx:q.cx, cy:q.cy};
+  let k=Math.max(JEL.kMin||0,Math.min(JEL.kMax||Infinity,jelFokLe(q.k)));
+  /* Egy odarepülés nem állhat meg egy átmenet közepén (félig szétnyílt
+     campus, félig áttűnt település): onnan kijjebb, a teljes lépcsőre —
+     kijjebb, hogy a cél ne lógjon ki. Asztalon a Budapest-nézet 8 m/px-re
+     esett. Kézzel persze bárhol meg lehet állni. */
+  if(1/k>JEL_MORPH1&&1/k<JEL_MORPH0) k=1/JEL_MORPH0;
+  else if(1/k>JEL_VT0&&1/k<JEL_MPP_VAROS) k=1/JEL_MPP_VAROS;
+  return {k, cx:q.cx, cy:q.cy};
 }
 function epvOda(mit, arg){
   if(!JEL.k) return;
@@ -5012,8 +5150,9 @@ function jelBelepoFigyel(sx,sy){
    fokot lépnek a már beállt fokról, így a kép mindig fokon marad. */
 function epvZoom(be){
   if(!JEL.k) return;
-  const cel=Math.max(JEL.kMin,Math.min(be?JEL.kMax:Math.max(JEL.kMax,JEL.k),jelFokRa(JEL.k)*(be?2:0.5)));
-  jelNagyit(cel/JEL.k, JEL.W/2+JEL.ox, JEL.H/2+JEL.oy);
+  const most=JEL.gorgo?JEL.gorgo.cel:JEL.k;
+  const cel=Math.max(JEL.kMin,Math.min(be?JEL.kMax:Math.max(JEL.kMax,most),jelFokRa(most)*(be?2:0.5)));
+  jelSimaNagyit(cel/most, JEL.W/2+JEL.ox, JEL.H/2+JEL.oy);
 }
 
 const epvTerkepKulcs=tel=>HELYEK&&Object.keys(HELYEK.terkep).find(k=>HELYEK.terkep[k].nev===tel&&k!=="orszag");

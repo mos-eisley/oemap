@@ -94,20 +94,61 @@ eltolással, a határ, a Duna és a Margit-sziget egyszerűsítve. Amit tudni ke
   | m/képpont | mi áll a képen | mi a kérdés |
   | --- | --- | --- |
   | 300 fölött | a TELEPÜLÉSEK kis mása | melyik városban |
-  | 6–300 | a CSOPORTOK (kerület, telephely) kis mása | melyik campuson |
-  | 6 alatt | a VALÓDI házak, a valódi helyükön | melyik ház |
+  | 230–300 | a kettő áttűnik egymásba | |
+  | 10–230 | a CSOPORTOK (kerület, telephely) kis mása | melyik campuson |
+  | 5–10 | a csoport kis mása SZÉTNYÍLIK a valódi házakba | |
+  | 5 alatt | a VALÓDI házak, a valódi helyükön | melyik ház |
   A két modell-lépcső ugyanazzal a kóddal készül (`jelVarosAdat`,
   `jelVarosSvg`), csak más halmazra; a háznál a HELY igaz, a MÉRET nem.
-  A határok ott vannak, ahol a következő lépcső már értelmes méretű: 6
-  m/képponton egy 800 m-es campus 133 képpont, ott már a házak a téma.
-- **A kamera rögzített FOKOKRA áll be** (`jelFokLe`, `jelFokRa`,
-  `jelBeakad()`): minden campus és minden város ugyanúgy, ugyanakkora
-  házakkal nyílik meg, és a hallgató onnan nagyít tovább. A fokok √2-es
-  lépcsők (mint a 3D-s rajz sűrűségéé), tehát a legrosszabb eset is 19%
-  eltérés a kívánt kivágattól. Odarepüléskor LEFELÉ kerekítünk (kijjebb),
-  hogy a cél sose lógjon ki; kézi nagyítás (görgő, csippentés) után a
-  legközelebbire, az ujj alatti pontot a helyén tartva — ettől „akad be” a
-  mozdulat. A +/− gomb egész oktávot lép a már beállt fokról.
+  A határok ott vannak, ahol a következő lépcső már értelmes méretű: 5–10
+  m/képponton egy 800 m-es campus 80–160 képpont, ott már a házak a téma.
+- **A nagyítás SIMA: semmi nem ugrik** (élesben: „ahogy nagyítok bele egyre
+  jobban, az épületek ide-oda ugrálnak, sokkal smoothabbnak kéne lennie”).
+  Mérve három oka volt, mindhárom javítva:
+  - **A címkék és a modellek helye ugrált.** Az ütközéskerülő elhelyezés
+    (`jelCimkek()`) minden képkockán elölről választott, és nagyítás közben
+    két egyformán jó hely közt 60–200 képpontot ugrált ide-oda. Most a hely
+    EMLÉKSZIK (`JEL.hely`, kulcs a `data-epv`): előbb az otthon (ha már ki
+    volt tolva, mozgás közben csak 8 képpontnyi tartalékkal), aztán az előző
+    hely (ha még tiszta), csak utána keres — és ott is az előzőhöz
+    legközelebbi tiszta helyet; az új helyére CSÚSZIK (`JEL_SIKLAS` 110 ms,
+    legfeljebb `JEL_SIKLAS_V` 0,8 px/ms), a csúszás kedvéért a képkocka-hurok
+    a kamera megállta után is fut (`JEL.siklik`). 150 ms mozdulatlanság után
+    a tartalék elmarad, és ami csak miatta maradt kint, hazacsúszik —
+    különben a Budapest-nézetben a VIII. kerület modellje a repülésből
+    megmaradt eltolással a Duna rossz oldalán állt. A „nyugvó” nem egy
+    képkocka: egyetlen kocka szünettel minden második kocka nyugvónak
+    látszott, és a címkék a két szabály közt ingáztak. A gesztusok nem
+    rajzolnak azonnal, csak képkockát kérnek (`jelKer()`): egy képkockán a
+    jelenet legfeljebb egyszer épül újra. Mérve: egy folytonos
+    nagyításon az ország fölött az OA-ig a leggyorsabb elmozdulás 0,8 px/ms
+    (korábban egy képkockán 200 px), az oda-vissza ingázás 2–3 (emlékezet
+    nélkül 25–32). Az áttűnőben lévő, halvány címke (`data-halv`) nem
+    akadály, nem keres helyet, és nem koppintható.
+  - **A lépcsők határán az egész kép egy képkockán cserélődött.** Most a
+    település → csoport határon a kettő áttűnik, a csoport → ház határon
+    pedig a csoport kis mása szétnyílik: a modell minden háza a modellbeli
+    helyéről (a modell kirajzolt eltolásával) a valódi helyére csúszik,
+    ugyanazzal a körvonallal (a két gyűrű ugyanaz az OSM-körvonal,
+    ugyanúgy fordítva), a modellben nem szereplő házak áttűnnek, a csoport
+    neve elhalványul, a házaké a második felében úszik be. A két varraton
+    a házak befoglalója képpontra egyezik. Egy odarepülés nem áll meg egy
+    átmenet közepén (`epvCel()`: onnan kijjebb, a teljes lépcsőre —
+    asztalon a Budapest-nézet 8 m/px-re esett); kézzel bárhol meg lehet
+    állni.
+  - **A görgő 25%-ot ugrott egy képkockán, és a mozdulat után a kép még
+    „beakadt” a legközelebbi fokra** — egy kéretlen, utólagos rántás. Most a
+    görgő és a +/− egy CÉL-nagyítást ad, a kamera képkockánként arra
+    közelít (`jelSimaNagyit`, `JEL_GORGO_TAU` 70 ms), a mutató alatti pontot
+    a helyén tartva, és a kézi nagyítás ott marad, ahol a kéz hagyta.
+- **Az odarepülés rögzített FOKOKRA áll be** (`jelFokLe`, `jelFokRa`):
+  minden campus és minden város ugyanúgy, ugyanakkora házakkal nyílik meg,
+  és a hallgató onnan nagyít tovább. A fokok √2-es lépcsők (mint a 3D-s
+  rajz sűrűségéé), tehát a legrosszabb eset is 19% eltérés a kívánt
+  kivágattól. Odarepüléskor LEFELÉ kerekítünk (kijjebb), hogy a cél sose
+  lógjon ki. A +/− gomb egész oktávot lép a fokról (simítva). A kézi
+  nagyítás (görgő, csippentés) viszont NEM akad be utólag a legközelebbi
+  fokra: az egy kéretlen rántás volt (lásd fent).
 - **A valódi házak is nagyítva vannak, de EGYSÉGESEN** (`gEgy`): a tipikus
   60 m-es ház a célméretig (46 px) nő, és minden ház ugyanannyiszorosára —
   házanként a célmérethez igazítva a 101 m-es OA és a 24 m-es KD egyforma
@@ -669,7 +710,7 @@ hagytak egy hibás kódot.
 | `tests/meres.js` | a telefonos mérőlap (`meres.html`) végigfut a valódi appon, az OA-n akkor is, ha a készüléken más az alapértelmezett épület |
 | `tests/epuletek.js` | épületválasztó és **épületváltás**: mind a 39 épület bent van (településenként végigjárva, mindegyik pontosan egyszer), de csak az nyitható meg, aminek kész az adata; a Tervtár adatai a soron, az adatlapon a nem megnyithatónál nincs megnyitó és alapértelmezett gomb; az Esc csak a választót zárja, a kijelölés marad; más épület kódjára mutató link megnevezi az épületet, nem tűnik el csendben; a váltás mércéje **valódi épületeken mért aranyérték** (épületenként az elérhetetlen helyiségek, az útvonalak összhossza és a gráf élszáma a portától), a váltás utáni **tisztaság** (egyetlen tárolóban, a szintdobozokban sem marad régi bejegyzés), OD → KT → OD (a KT betöltésével); az OD IFC-ajtókkal: a két terem ajtaja a hálózatra nyílik, az OD00F03 az OD00F02-n át érhető el; ajtók nélkül (a teszt leveszi őket) a fő folyosó mellé, de leszakadt szilánkhoz kötött OD-helyiségek (OD00F02, OD35E04) elérhetők, a csak sarkával érintkező OD00F03 nem; minden többcellás kötés egy falnyira van, harmadik helyiség nélkül, és odáig a célszinten az épületen belül vezet az út (pontos geometriával mérve); a homlokzat előtti gyűrűn és ablakrésen át nincs útvonal (KH00F36, KH00F37, KH00F42); a bekötések száma mind a tíz épületben rögzített; a portáról egyik épületben sem mosdón át indul az út (TB), és a saját foltján belüli út (KHX1PK2 → KHX1P03) megmarad; offline vissza az OA-ra; az `epuletKesz()` egyenként mind a hét kötelező elemre és a portára, és hibás szerkezetre (sokszög nélküli helyiség, maszk nélküli szint, hibás lépcsőpont…); ha az építés mégis elbukik, a régi épület épül vissza (nem félig vált); az ablakos cellakeresés véletlen pontokon és minden helyiségen ugyanazt adja, mint a teljes bejárás (OA, OD) — az aranyértékek egy szűkebb ablakot nem vennének észre; a nem elérhető adat üzenete angolul is a kóddal; **nyilvántartás nélkül** (első indulás, letiltott kérés) a gomb el sem jelenik meg, és az app elindul |
 | `tests/valaszto.js` | a választó: **egy ablak** — a térkép az alaprajz helyén áll, ugyanakkorán, nyitott `<dialog>` nélkül (hat képernyőméreten); kifelé görgetve az alaprajz az illesztett méret 0,6-áig megy, ott a térkép veszi át, az átadás pillanatában a ház az alaprajz helyén (a közép az átló 4%-án, a méret ±10%-on belül), ugyanúgy elfordulva, felülnézetben; utána északra fordul, a lista a telephely házait mutatja, az alaprajz és a szintsín rejtve; egy megnyitható házra görgetve belép, a sorára kattintva a ház fölé repülve (az alaprajz állására fordulva) tűnik át; az Esc visszavisz (a panel azonnal, a kép áttűnve); minden címmel bíró épület helye a saját települése és az ország határán belül; Budapesten a csoportok jele a Duna jó oldalán (a III. kerületé Budán), a Duna a képen fut a nagyításhoz mért szélességgel, a III. kerület csoportja a hét óbudai épület; a címkék hat képernyőméreten (telefon, keskeny, fekvő, asztal, alacsony és kis asztali ablak), négy nézetben nem fedik egymást és más jelét, és a térkép szabad részén (a panel és az alsó lap nélkül) maradnak, átméretezés után sem; a biztonsági sávokkal (CDP-vel emulálva) a forrás a képen, a fejléc alatt, a lap és a kezdősáv fölött; a házikó felirata telefonon is látszik; az OSM-forrás (ODbL, hivatkozással) a felületen; **alapértelmezett épület**: beállítás, a házikó, induláskor megnyílik, a link, a totem (cím nélkül is) és a párosító mód elsőbbsége, kikapcsolás, hálózat nélkül az OA marad, letiltott tárolóval is fut; **a csendes betöltés közben** választott terem marad, az ugyanarra az épületre mutató link érvényesül, a választott másik épület nyílik meg, a nyitott választó nem csukódik be (és nem mutat „Betöltés…”-t), egy görgetés megállítja, a házikó nem tölt újra; **GPS**: az OD körvonalán belül, a faltól 9 m-re „itt vagy”, előtte a körvonaltól mért távolság, a már nyitott épületnél nincs megnyitás, az YA-nál az YB is, messziről km, letiltott engedélynél üzenet, a bezárt választónál késve jött hely eldobódik; `helyek.json` nélkül csak a lista; a fókusz (zárt választóban nincs tab-állomás, nyitva a Tab nem jut a rejtett alaprajzra, a szintsínre és a kereső panelére, zárva visszatér, a sorról nem ugrik a jelenet címkéjére, a GPS-eredményre megy, a házikó, a töltés és egy azóta rejtetté vált nyitógomb után sem esik a `<body>`-ra); angolul „1 building”; a felirat a térkép és az alsó lap fölött látszik, és újrarajzolás után is megvan; a térkép üres részére kattintva és rajta húzva nyitva marad, a fejléc gombja zárja; fekvő telefonon (844×340 és a 900 px-nél szélesebb 932×380) a GPS-eredmény után is elérhető a lista; ugyanazon a nézeten újrarajzolva a görgetés marad; az alapértelmezett doboz gombja „Betöltés…”-t mutat; a linkről indult betöltés alatt választott terem marad; egy soha be nem fejeződő letöltés 20 s után üzenetet ad; az elakadt linkes váltás újrapróbálva a link termét nyitja, a hibalap bezárása után már nem; a két épületet vegyítő link egyszer vált, a history-ba nem tesz közbülső bejegyzést, és a címben sem marad a másik épület kódja |
-| `tests/jelenet.js` | a folytonosan nagyítható jelenet és a három lépcsője: országos léptéken a települések kis mása (Budapest, Székesfehérvár — Nagymarosnak nincs körvonalas épülete, tehát modellje sem), a város fölött a kerületek modellje a valódi helyükön (egyetlen valódi ház sem, az a következő lépcső), a campus fölött a valódi házak mind megnevezve; a modellek jól láthatók (≥30 px), nem fedik egymást, nem lógnak ki és nem takarnak másik jelet, és a többházas campusé szélesebb az egyházasénál; a magasság a szintszámból jön (OD > OA > OC); a hátrafelé néző falak kimaradnak (ARÁNYRA mérve); a húzás a kamerát mozdítja és nem nyit épületet, a koppintás megnyitja (alaprajz nélkülinél az adatlapját: a VIII. kerület TA-ja, mert a címke szára nem kaphatja el a koppintást a jel elől); a +/− gomb (ugyanaz, mint az alaprajzon, telefonon is kint) nagyít-kicsinyít és fokon marad, a kézi nagyítás után a kamera beakad a legközelebbi fokra, és az országnál kijjebb nem lehet menni; a címkék és a modellek telefonon, keskeny telefonon és asztalon sem fednek és nem lógnak ki a szabad részből, a doboz a képernyőn belül van; a jelenet csoportjára koppintva (FG) a lista szűkül és a kamera odarepül (a lista és a jelenet ugyanazzal a csoportosítással: `epvCsoportok(l,JELVET,CSOP_M)`), húzás után is működik a billentyűs Enter a címkén, sötét témában a kiválasztott címke kontrasztja ≥ 4,5 (`--accent-ink`) |
+| `tests/jelenet.js` | a folytonosan nagyítható jelenet és a három lépcsője: országos léptéken a települések kis mása (Budapest, Székesfehérvár — Nagymarosnak nincs körvonalas épülete, tehát modellje sem), a város fölött a kerületek modellje a valódi helyükön (egyetlen valódi ház sem, az a következő lépcső), a campus fölött a valódi házak mind megnevezve; a modellek jól láthatók (≥30 px), nem fedik egymást, nem lógnak ki és nem takarnak másik jelet, és a többházas campusé szélesebb az egyházasénál; a magasság a szintszámból jön (OD > OA > OC); a hátrafelé néző falak kimaradnak (ARÁNYRA mérve); a húzás a kamerát mozdítja és nem nyit épületet, a koppintás megnyitja (alaprajz nélkülinél az adatlapját: a VIII. kerület TA-ja, mert a címke szára nem kaphatja el a koppintást a jel elől); a +/− gomb (ugyanaz, mint az alaprajzon, telefonon is kint) simítva nagyít-kicsinyít és fokon marad, egy görgőkattanás több képkockára elosztva nagyít, a mutató alatti pontot tartva, a kézi nagyítás után nincs utólagos beakadás, és az országnál kijjebb nem lehet menni; **sima nagyítás** (élesben: „az épületek ide-oda ugrálnak”): az ország fölött az OA-ig folytonosan nagyítva a címkék és a modellek legfeljebb 1 px/ms-mal csúsznak (korábban egy képkockán 60–200 px-et ugrottak), és legfeljebb 8-szor ingáznak oda-vissza, a campus kis mása ugrás nélkül nyílik szét a valódi házakba (a két varraton a befoglaló 3 px-en belül); a címkék és a modellek telefonon, keskeny telefonon és asztalon sem fednek és nem lógnak ki a szabad részből, a doboz a képernyőn belül van; a jelenet csoportjára koppintva (FG) a lista szűkül és a kamera odarepül (a lista és a jelenet ugyanazzal a csoportosítással: `epvCsoportok(l,JELVET,CSOP_M)`), húzás után is működik a billentyűs Enter a címkén, sötét témában a kiválasztott címke kontrasztja ≥ 4,5 (`--accent-ink`) |
 | `tests/masepulet.js` | más épületben nincs OA-ra szabott dolog: a foglalható termek (az OA órarendje) nincs kint, a Büfé gomb csak ahol van büfé (OA, FK; az OD-ben nincs); a szintnév és az emeletszám az épület saját szintjeiből (KT I. és IV. emelet, KH tetőtér, OD V. emelet, egy félszint és egy „Pince”, angolul is), a név az elsődleges (a KD-alak félemelete a földszint fölött, a kötőjel nélküli „Pince 2”), de ahol a név és a kód ellentmond (KD, TA) vagy két földszint jönne ki (BA), az épület nem nyílik meg; a 3D-s szintfelirat és a felolvasói név angolul (OA, KT); a liftes megjegyzés a lift nélküli szöveg; a nemre nem jelölt WC nem „Női” és „Férfi” mosdó, hanem semleges sor; a mosdónevek írásmódjai, a kategória nélküli OC-mosdók, a személyzeti WC kizárása, a mosdó-előtér mögötti WC (OC I. emelet) számít; a KH és a KT akadálymentes mosdója ott van; vissza az OA-ra minden OA-s dolog visszajön |
 | `tests/csomag.js` | a Pages-re publikált csomag (`tools/pages-csomag.js`): csak engedélylistás fájl, belső anyag és fejlesztői fájl nincs benne, minden, amire a lapok és a manifest hivatkoznak, benne van; a célkönyvtár nem lehet a repó, a szülője, egy forráskönyvtár, sem egy csomagnevű, de idegen tartalmú könyvtár (a repó-szabály külön is mérve); és az app ebből a csomagból minden épületen végigváltva, a service workerrel együtt egyetlen sikertelen kérés nélkül fut |
 

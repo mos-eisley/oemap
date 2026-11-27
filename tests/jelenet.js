@@ -27,7 +27,8 @@ const fs = require("fs"), path = require("path");
 const reg = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "epuletek.json"), "utf8")).epuletek;
 const hely = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "helyek.json"), "utf8"));
 
-const nyugodt = pg => pg.waitForFunction(() => !JEL.fly && !JEL.lazit, null, { timeout: 6000 }).catch(() => {});
+// a repülés, a lazulás, a simított nagyítás és a címkék csúszása is megállt
+const nyugodt = pg => pg.waitForFunction(() => !JEL.fly && !JEL.lazit && !JEL.gorgo && !JEL.siklik, null, { timeout: 6000 }).catch(() => {});
 // telefonon a lista az alsó lapon: a sorokhoz fölhúzzuk, a térképhez félig vissza
 const lap = (pg, n) => pg.evaluate(n => { if (MOB()) setSnap(n); }, n).then(() => pg.waitForTimeout(80));
 async function nyit(pg) { await pg.click("#epvBtn"); await pg.waitForTimeout(150); await nyugodt(pg); }
@@ -166,7 +167,7 @@ run("jelenet", async ({ t, browser, base }) => {
   const cimkeHiba = pg => pg.evaluate(SZ => {
     const m = document.getElementById("epvScene"), Z = eval(SZ), R = Z, H = Z.H, h = [];
     const fed = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
-    const ps = [...m.querySelectorAll(".jTel,.jNev")].map(e => ({ n: e.textContent.trim(),
+    const ps = [...m.querySelectorAll(".jTel:not([data-halv]),.jNev:not([data-halv])")].map(e => ({ n: e.textContent.trim(),
       s: e.getBoundingClientRect(), p: { x: H.left + parseFloat(e.style.left), y: H.top + parseFloat(e.style.top) } }));
     for (const a of ps) {
       if (a.s.left < R.left - 1 || a.s.right > R.right + 1 || a.s.top < R.top - 1 || a.s.bottom > R.bottom + 1) h.push(a.n + " kilóg");
@@ -196,25 +197,48 @@ run("jelenet", async ({ t, browser, base }) => {
   const k0 = await p.evaluate(() => JEL.k);
   /* Ugyanazok a gombok, mint az alaprajzon (telefonon a térképen kint vannak:
      a csippentés mellé egyujjas út is kell). */
-  await p.click("#zin"); await p.waitForTimeout(200);
+  /* A gomb simítva nagyít (nem egy képkockán ugrik): közvetlenül utána még
+     csak úton van, a végén a cél-fokon áll. */
+  await p.click("#zin");
+  const kozben = await p.evaluate(() => JEL.k);
+  await nyugodt(p);
+  t("a + gomb simítva nagyít (az első képkockán még nem ugrik a célra)", kozben < k0 * 1.9, `${k0} → ${kozben}`);
   t("a + gomb nagyít", (await p.evaluate(() => JEL.k)) > k0 * 1.5);
-  await p.click("#zout"); await p.waitForTimeout(200);
+  await p.click("#zout"); await nyugodt(p);
   t("a − gomb vissza", Math.abs((await p.evaluate(() => JEL.k)) - k0) < k0 * 0.02);
-  /* A kamera RÖGZÍTETT FOKOKRA áll be: minden campus és minden város
-     ugyanúgy, ugyanakkora házakkal nyílik meg, és a hallgató onnan nagyít
-     tovább. A fokok √2-es lépcsők. */
+  /* Az odarepülés RÖGZÍTETT FOKOKRA áll be: minden campus és minden város
+     ugyanúgy, ugyanakkora házakkal nyílik meg, és a gomb is egész fokot lép.
+     A fokok √2-es lépcsők. */
   const fokon = k => Math.abs(Math.log(k) / Math.log(Math.SQRT2) - Math.round(Math.log(k) / Math.log(Math.SQRT2))) < 0.01;
   t("a gombbal lépve a nagyítás fokon marad", fokon(await p.evaluate(() => JEL.k)));
-  const beakadt = await p.evaluate(async () => {
+  /* A kézi nagyítás viszont ott marad, ahol a kéz hagyta: korábban a mozdulat
+     után a kép még a legközelebbi fokra „akadt be” — egy kéretlen, utólagos
+     rántás (élesben: „sokkal smoothabbnak kéne lennie”). */
+  const nemAkad = await p.evaluate(async () => {
     jelNagyit(1.27, JEL.W / 2, JEL.H / 2);          // fokok közé állunk
     const kozott = JEL.k;
-    const h = jelHost();
-    h.dispatchEvent(new WheelEvent("wheel", { deltaY: -1, bubbles: true, cancelable: true }));
+    const h = jelHost(), r = h.getBoundingClientRect();
+    h.dispatchEvent(new WheelEvent("wheel", { deltaY: -1, clientX: r.left + 100, clientY: r.top + 100, bubbles: true, cancelable: true }));
     await new Promise(r => setTimeout(r, 900));
     return { kozott, utana: JEL.k };
   });
-  t("és a kézi nagyítás után beakad a legközelebbi fokra",
-    !fokon(beakadt.kozott) && fokon(beakadt.utana), JSON.stringify(beakadt));
+  t("a kézi nagyítás után nincs utólagos rántás: a nagyítás ott marad, ahol a mozdulat hagyta",
+    Math.abs(nemAkad.utana / nemAkad.kozott - 1.0022) < 0.0005, JSON.stringify(nemAkad));
+  /* Egy görgőkattanás (deltaY 100: 25%) nem egy képkockán ugrik, hanem
+     képkockánként közelít a célra, a mutató alatti pontot a helyén tartva. */
+  const gorgo = await p.evaluate(async () => {
+    const h = jelHost(), r = h.getBoundingClientRect(), sx = 140, sy = 160, w0 = jelVilag(sx, sy), k0 = JEL.k;
+    h.dispatchEvent(new WheelEvent("wheel", { deltaY: -100, clientX: r.left + sx, clientY: r.top + sy, bubbles: true, cancelable: true }));
+    const lepes = [];
+    for (let i = 0; i < 12; i++) { await new Promise(r => requestAnimationFrame(r)); lepes.push(JEL.k / k0); }
+    await new Promise(r => setTimeout(r, 600));
+    const w1 = jelVilag(sx, sy);
+    return { lepes: lepes.map(x => +x.toFixed(3)), veg: JEL.k / k0, csuszas: Math.hypot(w1[0] - w0[0], w1[1] - w0[1]) * JEL.k };
+  });
+  const max1 = Math.max(...gorgo.lepes.map((x, i) => Math.abs(Math.log(x / (i ? gorgo.lepes[i - 1] : 1)))));
+  t("egy görgőkattanás több képkockára elosztva nagyít (képkockánként legfeljebb a 40%-a), és a mutató alatti pont a helyén marad",
+    Math.abs(gorgo.veg - Math.pow(1.0022, 100)) < 0.01 && max1 < Math.log(Math.pow(1.0022, 100)) * 0.4 && gorgo.csuszas < 1,
+    JSON.stringify(gorgo));
   t("az országnál kijjebb nem lehet menni", await p.evaluate(() => {
     for (let i = 0; i < 30; i++) jelNagyit(1 / 1.9, JEL.W / 2, JEL.H / 2);
     return Math.abs(JEL.k - JEL.kMin) < JEL.kMin * 0.01;
@@ -315,4 +339,72 @@ run("jelenet", async ({ t, browser, base }) => {
     const a = L(s.color), g = L(s.backgroundColor); return +((Math.max(a, g) + .05) / (Math.min(a, g) + .05)).toFixed(2); });
   t("sötét témában a kiválasztott ház címkéjének kontrasztja legalább 4,5", kontr >= 4.5, String(kontr));
   await p5.close(); await c5.close();
+
+  /* ---- sima nagyítás: semmi nem ugrik ----
+     Élesben: „ahogy nagyítok bele egyre jobban, az épületek ide-oda
+     ugrálnak”. Mérve két oka volt: (1) a címkék és a modellek ütközéskerülő
+     helyét minden képkocka elölről választotta, és két egyformán jó hely
+     közt 60–200 képpontot ugráltak; (2) a lépcsők határán (település →
+     campus → ház) az egész kép egy képkockán cserélődött. */
+  const c6 = await browser.newContext(PHONE);
+  const p6 = await open(c6, base, { settle: 400 });
+  await p6.waitForFunction(() => EPULETEK && HELYEK, null, { timeout: 10000 });
+  await nyit(p6);
+  const sima = await p6.evaluate(async () => {
+    JEL.fly = null; JEL.lazit = null;
+    const tv = epvTerv("OA"), W = JEL.W / 2 + JEL.ox, H = JEL.H / 2 + JEL.oy;
+    JEL.cx = tv.w[0]; JEL.cy = tv.w[1]; JEL.k = JEL.kMin * 1.2; jelFrissit();
+    // csak az előző képkockán is kint lévőt hasonlítjuk: ami most jelent meg, az a helyén jelenik meg
+    let elozo = new Map(), max = 0, hol = "";
+    const tort = new Map(); let inga = 0;
+    while (JEL.k < 3) {
+      jelNagyit(1.04, W, H);
+      await new Promise(r => requestAnimationFrame(r));
+      // a sebesség (px/ms) a két rajzolás közti időre: a tesztgép képkockaideje ingadozik
+      const most = new Map();
+      for (const [k, e] of JEL.hely) {
+        const o = elozo.get(k);
+        if (o && e.t > o[2]) { const v = Math.hypot(e.x - o[0], e.y - o[1]) / (e.t - o[2]);
+          if (v > max) { max = v; hol = k + " @ " + (1 / JEL.k).toFixed(1) + " m/px"; } }
+        most.set(k, [e.x, e.y, e.t]);
+        // a célhely oda-vissza ingázása (A → B → A), 4 képpontos rácsra kerekítve
+        const c = Math.round(e.tx / 4) + "," + Math.round(e.ty / 4), h = tort.get(k) || [];
+        if (h[h.length - 1] !== c) { if (h.length >= 2 && h[h.length - 2] === c) inga++; h.push(c); tort.set(k, h); }
+      }
+      elozo = most;
+    }
+    return { max: +max.toFixed(2), hol, inga };
+  });
+  t("folytonos nagyítás közben a címkék és a modellek a jelükhöz képest csúsznak, nem ugranak (legfeljebb 1 px/ms; korábban egy képkockán 60–200 képpont)",
+    sima.max <= 1, JSON.stringify(sima));
+  /* És nem ingáznak két hely közt: a hely emlékszik az előző képkockára
+     (mérve 2–3 visszatérés a teljes nagyításon; minden képkockán elölről
+     választva 25–32). */
+  t("a címkék és a modellek nem ingáznak két hely közt (legfeljebb 8 oda-vissza a teljes nagyításon)", sima.inga <= 8, JSON.stringify(sima));
+  /* A campus kis mása szétnyílik a valódi házakba: a két varraton (ahol a
+     modell átadja a rajzot a szétnyíló házaknak, és ahol azok beállnak) a
+     házak befoglalója nem ugrik. */
+  const varrat = await p6.evaluate(async () => {
+    JEL.fly = null; JEL.lazit = null; JEL.gorgo = null;
+    const tv = epvTerv("OA"); JEL.cx = tv.w[0]; JEL.cy = tv.w[1];
+    const kocka = () => new Promise(r => requestAnimationFrame(r));
+    const bb = sel => { let a = 1e9, b = 1e9, c = -1e9, d = -1e9;
+      for (const e of jelHost().querySelectorAll(sel)) { const r = e.getBoundingClientRect(); if (!r.width) continue;
+        a = Math.min(a, r.left); b = Math.min(b, r.top); c = Math.max(c, r.right); d = Math.max(d, r.bottom); }
+      return [a, b, c, d]; };
+    const hazak = ["OA", "OB", "OC", "OD", "OM", "KB", "KD"].map(k => `svg > g.jHaz[data-epv="ep:${k}"]`).join(",");
+    const all = async m => { JEL.k = 1 / m; for (let i = 0; i < 30; i++) { jelFrissit(); await kocka(); } };
+    await all(JEL_MORPH0 * 1.003); const a0 = bb('g.jVar[data-epv="csop:KB"] g.jHaz');
+    await all(JEL_MORPH0 * 0.997); const a1 = bb(hazak);
+    const kozben = [];
+    for (const m of [9, 8, 7, 6]) { await all(m); kozben.push(bb(hazak)); }
+    await all(JEL_MORPH1 * 1.003); const b0 = bb(hazak);
+    await all(JEL_MORPH1 * 0.997); const b1 = bb(hazak);
+    const el = (x, y) => Math.max(...x.map((v, i) => Math.abs(v - y[i])));
+    return { kezdet: +el(a0, a1).toFixed(1), veg: +el(b0, b1).toFixed(1), kozben: kozben.map(x => x.map(Math.round)) };
+  });
+  t("a campus kis mása ugrás nélkül nyílik szét a valódi házakba (a két varraton a házak befoglalója 3 képponton belül)",
+    varrat.kezdet <= 3 && varrat.veg <= 3, JSON.stringify(varrat));
+  t("nincs JS hiba a sima nagyításban", !p6.jsErrors.length, p6.jsErrors.join(" | "));
+  await p6.close(); await c6.close();
 });

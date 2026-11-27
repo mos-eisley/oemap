@@ -37,7 +37,8 @@ const nyitva = pg => pg.evaluate(() => epvNyitva());
 const szogEl = (a, b) => Math.abs((((a - b) % 360) + 540) % 360 - 180);
 /* A kamera repülése (és az átadás utáni lazulás) végét várja: a címkék a
    nyugvó képen mérhetők. */
-const nyugodt = pg => pg.waitForFunction(() => !JEL.fly && !JEL.lazit, null, { timeout: 6000 }).catch(() => {});
+// a repülés, a lazulás, a simított nagyítás és a címkék csúszása is megállt
+const nyugodt = pg => pg.waitForFunction(() => !JEL.fly && !JEL.lazit && !JEL.gorgo && !JEL.siklik, null, { timeout: 6000 }).catch(() => {});
 /* Telefonon a lista az alsó lapon van: a lap állása dönti el, mi látszik
    belőle (a sorokhoz fölhúzzuk, ahogy a hallgató tenné; a térképhez le). */
 const lap = (pg, n) => pg.evaluate(n => { if (MOB()) setSnap(n); }, n).then(() => pg.waitForTimeout(80));
@@ -223,7 +224,8 @@ run("térképes választó", async ({ t, ctx, browser, base }) => {
     const H = m.getBoundingClientRect(), h = [];
     const R = { left: H.left + JEL.sz.l, right: H.right - JEL.sz.r, top: H.top + JEL.sz.t, bottom: H.bottom - JEL.sz.b };
     const fed = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
-    const ps = [...m.querySelectorAll(".jTel,.jNev")].map(b => ({ n: b.textContent.trim(),
+    // az átmenetben halvány (áttűnő, nem koppintható) címke nem számít
+    const ps = [...m.querySelectorAll(".jTel:not([data-halv]),.jNev:not([data-halv])")].map(b => ({ n: b.textContent.trim(),
       s: b.getBoundingClientRect(),
       p: { x: H.left + parseFloat(b.style.left), y: H.top + parseFloat(b.style.top) } }));
     for (const a of ps) {
